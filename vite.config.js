@@ -23,7 +23,7 @@ export default defineConfig({
     target: 'es2015'
   },
   server: {
-    port: 3000,
+    port: 3012,
     compress: true,
     hmr: process.env.NODE_ENV === 'production' ? false : true,
     headers: {
