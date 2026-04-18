@@ -69,7 +69,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     setStatus('Creating store...');
 
     try {
-      const response = await fetch('http://localhost:3011/api/store', {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const response = await fetch(`${API_BASE_URL}/api/store`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
