@@ -196,7 +196,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                   {(store.storeName || 'S').charAt(0).toUpperCase()}
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide ${store.status === 'active' || !store.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {store.status || 'Active'}
+                  {(store.status || 'active').charAt(0).toUpperCase() + (store.status || 'active').slice(1)}
                 </span>
               </div>
               <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-[#76b900] transition-colors">{store.storeName}</h3>
@@ -215,6 +215,15 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
                   </a>
+                )}
+
+                {store.planExpiryDate && (
+                  <div className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Plan Expires: <span className="font-semibold text-slate-700">{new Date(store.planExpiryDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                  </div>
                 )}
               </div>
               
