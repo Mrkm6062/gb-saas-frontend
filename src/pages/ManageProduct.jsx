@@ -17,9 +17,11 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
   const fetchProducts = async () => {
+    if (!currentStore._id) return;
+
     try {
       // Pass storeId context to the backend
-      const response = await fetch(`${API_BASE_URL}/api/products?storeId=${currentStore._id || storeId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/products?storeId=${currentStore._id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -32,10 +34,10 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   };
 
   useEffect(() => {
-    if (storeId) {
+    if (currentStore._id) {
       fetchProducts();
     }
-  }, [storeId]);
+  }, [currentStore._id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
