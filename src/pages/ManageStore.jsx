@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
+import AdminLayout from '../components/AdminLayout';
 
-const ManageStore = ({ token, stores }) => {
+const ManageStore = ({ token, stores, onLogout }) => {
   const { storeId } = useParams(); // Gets the store ID from the URL
 
   // Find the current store to initialize the form state
@@ -49,6 +50,7 @@ const ManageStore = ({ token, stores }) => {
   };
 
   return (
+    <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Store">
     <div className="p-6 bg-white rounded-xl shadow-sm max-w-2xl mx-auto mt-10">
       <h2 className="text-2xl font-bold mb-6 text-slate-800">Store Settings</h2>
       
@@ -110,6 +112,7 @@ const ManageStore = ({ token, stores }) => {
         </button>
       </form>
     </div>
+    </AdminLayout>
   );
 };
 

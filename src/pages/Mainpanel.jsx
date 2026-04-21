@@ -1,71 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  LayoutGrid, 
-  Store, 
-  Package, 
-  ClipboardList, 
-  Users, 
-  Truck, 
-  BarChart3, 
-  Settings 
-} from 'lucide-react';
-
-const Sidebar = ({ stores }) => {
-  const navigate = useNavigate();
-  
-  const menuItems = [
-    { name: 'Overview', icon: <LayoutGrid size={20} />, active: true },
-    { name: 'Manage Store', icon: <Store size={20} />, active: false },
-    { name: 'Products', icon: <Package size={20} />, active: false },
-    { name: 'Orders', icon: <ClipboardList size={20} />, active: false },
-    { name: 'Customers', icon: <Users size={20} />, active: false },
-    { name: 'Delivery', icon: <Truck size={20} />, active: false },
-    { name: 'Analytics', icon: <BarChart3 size={20} />, active: false },
-    { name: 'Settings', icon: <Settings size={20} />, active: false },
-  ];
-
-  return (
-    <div className="w-64 min-h-screen bg-white border-r border-gray-100 flex flex-col p-4 shrink-0">
-      {/* Brand Logo Section */}
-      <div className="mb-10 px-2">
-        <img 
-          src="https://galibrand.cloud/public/Name.png" 
-          alt="GB Galibrand Logo" 
-          className="h-12 w-auto"
-        />
-      </div>
-
-      {/* Navigation Menu */}
-      <nav className="flex-1 space-y-2">
-        {menuItems.map((item) => (
-          <button
-            key={item.name}
-            onClick={() => {
-              if (item.name === 'Manage Store' && stores && stores.length > 0) {
-                navigate(`/store/${stores[0].storeId}`);
-              } else if (item.name === 'Overview') {
-                navigate('/');
-              } else if (item.name === 'Products' && stores && stores.length > 0) {
-                navigate(`/store/${stores[0].storeId}/products`);
-              }
-            }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-              item.active 
-                ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
-                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-            }`}
-          >
-            <span className={item.active ? "text-[#76b900]" : "text-gray-400"}>
-              {item.icon}
-            </span>
-            <span className="text-sm tracking-wide">{item.name}</span>
-          </button>
-        ))}
-      </nav>
-    </div>
-  );
-};
+import AdminLayout from '../components/AdminLayout';
 
 const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [isCreatingStore, setIsCreatingStore] = useState(false);
@@ -113,20 +48,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 w-full overflow-hidden">
-      <Sidebar stores={stores} />
-      <div className="flex-1 flex flex-col h-full overflow-y-auto">
-        {/* Top Navigation Bar */}
-        <nav className="bg-white shadow-sm border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
-          <div className="flex items-center gap-4">
-            <span className="text-xl font-bold text-slate-800">Overview Dashboard</span>
-          </div>
-          <button onClick={onLogout} className="px-5 py-2 text-sm font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-full transition duration-200">
-            Logout
-          </button>
-        </nav>
-
-        {/* Main Dashboard Content */}
+    <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Overview Dashboard">
         <main className="max-w-7xl mx-auto w-full px-6 py-10 text-left">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
           <div>
@@ -263,8 +185,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
           )}
         </div>
       </main>
-      </div>
-    </div>
+    </AdminLayout>
   );
 };
 
