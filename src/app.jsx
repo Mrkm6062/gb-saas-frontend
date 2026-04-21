@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import Mainpanel from './pages/Mainpanel';
 import ManageStore from './pages/ManageStore';
+import ManageProduct from './pages/ManageProduct';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -57,6 +58,10 @@ function App() {
         <Route 
           path="/store/:storeId" 
           element={token ? <ManageStore token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/store/:storeId/products" 
+          element={token ? <ManageProduct token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="*" 
