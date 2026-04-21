@@ -125,9 +125,17 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
           {stores.map((store, index) => (
             <div key={index} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200 p-6 flex flex-col group">
               <div className="flex justify-between items-start mb-5">
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-orange-100 to-orange-50 text-[#ff8a00] flex items-center justify-center text-2xl font-bold shadow-inner">
-                  {(store.storeName || 'S').charAt(0).toUpperCase()}
-                </div>
+                {store.logo ? (
+                  <img 
+                    src={store.logo} 
+                    alt={`${store.storeName} logo`} 
+                    className="h-14 w-14 rounded-2xl object-contain bg-slate-50 border border-slate-100 shadow-sm p-1"
+                  />
+                ) : (
+                  <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-orange-100 to-orange-50 text-[#ff8a00] flex items-center justify-center text-2xl font-bold shadow-inner">
+                    {(store.storeName || 'S').charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide ${store.status === 'active' || !store.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                   {(store.status || 'active').charAt(0).toUpperCase() + (store.status || 'active').slice(1)}
                 </span>
