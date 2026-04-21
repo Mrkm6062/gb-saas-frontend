@@ -15,10 +15,16 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
   const navigate = useNavigate();
   const location = useLocation();
   
+  // Dynamically detect which store we are currently viewing based on the URL
+  const pathParts = location.pathname.split('/');
+  const activeStoreId = pathParts[1] === 'store' && pathParts[2] 
+    ? pathParts[2] 
+    : (stores?.length > 0 ? stores[0].storeId : null);
+
   const menuItems = [
     { name: 'Overview', icon: <LayoutGrid size={20} />, path: '/' },
-    { name: 'Manage Store', icon: <Store size={20} />, path: stores?.length > 0 ? `/store/${stores[0].storeId}` : '#' },
-    { name: 'Products', icon: <Package size={20} />, path: stores?.length > 0 ? `/store/${stores[0].storeId}/products` : '#' },
+    { name: 'Manage Store', icon: <Store size={20} />, path: activeStoreId ? `/store/${activeStoreId}` : '#' },
+    { name: 'Products', icon: <Package size={20} />, path: activeStoreId ? `/store/${activeStoreId}/products` : '#' },
     { name: 'Orders', icon: <ClipboardList size={20} />, path: '#' },
     { name: 'Customers', icon: <Users size={20} />, path: '#' },
     { name: 'Delivery', icon: <Truck size={20} />, path: '#' },
@@ -70,6 +76,28 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
         <nav className="bg-white shadow-sm border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-4">
             <span className="text-xl font-bold text-slate-800">{headerTitle}</span>
+            
+            {/* Store Switcher Dropdown (hidden on Overview page) */}
+            {stores && stores.length > 0 && activeStoreId && location.pathname !== '/' && (
+              <div className="ml-4 flex items-center gap-2 border-l border-slate-200 pl-4 hidden sm:flex">
+                <span className="text-sm font-medium text-slate-500">Store:</span>
+                <select
+                  value={activeStoreId}
+                  onChange={(e) => {
+                    const newStoreId = e.target.value;
+                    const currentSubPath = pathParts.slice(3).join('/'); // Preserves current sub-route like /products
+                    navigate(`/store/${newStoreId}${currentSubPath ? `/${currentSubPath}` : ''}`);
+                  }}
+                  className="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-[#76b900] focus:border-[#76b900] block py-1.5 px-3 outline-none font-semibold cursor-pointer max-w-[200px] truncate"
+                >
+                  {stores.map(store => (
+                    <option key={store.storeId} value={store.storeId}>
+                      {store.storeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <button onClick={onLogout} className="px-5 py-2 text-sm font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-full transition duration-200">
             Logout
