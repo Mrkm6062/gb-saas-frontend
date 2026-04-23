@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
+import { CreditCard } from 'lucide-react';
 
 const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [isCreatingStore, setIsCreatingStore] = useState(false);
