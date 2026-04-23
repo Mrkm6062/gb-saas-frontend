@@ -168,9 +168,12 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 )}
               </div>
               
-              <div className="mt-auto pt-5 border-t border-slate-100">
-                <button onClick={() => navigate(`/store/${store.storeId}`)} className="w-full py-3 bg-slate-50 text-slate-700 font-bold rounded-xl group-hover:bg-[#76b900] group-hover:text-white transition-all duration-300">
-                  Manage Store &rarr;
+              <div className="mt-auto pt-5 border-t border-slate-100 flex gap-2">
+                <button onClick={() => navigate(`/store/${store.storeId}`)} className="flex-1 py-2.5 bg-slate-50 text-slate-700 font-bold rounded-xl hover:bg-[#76b900] hover:text-white transition-all duration-300">
+                  Manage Store
+                </button>
+                <button onClick={() => navigate(`/store/${store.storeId}/plan`)} className="flex-1 py-2.5 bg-blue-50 text-blue-700 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-300">
+                  Upgrade Plan
                 </button>
               </div>
             </div>
