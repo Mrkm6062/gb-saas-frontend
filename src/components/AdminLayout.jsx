@@ -26,7 +26,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     { name: 'Overview', icon: <LayoutGrid size={20} />, path: '/' },
     { name: 'Manage Store', icon: <Store size={20} />, path: activeStoreId ? `/store/${activeStoreId}` : '#' },
     { name: 'Products', icon: <Package size={20} />, path: activeStoreId ? `/store/${activeStoreId}/products` : '#' },
-    { name: 'Orders', icon: <ClipboardList size={20} />, path: '#' },
+    { name: 'Orders', icon: <ClipboardList size={20} />, path: activeStoreId ? `/store/${activeStoreId}/orders` : '#' },
     { name: 'Customers', icon: <Users size={20} />, path: '#' },
     { name: 'Delivery', icon: <Truck size={20} />, path: '#' },
     { name: 'Analytics', icon: <BarChart3 size={20} />, path: '#' },

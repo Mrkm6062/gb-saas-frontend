@@ -5,6 +5,7 @@ import Mainpanel from './pages/Mainpanel';
 import ManageStore from './pages/ManageStore';
 import ManageProduct from './pages/ManageProduct';
 import UpgradePlan from './pages/UpgradePlan';
+import ManageOrders from './pages/ManageOrders';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -67,6 +68,10 @@ function App() {
         <Route 
           path="/store/:storeId/plan" 
           element={token ? <UpgradePlan token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/store/:storeId/orders" 
+          element={token ? <ManageOrders token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="*" 
