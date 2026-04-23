@@ -7,8 +7,27 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [newStoreName, setNewStoreName] = useState('');
   const [newStoreCategory, setNewStoreCategory] = useState('Kirana Stores');
   const [newStoreMeta, setNewStoreMeta] = useState('');
+  const [plans, setPlans] = useState([]);
+  const [newStorePlan, setNewStorePlan] = useState('');
   const [status, setStatus] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        const res = await fetch(`${API_BASE_URL}/api/plans`);
+        if (res.ok) {
+          const data = await res.json();
+          setPlans(data);
+          if (data.length > 0) setNewStorePlan(data[0]._id);
+        }
+      } catch (err) {
+        console.error('Failed to fetch plans', err);
+      }
+    };
+    fetchPlans();
+  }, []);
 
   const handleCreateStore = async (e) => {
     e.preventDefault();
@@ -25,7 +44,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
         body: JSON.stringify({ 
           name: newStoreName,
           category: newStoreCategory,
-          metaDescription: newStoreMeta
+          metaDescription: newStoreMeta,
+          planId: newStorePlan
         })
       });
 
@@ -97,6 +117,20 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                   >
                     {["Vegetable Shop", "Bakery Shop", "Cafe Shop", "Kirana Stores", "Cake Shop", "Clothes Shop", "Multi-Ecommerce Shop", "Education Webapp", "Nasta Corner", "Appointment&Contact Webapp"].map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Select Plan</label>
+                  <select 
+                    value={newStorePlan}
+                    onChange={(e) => setNewStorePlan(e.target.value)}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] focus:border-transparent outline-none transition text-slate-900 bg-white"
+                    required
+                  >
+                    <option value="" disabled>Select a plan...</option>
+                    {plans.map(plan => (
+                      <option key={plan._id} value={plan._id}>{plan.name} - ₹{plan.price}/mo</option>
                     ))}
                   </select>
                 </div>
