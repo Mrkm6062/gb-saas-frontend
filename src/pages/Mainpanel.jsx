@@ -122,17 +122,23 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Select Plan</label>
-                  <select 
-                    value={newStorePlan}
-                    onChange={(e) => setNewStorePlan(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] focus:border-transparent outline-none transition text-slate-900 bg-white"
-                    required
-                  >
-                    <option value="" disabled>Select a plan...</option>
-                    {plans.map(plan => (
-                      <option key={plan._id} value={plan._id}>{plan.name} - ₹{plan.price}/mo</option>
-                    ))}
-                  </select>
+                  {plans.length > 0 ? (
+                    <select 
+                      value={newStorePlan}
+                      onChange={(e) => setNewStorePlan(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] focus:border-transparent outline-none transition text-slate-900 bg-white"
+                      required
+                    >
+                      <option value="" disabled>Select a plan...</option>
+                      {plans.map(plan => (
+                        <option key={plan._id} value={plan._id}>{plan.name} - ₹{plan.price}/mo</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full px-4 py-3 border border-amber-200 bg-amber-50 text-amber-700 rounded-xl text-sm font-medium">
+                      No plans available. Please contact admin to set up plans.
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Meta Description</label>
