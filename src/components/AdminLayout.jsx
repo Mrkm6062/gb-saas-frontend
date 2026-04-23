@@ -8,6 +8,7 @@ import {
   Users, 
   Truck, 
   BarChart3, 
+  CreditCard,
   Settings 
 } from 'lucide-react';
 
@@ -29,6 +30,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     { name: 'Customers', icon: <Users size={20} />, path: '#' },
     { name: 'Delivery', icon: <Truck size={20} />, path: '#' },
     { name: 'Analytics', icon: <BarChart3 size={20} />, path: '#' },
+    { name: 'Plan & Billing', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' },
     { name: 'Settings', icon: <Settings size={20} />, path: '#' },
   ];
 
