@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, TrendingUp, ShoppingBag, Users, IndianRupee } from 'lucide-react';
 
 const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [isCreatingStore, setIsCreatingStore] = useState(false);
@@ -12,6 +12,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [newStorePlan, setNewStorePlan] = useState('');
   const [status, setStatus] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
+  const [orders, setOrders] = useState([]);
+  const [activeStoreId, setActiveStoreId] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,6 +32,31 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     };
     fetchPlans();
   }, []);
+
+  useEffect(() => {
+    if (stores.length > 0 && !activeStoreId) {
+      setActiveStoreId(stores[0]._id);
+    }
+  }, [stores, activeStoreId]);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!activeStoreId) return;
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        const response = await fetch(`${API_BASE_URL}/api/orders?storeId=${activeStoreId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setOrders(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+      }
+    };
+    fetchOrders();
+  }, [activeStoreId, token]);
 
   const handleCreateStore = async (e) => {
     e.preventDefault();
@@ -76,17 +103,30 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     setCurrentStep(1);
   };
 
+  // Analytics Calculations
+  const deliveredOrders = orders.filter(o => o.orderStatus === 'delivered');
+  const totalSales = deliveredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const placedOrders = orders.filter(o => o.orderStatus === 'placed').length;
+  
+  const today = new Date();
+  const todaysSales = deliveredOrders.filter(o => {
+    const orderDate = new Date(o.createdAt);
+    return orderDate.getDate() === today.getDate() &&
+           orderDate.getMonth() === today.getMonth() &&
+           orderDate.getFullYear() === today.getFullYear();
+  }).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+  const uniqueCustomers = new Set(orders.map(o => o.customerEmail).filter(Boolean));
+  const totalCustomers = uniqueCustomers.size;
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Overview Dashboard">
         <main className="max-w-7xl mx-auto w-full px-6 py-10 text-left">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
           <div>
-            <h2 className="text-3xl font-extrabold text-slate-900">My Stores</h2>
-            <p className="text-slate-500 mt-1">Manage and monitor your digital storefronts</p>
+            <h2 className="text-3xl font-extrabold text-slate-900">{stores.length > 0 ? 'Overview Dashboard' : 'Welcome'}</h2>
+            <p className="text-slate-500 mt-1">{stores.length > 0 ? 'Track your sales, orders, and customers' : 'Get started by creating your store'}</p>
           </div>
-          <button onClick={() => setIsCreatingStore(true)} className="px-6 py-3 bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white font-bold rounded-xl hover:shadow-lg hover:opacity-90 transition transform hover:-translate-y-0.5 flex items-center gap-2">
-            <span className="text-xl leading-none">+</span> Create New Store
-          </button>
         </div>
 
         {status && (
@@ -95,81 +135,74 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
            </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {/* Render Existing Stores */}
-          {stores.map((store, index) => (
-            <div key={index} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200 p-6 flex flex-col group">
-              <div className="flex justify-between items-start mb-5">
-                {store.logo ? (
-                  <img 
-                    src={store.logo} 
-                    alt={`${store.storeName} logo`} 
-                    className="h-14 w-14 rounded-2xl object-contain bg-slate-50 border border-slate-100 shadow-sm p-1"
-                  />
-                ) : (
-                  <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-orange-100 to-orange-50 text-[#ff8a00] flex items-center justify-center text-2xl font-bold shadow-inner">
-                    {(store.storeName || 'S').charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide ${store.status === 'active' || !store.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {(store.status || 'active').charAt(0).toUpperCase() + (store.status || 'active').slice(1)}
-                </span>
-              </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-[#76b900] transition-colors">{store.storeName}</h3>
-              <div className="flex flex-col items-start gap-2 mb-6">
-                <span className="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{store.storeId || 'GBS-NEW'}</span>
-                
-                {(store.subdomain || store.storeSlug) && (
-                  <a 
-                    href={`http://${store.subdomain || store.storeSlug + '.galibrand.cloud'}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 mt-1"
-                  >
-                    {store.subdomain || store.storeSlug + '.galibrand.cloud'}
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                )}
+        {stores.length === 0 && !isCreatingStore ? (
+          <div 
+            onClick={() => setIsCreatingStore(true)}
+            className="w-full max-w-2xl mx-auto min-h-[300px] flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 rounded-3xl hover:border-[#76b900] hover:bg-green-50/50 hover:text-[#76b900] transition-colors cursor-pointer group mt-10"
+          >
+            <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-[#76b900] group-hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-700 group-hover:text-[#76b900] mb-1">Create Your First Store</h3>
+            <p className="text-sm text-center px-4">Click here to launch your online ordering system.</p>
+          </div>
+        ) : stores.length > 0 ? (
+          <>
+            {/* Store Selection Dropdown for Analytics */}
+            <div className="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-5 rounded-2xl shadow-sm border border-slate-200 gap-4">
+              <span className="font-bold text-slate-700">Displaying data for:</span>
+              <select
+                value={activeStoreId}
+                onChange={(e) => setActiveStoreId(e.target.value)}
+                className="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-[#76b900] focus:border-[#76b900] px-4 py-2.5 font-semibold outline-none min-w-[200px] cursor-pointer"
+              >
+                {stores.map(s => <option key={s._id} value={s._id}>{s.storeName}</option>)}
+              </select>
+            </div>
 
-                {store.planExpiryDate && (
-                  <div className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Plan Expires: <span className="font-semibold text-slate-700">{new Date(store.planExpiryDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                  </div>
-                )}
+            {/* 4 Analytics Metric Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+                  <IndianRupee size={28} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Sales</p>
+                  <p className="text-2xl font-extrabold text-slate-800">₹{totalSales}</p>
+                </div>
               </div>
-              
-              <div className="mt-auto pt-5 border-t border-slate-100 flex gap-2">
-                <button onClick={() => navigate(`/store/${store.storeId}`)} className="flex-1 py-2.5 bg-slate-50 text-slate-700 font-bold rounded-xl hover:bg-[#76b900] hover:text-white transition-all duration-300">
-                  Manage Store
-                </button>
-                <button onClick={() => navigate(`/store/${store.storeId}/plan`)} className="flex-1 py-2.5 bg-blue-50 text-blue-700 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-300">
-                  Upgrade Plan
-                </button>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <TrendingUp size={28} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Today's Sales</p>
+                  <p className="text-2xl font-extrabold text-slate-800">₹{todaysSales}</p>
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                  <ShoppingBag size={28} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Placed Orders</p>
+                  <p className="text-2xl font-extrabold text-slate-800">{placedOrders}</p>
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                  <Users size={28} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Customers</p>
+                  <p className="text-2xl font-extrabold text-slate-800">{totalCustomers}</p>
+                </div>
               </div>
             </div>
-          ))}
-
-          {/* Empty State / Welcome Add Store Card */}
-          {stores.length === 0 && !isCreatingStore && (
-            <div 
-              onClick={() => setIsCreatingStore(true)}
-              className="col-span-full md:col-span-2 lg:col-span-1 min-h-[250px] flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 rounded-3xl hover:border-[#76b900] hover:bg-green-50/50 hover:text-[#76b900] transition-colors cursor-pointer cursor-pointer group"
-            >
-              <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-[#76b900] group-hover:text-white transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-700 group-hover:text-[#76b900] mb-1">Create Your First Store</h3>
-              <p className="text-sm text-center px-4">Click here to launch your online ordering system.</p>
-            </div>
-          )}
-        </div>
+          </>
+        ) : null}
       </main>
 
       {/* Modal Overlay for Store Creation */}
