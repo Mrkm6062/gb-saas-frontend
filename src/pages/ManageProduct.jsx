@@ -154,8 +154,27 @@ const ManageProduct = ({ token, stores, onLogout }) => {
         <div className="grid grid-cols-12 gap-4 p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-sm">
           <div className="col-span-5">Product Name</div><div className="col-span-3">Price</div><div className="col-span-2">Stock</div><div className="col-span-2 text-right">Actions</div>
         </div>
-        {products.length === 0 ? (<div className="p-8 text-center text-slate-500 font-medium">No products found. Add your first product above!</div>) : (
-          products.map(p => (<div key={p._id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 items-center hover:bg-slate-50 transition"><div className="col-span-5 font-semibold text-slate-800">{p.name}</div><div className="col-span-3 text-green-600 font-bold">₹{p.price}</div><div className="col-span-2 text-slate-600">{p.stock} units</div><div className="col-span-2 text-right flex justify-end gap-2"><button onClick={() => handleEdit(p)} className="text-blue-500 hover:text-blue-700 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded-lg transition">Edit</button><button onClick={() => handleDelete(p._id)} className="text-red-500 hover:text-red-700 text-sm font-bold bg-red-50 px-3 py-1.5 rounded-lg transition">Delete</button></div></div>))
+        {products.length === 0 ? (
+          <div className="p-8 text-center text-slate-500 font-medium">No products found. Add your first product above!</div>
+        ) : (
+          products.map(p => (
+            <div key={p._id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 items-center hover:bg-slate-50 transition">
+              <div className="col-span-5">
+                <div className="font-semibold text-slate-800">{p.name}</div>
+                <div className="text-xs text-slate-400 font-mono mt-1" title="MongoDB Store ID">Store ID: {p.storeId}</div>
+              </div>
+              <div className="col-span-3 text-green-600 font-bold">₹{p.price}</div>
+              <div className="col-span-2 text-slate-600">{p.stock} units</div>
+              <div className="col-span-2 text-right flex justify-end gap-2">
+                <button onClick={() => handleEdit(p)} className="text-blue-500 hover:text-blue-700 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded-lg transition">
+                  Edit
+                </button>
+                <button onClick={() => handleDelete(p._id)} className="text-red-500 hover:text-red-700 text-sm font-bold bg-red-50 px-3 py-1.5 rounded-lg transition">
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>
