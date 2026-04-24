@@ -7,12 +7,33 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const currentStore = stores.find(s => s.storeId === storeId) || {};
 
   const [products, setProducts] = useState([]);
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const initialForm = {
+    name: '', description: '', category: '', unitType: 'piece',
+    basePrice: '', totalStock: '', images: [], variants: []
+  };
+  const [formData, setFormData] = useState(initialForm);
+
+  // Dynamic Field Handlers
+  const handleAddVariant = () => setFormData({ ...formData, variants: [...formData.variants, { name: '', price: '', comparePrice: '', stock: '', sku: '' }] });
+  const handleUpdateVariant = (index, field, value) => {
+    const newVariants = [...formData.variants];
+    newVariants[index][field] = value;
+    setFormData({ ...formData, variants: newVariants });
+  };
+  const handleRemoveVariant = (index) => setFormData({ ...formData, variants: formData.variants.filter((_, i) => i !== index) });
+
+  const handleAddImage = () => setFormData({ ...formData, images: [...formData.images, ''] });
+  const handleUpdateImage = (index, value) => {
+    const newImages = [...formData.images];
+    newImages[index] = value;
+    setFormData({ ...formData, images: newImages });
+  };
+  const handleRemoveImage = (index) => setFormData({ ...formData, images: formData.images.filter((_, i) => i !== index) });
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -55,9 +76,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
-          name, 
-          price: Number(price), 
-          stock: Number(stock), 
+          ...formData,
+          basePrice: Number(formData.basePrice) || 0,
+          totalStock: Number(formData.totalStock) || 0,
           storeId: currentStore._id // Explicitly bind product to this store
         })
       });
@@ -66,10 +87,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
       if (response.ok) {
         setStatus(editingId ? 'Product updated successfully!' : 'Product added successfully!');
-        setName('');
-        setPrice('');
-        setStock('');
+        setFormData(initialForm);
         setEditingId(null);
+        setIsFormOpen(false);
         fetchProducts(); // Refresh the grid
       } else {
         setStatus(`Error: ${data.message || 'Failed to save product'}`);
@@ -82,11 +102,25 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   };
 
   const handleEdit = (product) => {
-    setName(product.name);
-    setPrice(product.price);
-    setStock(product.stock || 0);
+    setFormData({
+      name: product.name || '',
+      description: product.description || '',
+      category: product.category || '',
+      unitType: product.unitType || 'piece',
+      basePrice: product.basePrice || product.price || '',
+      totalStock: product.totalStock !== undefined ? product.totalStock : (product.stock || ''),
+      images: product.images || [],
+      variants: product.variants || []
+    });
     setEditingId(product._id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsFormOpen(true);
+  };
+
+  const handleClose = () => {
+    setFormData(initialForm);
+    setEditingId(null);
+    setIsFormOpen(false);
+    setStatus('');
   };
 
   const handleDelete = async (id) => {
@@ -113,41 +147,21 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
     <div className="p-6 mx-auto mt-6">
-      <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Product Management</h2>
-      <p className="text-slate-500 mb-8">Manage inventory for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Product Management</h2>
+          <p className="text-slate-500">Manage inventory and variants for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
+        </div>
+        <button onClick={() => setIsFormOpen(true)} className="px-6 py-3 bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white font-bold rounded-xl hover:shadow-lg transition flex items-center gap-2">
+          <span className="text-xl leading-none">+</span> Add Product
+        </button>
+      </div>
 
       {status && (
         <div className={`p-4 mb-6 rounded-xl font-medium text-sm border ${status.includes('Error') ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
           {status}
         </div>
       )}
-
-      {/* Product Form */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
-        <h3 className="text-xl font-bold mb-4">{editingId ? 'Edit Product' : 'Add New Product'}</h3>
-        <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-4 items-end">
-          <div className="w-full md:w-1/3">
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Product Name</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none" placeholder="e.g. 1kg Onions" />
-          </div>
-          <div className="w-full md:w-1/4">
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Price (₹)</label>
-            <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required min="0" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none" placeholder="e.g. 40" />
-          </div>
-          <div className="w-full md:w-1/4">
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Stock Qty</label>
-            <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} required min="0" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none" placeholder="e.g. 100" />
-          </div>
-          <div className="w-full md:w-auto flex gap-2">
-            <button type="submit" disabled={loading} className="px-6 py-2.5 bg-[#76b900] text-white font-bold rounded-lg hover:bg-[#659e00] transition whitespace-nowrap">
-              {editingId ? 'Update' : 'Add Product'}
-            </button>
-            {editingId && (
-              <button type="button" onClick={() => { setEditingId(null); setName(''); setPrice(''); setStock(''); }} className="px-4 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300 transition">Cancel</button>
-            )}
-          </div>
-        </form>
-      </div>
 
       {/* Product List */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -163,8 +177,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                 <div className="font-semibold text-slate-800">{p.name}</div>
                 <div className="text-xs text-slate-400 font-mono mt-1" title="Store ID">Store ID: {currentStore.storeId}</div>
               </div>
-              <div className="col-span-3 text-green-600 font-bold">₹{p.price}</div>
-              <div className="col-span-2 text-slate-600">{p.stock} units</div>
+              <div className="col-span-3 text-green-600 font-bold">₹{p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}</div>
+              <div className="col-span-2 text-slate-600">{p.totalStock !== undefined ? p.totalStock : (p.stock || 0)} {p.unitType || 'units'}</div>
               <div className="col-span-2 text-right flex justify-end gap-2">
                 <button onClick={() => handleEdit(p)} className="text-blue-500 hover:text-blue-700 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded-lg transition">
                   Edit
@@ -178,6 +192,110 @@ const ManageProduct = ({ token, stores, onLogout }) => {
         )}
       </div>
     </div>
+
+    {/* Modal Overlay for Product Form */}
+    {isFormOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity overflow-y-auto">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+          
+          {/* Modal Header */}
+          <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
+            <h3 className="text-2xl font-extrabold text-slate-800">{editingId ? 'Edit Product' : 'Add New Product'}</h3>
+            <button onClick={handleClose} className="text-slate-400 hover:text-red-500 transition-colors text-3xl leading-none">&times;</button>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-8 overflow-y-auto flex-1">
+            <form id="productForm" onSubmit={handleSubmit} className="space-y-8">
+              
+              {/* Basic Info */}
+              <div className="space-y-4">
+                <h4 className="font-bold text-lg border-b border-slate-100 pb-2 text-slate-800">Basic Info</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Product Name <span className="text-red-500">*</span></label><input required value={formData.name} onChange={e=>setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Fresh Tomatoes" /></div>
+                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Category</label>
+                    <select value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow bg-white">
+                      <option value="">Select Category</option>
+                      <option value="vegetable">Vegetable Shop</option>
+                      <option value="nasta">Nasta Corner</option>
+                      <option value="restaurant">Restaurant</option>
+                      <option value="clothes">Clothes Shop</option>
+                      <option value="kirana">Kirana Store</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2"><label className="block text-sm font-semibold mb-1 text-slate-700">Description</label><textarea rows="3" value={formData.description} onChange={e=>setFormData({...formData, description: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow resize-none" placeholder="Provide product details..." /></div>
+                </div>
+              </div>
+
+              {/* Pricing & Inventory */}
+              <div className="space-y-4">
+                <h4 className="font-bold text-lg border-b border-slate-100 pb-2 text-slate-800">Pricing & Default Inventory</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Base Price (₹) <span className="text-red-500">*</span></label><input type="number" required={formData.variants.length === 0} value={formData.basePrice} onChange={e=>setFormData({...formData, basePrice: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="0.00" /></div>
+                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Total Stock</label><input type="number" value={formData.totalStock} onChange={e=>setFormData({...formData, totalStock: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow disabled:bg-slate-50" disabled={formData.variants.length > 0} placeholder={formData.variants.length > 0 ? "Calculated from variants" : "0"} /></div>
+                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Selling Unit Type</label>
+                    <select value={formData.unitType} onChange={e=>setFormData({...formData, unitType: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow bg-white">
+                      <option value="piece">Piece</option>
+                      <option value="kg">Kg</option>
+                      <option value="gram">Gram</option>
+                      <option value="plate">Plate</option>
+                      <option value="pack">Pack</option>
+                      <option value="size">Size</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Images */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                  <h4 className="font-bold text-lg text-slate-800">Images (URLs)</h4>
+                  <button type="button" onClick={handleAddImage} className="text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">+ Add Image</button>
+                </div>
+                {formData.images.length === 0 && <p className="text-sm text-slate-500 italic">No images added. A placeholder will be shown.</p>}
+                {formData.images.map((img, idx) => (
+                  <div key={idx} className="flex gap-3">
+                    <input type="text" placeholder="https://example.com/image.png" value={img} onChange={e=>handleUpdateImage(idx, e.target.value)} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" />
+                    <button type="button" onClick={()=>handleRemoveImage(idx)} className="px-4 py-2.5 bg-red-50 text-red-500 rounded-xl font-bold hover:bg-red-100 transition-colors">&times;</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Variants */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                  <h4 className="font-bold text-lg text-slate-800">Product Variants</h4>
+                  <button type="button" onClick={handleAddVariant} className="text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">+ Add Variant</button>
+                </div>
+                {formData.variants.length === 0 ? (
+                  <p className="text-sm text-slate-500 italic">No variants added. The product will use the base price and total stock.</p>
+                ) : formData.variants.map((v, idx) => (
+                  <div key={idx} className="p-5 bg-slate-50 rounded-2xl border border-slate-200 relative group transition-colors hover:border-slate-300">
+                    <button type="button" onClick={()=>handleRemoveVariant(idx)} className="absolute top-3 right-4 text-red-400 hover:text-red-600 font-bold text-xl leading-none">&times;</button>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-2">
+                      <div className="md:col-span-2"><label className="block text-xs font-semibold mb-1 text-slate-600">Variant Name <span className="text-red-500">*</span></label><input type="text" placeholder="e.g. 500g, Red, Size L" value={v.name} onChange={e=>handleUpdateVariant(idx, 'name', e.target.value)} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#76b900]" /></div>
+                      <div><label className="block text-xs font-semibold mb-1 text-slate-600">Price (₹) <span className="text-red-500">*</span></label><input type="number" placeholder="Price" value={v.price} onChange={e=>handleUpdateVariant(idx, 'price', e.target.value)} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#76b900]" /></div>
+                      <div><label className="block text-xs font-semibold mb-1 text-slate-600">Stock <span className="text-red-500">*</span></label><input type="number" placeholder="Qty" value={v.stock} onChange={e=>handleUpdateVariant(idx, 'stock', e.target.value)} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#76b900]" /></div>
+                      <div><label className="block text-xs font-semibold mb-1 text-slate-600">SKU Code</label><input type="text" placeholder="Optional" value={v.sku} onChange={e=>handleUpdateVariant(idx, 'sku', e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#76b900]" /></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </form>
+          </div>
+
+          {/* Modal Footer Controls */}
+          <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-4 rounded-b-3xl sticky bottom-0">
+            <button type="button" onClick={handleClose} className="px-6 py-2.5 font-bold text-slate-500 hover:text-slate-800 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" form="productForm" disabled={loading} className="px-8 py-2.5 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition-colors shadow-lg shadow-green-100 disabled:opacity-50">
+              {editingId ? 'Update Product' : 'Save Product'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </AdminLayout>
   );
 };
