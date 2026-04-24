@@ -122,13 +122,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Overview Dashboard">
         <main className="max-w-7xl mx-auto w-full px-6 py-10 text-left">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
-          <div>
-            <h2 className="text-3xl font-extrabold text-slate-900">{stores.length > 0 ? 'Overview Dashboard' : 'Welcome'}</h2>
-            <p className="text-slate-500 mt-1">{stores.length > 0 ? 'Track your sales, orders, and customers' : 'Get started by creating your store'}</p>
-          </div>
-        </div>
-
         {status && (
            <div className={`mb-8 p-4 rounded-xl text-sm font-medium ${status.startsWith('Error') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
              {status}
