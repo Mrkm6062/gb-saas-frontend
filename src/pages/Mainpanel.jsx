@@ -121,7 +121,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Overview Dashboard">
-        <main className="max-w-7xl mx-auto w-full px-6 py-10 text-left">
+        <main className="max-w-7xl mx-auto w-full  text-left">
         {status && (
            <div className={`mb-8 p-4 rounded-xl text-sm font-medium ${status.startsWith('Error') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
              {status}
