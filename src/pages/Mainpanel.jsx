@@ -109,7 +109,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const placedOrders = orders.filter(o => o.orderStatus === 'placed').length;
   
   const today = new Date();
-  const todaysSales = deliveredOrders.filter(o => {
+  const todaysSales = orders.filter(o => {
     const orderDate = new Date(o.createdAt);
     return orderDate.getDate() === today.getDate() &&
            orderDate.getMonth() === today.getMonth() &&
