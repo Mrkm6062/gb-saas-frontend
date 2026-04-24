@@ -2,30 +2,49 @@ import React, { useState } from 'react';
 
 function Login({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
+  const [step, setStep] = useState(1); // Step 1: Email, Step 2: OTP
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
   const [status, setStatus] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
 
   const logoUrl = "https://galibrand.cloud/public/Name.png"; // REPLACE WITH YOUR ACTUAL LOGO
 
-  const handleSubmit = async (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
-    setStatus('Processing...');
-    
-    // Change these endpoints if your authRoutes.js uses different paths
-    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-    const payload = isLogin ? { email, password } : { name, email, password };
+    setStatus('Sending OTP...');
 
     try {
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
-        headers: {
-           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name, isLogin })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStatus('OTP sent to your email!');
+        setStep(2); // Move to OTP verification step
+      } else {
+        setStatus(`Error: ${data.message || 'Failed to send OTP'}`);
+      }
+    } catch (err) {
+      setStatus(`Error: ${err.message}`);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setStatus('Verifying...');
+
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
       });
 
       const data = await response.json();
@@ -33,13 +52,11 @@ function Login({ onLoginSuccess }) {
       if (response.ok) {
         setStatus(`${isLogin ? 'Login' : 'Registration'} successful!`);
         if (data.token) {
-          localStorage.setItem('token', data.token); // Save token for future requests
-          
-          // Call the prop function to update App.jsx's state
+          localStorage.setItem('token', data.token);
           onLoginSuccess(data.token, data.user?.stores || []);
         }
       } else {
-        setStatus(`Error: ${data.message || 'Something went wrong'}`);
+        setStatus(`Error: ${data.message || 'Invalid OTP'}`);
       }
     } catch (err) {
       setStatus(`Error: ${err.message}`);
@@ -65,75 +82,74 @@ function Login({ onLoginSuccess }) {
           commissions. The trusted choice for grocery online ordering in India.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-5 max-w-md">
-          {!isLogin && (
+        {step === 1 ? (
+          <form onSubmit={handleSendOtp} className="space-y-5 max-w-md animate-fadeIn">
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-bold text-slate-800 mb-2">Full Name</label>
+                <input 
+                  type="text" 
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-[#76b900] outline-none transition text-black"
+                  required
+                />
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-bold text-slate-800 mb-2">Full Name</label>
+              <label className="block text-sm font-bold text-slate-800 mb-2">Email Address</label>
               <input 
-                type="text" 
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition text-black"
+                type="email" 
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-[#76b900] outline-none transition text-black"
                 required
               />
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-bold text-slate-800 mb-2">Phone Number / Email</label>
-            <input 
-              type="email" 
-              placeholder="Email Address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition text-black"
-              required
-            />
-          </div>
-
-          <div className="relative">
-            <label className="block text-sm font-bold text-slate-800 mb-2">Password</label>
-            <input 
-              type={showPassword ? "text" : "password"} 
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition text-black"
-              required
-            />
-            <button 
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-10 text-slate-400 hover:text-slate-600"
-            >
-              {showPassword ? "👁️" : "👁️‍🗨️"}
+            <button type="submit" className="w-full py-3 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-full hover:opacity-90 transition shadow-lg text-lg">
+              Get OTP
             </button>
-          </div>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} className="space-y-5 max-w-md animate-fadeIn">
+            <div>
+              <label className="block text-sm font-bold text-slate-800 mb-2">Enter 6-Digit OTP</label>
+              <p className="text-xs text-slate-500 mb-3">We sent a code to <span className="font-bold text-slate-800">{email}</span>. <button type="button" onClick={() => {setStep(1); setStatus('');}} className="text-[#76b900] hover:underline ml-1">Change Email</button></p>
+              <input 
+                type="text" 
+                placeholder="• • • • • •"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                maxLength="6"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-[#76b900] outline-none transition text-black text-center text-2xl tracking-[0.5em] font-bold"
+                required
+              />
+            </div>
 
-          <button type="submit" className="w-full py-3 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-full hover:opacity-90 transition shadow-lg text-lg">
-            {isLogin ? 'Login' : 'Create Account'}
-          </button>
+            <button type="submit" className="w-full py-3 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-full hover:opacity-90 transition shadow-lg text-lg">
+              Verify & {isLogin ? 'Login' : 'Create Account'}
+            </button>
+          </form>
+        )}
 
           {status && (
-            <div className={`p-3 mt-4 text-center rounded-md text-sm font-medium ${status.startsWith('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+            <div className={`p-3 mt-4 max-w-md text-center rounded-md text-sm font-medium ${status.startsWith('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
               {status}
             </div>
           )}
 
-          {isLogin && (
-            <div className="text-right">
-              <a href="#" className="text-sm font-semibold text-[#76b900] hover:underline">Forgot Password?</a>
+          {step === 1 && (
+            <div className="text-center pt-6 text-slate-700 max-w-md">
+              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              <button type="button" onClick={() => { setIsLogin(!isLogin); setStatus(''); }} className="text-[#76b900] font-bold hover:underline bg-transparent border-none p-0 cursor-pointer">
+                {isLogin ? 'Sign Up Now' : 'Login here'}
+              </button>
             </div>
           )}
-
-          <div className="text-center pt-4 text-slate-700">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button type="button" onClick={() => { setIsLogin(!isLogin); setStatus(''); }} className="text-[#76b900] font-bold hover:underline bg-transparent border-none p-0 cursor-pointer">
-              {isLogin ? 'Sign Up Now' : 'Login here'}
-            </button>
-          </div>
-        </form>
       </div>
 
       {/* Right Side: Image Grid Overlay */}
