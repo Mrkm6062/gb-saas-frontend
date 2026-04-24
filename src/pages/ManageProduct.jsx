@@ -112,7 +112,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
-    <div className="p-6 max-w-5xl mx-auto mt-6">
+    <div className="p-6 mx-auto mt-6">
       <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Product Management</h2>
       <p className="text-slate-500 mb-8">Manage inventory for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
 

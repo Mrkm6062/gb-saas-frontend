@@ -61,7 +61,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Store">
-    <div className="p-6 max-w-7xl mx-auto mt-6">
+    <div className="p-6 mx-auto mt-6">
       
       {/* Your Stores List */}
       <div className="mb-12">
