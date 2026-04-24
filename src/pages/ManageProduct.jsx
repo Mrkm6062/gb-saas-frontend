@@ -161,7 +161,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
             <div key={p._id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 items-center hover:bg-slate-50 transition">
               <div className="col-span-5">
                 <div className="font-semibold text-slate-800">{p.name}</div>
-                <div className="text-xs text-slate-400 font-mono mt-1" title="MongoDB Store ID">Store ID: {p.storeId}</div>
+                <div className="text-xs text-slate-400 font-mono mt-1" title="Store ID">Store ID: {currentStore.storeId}</div>
               </div>
               <div className="col-span-3 text-green-600 font-bold">₹{p.price}</div>
               <div className="col-span-2 text-slate-600">{p.stock} units</div>
