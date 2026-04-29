@@ -14,7 +14,9 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [websiteTitle, setWebsiteTitle] = useState(currentStore.websiteTitle || '');
   const [logo, setLogo] = useState(currentStore.logo || '');
   const [favicon, setFavicon] = useState(currentStore.favicon || '');
+  const [banner, setBanner] = useState(currentStore.banner || '');
   const [status, setStatus] = useState('');
+  const [uploadingField, setUploadingField] = useState(null); // 'logo' or 'favicon'
 
   // Update form fields if the user switches to managing a different store
   useEffect(() => {
@@ -22,8 +24,9 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setWebsiteTitle(currentStore.websiteTitle || '');
     setLogo(currentStore.logo || '');
     setFavicon(currentStore.favicon || '');
+    setBanner(currentStore.banner || '');
     setStatus('');
-  }, [storeId, currentStore.storeName, currentStore.websiteTitle, currentStore.logo, currentStore.favicon]);
+  }, [storeId, currentStore.storeName, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner]);
 
   const handleUpdateStore = async (e) => {
     e.preventDefault();
@@ -42,7 +45,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
           storeName,
           websiteTitle,
           logo,
-          favicon
+          favicon,
+          banner
         })
       });
 
@@ -56,6 +60,41 @@ const ManageStore = ({ token, stores, onLogout }) => {
       }
     } catch (err) {
       setStatus(`Error: ${err.message}`);
+    }
+  };
+
+  const handleImageUpload = async (e, field) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const uploadData = new FormData();
+    uploadData.append('storeId', currentStore._id);
+    uploadData.append('images', files[0]); // Just one file for logo/favicon
+
+    setUploadingField(field);
+    setStatus(`Uploading ${field}...`);
+
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: uploadData
+      });
+
+      const data = await response.json();
+      if (response.ok && data.urls && data.urls.length > 0) {
+        if (field === 'logo') setLogo(data.urls[0]);
+        if (field === 'favicon') setFavicon(data.urls[0]);
+        if (field === 'banner') setBanner(data.urls[0]);
+        setStatus(`${field.charAt(0).toUpperCase() + field.slice(1)} uploaded successfully!`);
+      } else {
+        setStatus(`Upload Error: ${data.message || 'Failed to upload'}`);
+      }
+    } catch (err) {
+      setStatus(`Upload Error: ${err.message}`);
+    } finally {
+      setUploadingField(null);
     }
   };
 
@@ -132,25 +171,55 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Logo URL</label>
-            <input 
-              type="text" 
-              value={logo}
-              onChange={(e) => setLogo(e.target.value)}
-              placeholder="https://example.com/logo.png"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
-            />
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={logo}
+                onChange={(e) => setLogo(e.target.value)}
+                placeholder="https://example.com/logo.png"
+                className="flex-1 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
+              />
+              <label className={`cursor-pointer px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap ${uploadingField === 'logo' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {uploadingField === 'logo' ? 'Uploading...' : 'Upload'}
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'logo')} disabled={uploadingField !== null} />
+              </label>
+            </div>
             {logo && <img src={logo} alt="Logo Preview" className="mt-3 h-12 object-contain" />}
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Favicon URL</label>
-            <input 
-              type="text" 
-              value={favicon}
-              onChange={(e) => setFavicon(e.target.value)}
-              placeholder="https://example.com/favicon.ico"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
-            />
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={favicon}
+                onChange={(e) => setFavicon(e.target.value)}
+                placeholder="https://example.com/favicon.ico"
+                className="flex-1 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
+              />
+              <label className={`cursor-pointer px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap ${uploadingField === 'favicon' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {uploadingField === 'favicon' ? 'Uploading...' : 'Upload'}
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'favicon')} disabled={uploadingField !== null} />
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Banner URL</label>
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={banner}
+                onChange={(e) => setBanner(e.target.value)}
+                placeholder="https://example.com/banner.jpg"
+                className="flex-1 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
+              />
+              <label className={`cursor-pointer px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap ${uploadingField === 'banner' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {uploadingField === 'banner' ? 'Uploading...' : 'Upload'}
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'banner')} disabled={uploadingField !== null} />
+              </label>
+            </div>
+            {banner && <img src={banner} alt="Banner Preview" className="mt-3 h-24 w-full object-cover rounded-lg border border-slate-200" />}
           </div>
 
           <button 
