@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
+import { Facebook, Instagram, Twitter, Linkedin, Youtube, Link as LinkIcon, Trash2 } from 'lucide-react';
 
 const ManageStore = ({ token, stores, onLogout }) => {
   const { storeId } = useParams(); // Gets the store ID from the URL
@@ -17,6 +18,12 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [banner, setBanner] = useState(currentStore.banner || '');
   const [status, setStatus] = useState('');
   const [uploadingField, setUploadingField] = useState(null); // 'logo' or 'favicon'
+  
+  // Social Media states
+  const [socialLinks, setSocialLinks] = useState([]);
+  const [newPlatform, setNewPlatform] = useState('Facebook');
+  const [newUrl, setNewUrl] = useState('');
+  const [socialStatus, setSocialStatus] = useState('');
 
   // Update form fields if the user switches to managing a different store
   useEffect(() => {
@@ -27,6 +34,20 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setBanner(currentStore.banner || '');
     setStatus('');
   }, [storeId, currentStore.storeName, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner]);
+
+  const fetchSocialLinks = async () => {
+    if (!currentStore._id) return;
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const res = await fetch(`${API_BASE_URL}/api/social-media?storeId=${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) setSocialLinks(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  useEffect(() => { fetchSocialLinks(); }, [currentStore._id]);
 
   const handleUpdateStore = async (e) => {
     e.preventDefault();
@@ -98,6 +119,53 @@ const ManageStore = ({ token, stores, onLogout }) => {
     }
   };
 
+  const handleAddSocial = async (e) => {
+    e.preventDefault();
+    if (!newUrl) return;
+    setSocialStatus('Adding...');
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const res = await fetch(`${API_BASE_URL}/api/social-media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ storeId: currentStore._id, platform: newPlatform, url: newUrl })
+      });
+      if (res.ok) {
+        setNewUrl('');
+        setSocialStatus('');
+        fetchSocialLinks();
+      } else {
+        setSocialStatus('Failed to add link');
+      }
+    } catch (err) {
+      setSocialStatus('Error occurred');
+    }
+  };
+
+  const handleDeleteSocial = async (id) => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const res = await fetch(`${API_BASE_URL}/api/social-media/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) fetchSocialLinks();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const renderSocialIcon = (platform) => {
+    switch(platform.toLowerCase()) {
+      case 'facebook': return <Facebook size={20} className="text-blue-600" />;
+      case 'instagram': return <Instagram size={20} className="text-pink-600" />;
+      case 'twitter': return <Twitter size={20} className="text-sky-500" />;
+      case 'linkedin': return <Linkedin size={20} className="text-blue-700" />;
+      case 'youtube': return <Youtube size={20} className="text-red-600" />;
+      default: return <LinkIcon size={20} className="text-slate-600" />;
+    }
+  };
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Store">
     <div className="p-6 mx-auto mt-6">
@@ -138,8 +206,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
         </div>
       </div>
 
-      {/* Store Settings Form */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 max-w-3xl">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-6 text-slate-800">Settings for {currentStore.storeName}</h2>
         
         {status && (
@@ -229,6 +297,57 @@ const ManageStore = ({ token, stores, onLogout }) => {
             Save Settings
           </button>
         </form>
+      </div>
+
+      {/* Social Media Links Manager */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+        <h2 className="text-2xl font-bold mb-6 text-slate-800">Social Media Links</h2>
+        <p className="text-sm text-slate-500 mb-6">Add your social media profiles. They will automatically appear in your storefront footer.</p>
+        
+        <form onSubmit={handleAddSocial} className="flex flex-col sm:flex-row gap-3 mb-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <select 
+            value={newPlatform} 
+            onChange={(e) => setNewPlatform(e.target.value)}
+            className="px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none bg-white font-medium text-slate-700"
+          >
+            <option value="Facebook">Facebook</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Twitter">Twitter</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="YouTube">YouTube</option>
+            <option value="Other">Other Link</option>
+          </select>
+          <input 
+            type="url" 
+            required
+            placeholder="https://..."
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.target.value)}
+            className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none"
+          />
+          <button type="submit" className="px-6 py-2.5 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 transition whitespace-nowrap">
+            + Add Link
+          </button>
+        </form>
+        {socialStatus && <p className="text-sm text-red-500 mb-4 font-medium">{socialStatus}</p>}
+
+        <div className="space-y-3">
+          {socialLinks.length === 0 ? (
+            <div className="text-center py-10 text-slate-400 font-medium border-2 border-dashed border-slate-100 rounded-xl">No social links added yet</div>
+          ) : socialLinks.map(link => (
+            <div key={link._id} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl hover:shadow-md transition bg-white group">
+              <div className="flex items-center gap-4 overflow-hidden">
+                <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">{renderSocialIcon(link.platform)}</div>
+                <div className="truncate">
+                  <p className="font-bold text-slate-800 text-sm">{link.platform}</p>
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline truncate block max-w-[200px] sm:max-w-xs">{link.url}</a>
+                </div>
+              </div>
+              <button onClick={() => handleDeleteSocial(link._id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"><Trash2 size={18} /></button>
+            </div>
+          ))}
+        </div>
+      </div>
       </div>
     </div>
     </AdminLayout>
