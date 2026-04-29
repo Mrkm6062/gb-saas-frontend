@@ -11,6 +11,10 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
+  const [mediaImages, setMediaImages] = useState([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
 
   const initialForm = {
     name: '', description: '', category: '', unitType: 'piece',
@@ -27,12 +31,6 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   };
   const handleRemoveVariant = (index) => setFormData({ ...formData, variants: formData.variants.filter((_, i) => i !== index) });
 
-  const handleAddImage = () => setFormData({ ...formData, images: [...formData.images, ''] });
-  const handleUpdateImage = (index, value) => {
-    const newImages = [...formData.images];
-    newImages[index] = value;
-    setFormData({ ...formData, images: newImages });
-  };
   const handleRemoveImage = (index) => setFormData({ ...formData, images: formData.images.filter((_, i) => i !== index) });
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
@@ -144,6 +142,67 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const uploadData = new FormData();
+    uploadData.append('storeId', currentStore._id);
+    files.forEach(file => uploadData.append('images', file));
+
+    setLoading(true);
+    setStatus('Uploading and converting images...');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: uploadData
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setFormData({ ...formData, images: [...formData.images, ...data.urls] });
+        setStatus('Images uploaded successfully!');
+      } else {
+        setStatus(`Upload Error: ${data.message}`);
+      }
+    } catch (err) {
+      setStatus(`Upload Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMedia = async () => {
+    setLoadingMedia(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upload?storeId=${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) setMediaImages(data.images || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMedia(false);
+    }
+  };
+
+  const handleDeleteMedia = async (filename) => {
+    if (!window.confirm("Delete this image permanently from cloud storage?")) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename })
+      });
+      if (response.ok) fetchMedia();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
     <div className="p-6 mx-auto mt-6">
@@ -249,16 +308,25 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               {/* Images */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                  <h4 className="font-bold text-lg text-slate-800">Images (URLs)</h4>
-                  <button type="button" onClick={handleAddImage} className="text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">+ Add Image</button>
+                  <h4 className="font-bold text-lg text-slate-800">Product Images</h4>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => { setIsMediaLibraryOpen(true); fetchMedia(); }} className="text-sm font-bold text-slate-600 hover:text-slate-800 bg-slate-100 px-3 py-1.5 rounded-lg transition-colors">View Media Library</button>
+                    <label className="cursor-pointer text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+                      + Upload Images
+                      <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} disabled={loading} />
+                    </label>
+                  </div>
                 </div>
                 {formData.images.length === 0 && <p className="text-sm text-slate-500 italic">No images added. A placeholder will be shown.</p>}
-                {formData.images.map((img, idx) => (
-                  <div key={idx} className="flex gap-3">
-                    <input type="text" placeholder="https://example.com/image.png" value={img} onChange={e=>handleUpdateImage(idx, e.target.value)} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" />
-                    <button type="button" onClick={()=>handleRemoveImage(idx)} className="px-4 py-2.5 bg-red-50 text-red-500 rounded-xl font-bold hover:bg-red-100 transition-colors">&times;</button>
-                  </div>
-                ))}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                  {formData.images.map((img, idx) => (
+                    <div key={idx} className="relative group rounded-xl border border-slate-200 overflow-hidden bg-slate-50 aspect-square flex items-center justify-center">
+                      <img src={img} alt={`Product ${idx+1}`} className="w-full h-full object-cover" />
+                      <button type="button" onClick={()=>handleRemoveImage(idx)} className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600">&times;</button>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500">Images will be automatically converted to AVIF format for better performance and smaller size.</p>
               </div>
 
               {/* Variants */}
@@ -292,6 +360,41 @@ const ManageProduct = ({ token, stores, onLogout }) => {
             <button type="submit" form="productForm" disabled={loading} className="px-8 py-2.5 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition-colors shadow-lg shadow-green-100 disabled:opacity-50">
               {editingId ? 'Update Product' : 'Save Product'}
             </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Media Library Modal */}
+    {isMediaLibraryOpen && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-[85vh]">
+          <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
+            <h3 className="text-2xl font-extrabold text-slate-800">Store Media Library</h3>
+            <button onClick={() => setIsMediaLibraryOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors text-3xl leading-none">&times;</button>
+          </div>
+          <div className="p-8 overflow-y-auto flex-1">
+            {loadingMedia ? (
+              <div className="flex justify-center py-10"><span className="text-slate-500 font-medium">Loading media...</span></div>
+            ) : mediaImages.length === 0 ? (
+              <div className="text-center py-20 text-slate-500 font-medium">No media found. Upload images from the product form.</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {mediaImages.map((img) => (
+                  <div key={img.name} className="relative group rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 aspect-square shadow-sm hover:shadow-md transition-shadow">
+                    <img src={img.url} alt="media" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
+                      <button onClick={() => { if (!formData.images.includes(img.url)) setFormData({...formData, images: [...formData.images, img.url]}); setIsMediaLibraryOpen(false); }} className="bg-white text-slate-900 px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-100 shadow-sm w-3/4">
+                        Select
+                      </button>
+                      <button onClick={() => handleDeleteMedia(img.name)} className="bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 shadow-sm w-3/4">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
