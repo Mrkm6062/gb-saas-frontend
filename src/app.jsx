@@ -8,6 +8,7 @@ import UpgradePlan from './pages/UpgradePlan';
 import ManageOrders from './pages/ManageOrders';
 import ManagePolicy from './pages/ManagePolicy';
 import ManageCustomer from './pages/ManageCustomer';
+import ManageCategory from './pages/ManageCategory';
 
 
 function App() {
@@ -67,6 +68,10 @@ function App() {
         <Route 
           path="/store/:storeId/products" 
           element={token ? <ManageProduct token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/store/:storeId/categories" 
+          element={token ? <ManageCategory token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/store/:storeId/customers" 

@@ -12,6 +12,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   
+  const [categories, setCategories] = useState([]);
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [mediaImages, setMediaImages] = useState([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
@@ -52,9 +53,24 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     }
   };
 
+  const fetchCategories = async () => {
+    if (!currentStore._id) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/categories?storeId=${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setCategories(await response.json());
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  };
+
   useEffect(() => {
     if (currentStore._id) {
       fetchProducts();
+      fetchCategories();
     }
   }, [currentStore._id]);
 
@@ -225,18 +241,20 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       {/* Product List */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="grid grid-cols-12 gap-4 p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-sm">
-          <div className="col-span-5">Product Name</div><div className="col-span-3">Price</div><div className="col-span-2">Stock</div><div className="col-span-2 text-right">Actions</div>
+          <div className="col-span-4">Product Name</div><div className="col-span-2">Category</div><div className="col-span-2">Price</div><div className="col-span-2">Stock</div><div className="col-span-2 text-right">Actions</div>
         </div>
         {products.length === 0 ? (
           <div className="p-8 text-center text-slate-500 font-medium">No products found. Add your first product above!</div>
         ) : (
           products.map(p => (
             <div key={p._id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 items-center hover:bg-slate-50 transition">
-              <div className="col-span-5">
+              <div className="col-span-4">
                 <div className="font-semibold text-slate-800">{p.name}</div>
-                <div className="text-xs text-slate-400 font-mono mt-1" title="Store ID">Store ID: {currentStore.storeId}</div>
               </div>
-              <div className="col-span-3 text-green-600 font-bold">₹{p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}</div>
+              <div className="col-span-2 text-slate-600 text-sm font-medium">
+                {categories.find(c => c._id === p.category)?.name || <span className="text-slate-400 italic">None</span>}
+              </div>
+              <div className="col-span-2 text-green-600 font-bold">₹{p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}</div>
               <div className="col-span-2 text-slate-600">{p.totalStock !== undefined ? p.totalStock : (p.stock || 0)} {p.unitType || 'units'}</div>
               <div className="col-span-2 text-right flex justify-end gap-2">
                 <button onClick={() => handleEdit(p)} className="text-blue-500 hover:text-blue-700 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded-lg transition">
@@ -275,11 +293,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                   <div><label className="block text-sm font-semibold mb-1 text-slate-700">Category</label>
                     <select value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow bg-white">
                       <option value="">Select Category</option>
-                      <option value="vegetable">Vegetable Shop</option>
-                      <option value="nasta">Nasta Corner</option>
-                      <option value="restaurant">Restaurant</option>
-                      <option value="clothes">Clothes Shop</option>
-                      <option value="kirana">Kirana Store</option>
+                      {categories.map(c => (
+                        <option key={c._id} value={c._id}>{c.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="md:col-span-2"><label className="block text-sm font-semibold mb-1 text-slate-700">Description</label><textarea rows="3" value={formData.description} onChange={e=>setFormData({...formData, description: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow resize-none" placeholder="Provide product details..." /></div>
