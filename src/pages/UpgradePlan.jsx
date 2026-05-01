@@ -74,35 +74,40 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
         {loading ? (
           <div className="flex justify-center py-20 text-slate-400 font-bold animate-pulse">Loading plans...</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-6">
             {plans.map(plan => {
               const isCurrentPlan = currentStore.planId === plan._id || (!currentStore.planId && plan.name === 'Free');
+              const isProPlan = plan.name === 'Pro'; // Identify the Pro plan
               
               return (
-                <div key={plan._id} className={`bg-white rounded-2xl shadow-sm border-2 flex flex-col p-8 transition-all ${isCurrentPlan ? 'border-[#76b900] ring-4 ring-green-50' : 'border-slate-100 hover:border-slate-300'}`}>
-                  <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-slate-800 mb-2">{plan.name}</h3>
+                <div key={plan._id} className={`bg-white rounded-2xl shadow-sm border-2 flex flex-col p-5 md:p-6 transition-all ${isCurrentPlan ? 'border-[#76b900] ring-4 ring-green-50' : isProPlan ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100 hover:border-slate-300'}`}>
+                  <div className="mb-5">
+                    <h3 className="text-xl font-bold text-slate-800 mb-1">{plan.name}</h3>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-extrabold text-slate-900">₹{plan.price}</span>
-                      <span className="text-slate-500 font-medium">/month</span>
+                      <span className="text-3xl font-extrabold text-slate-900">₹{plan.price}</span>
+                      <span className="text-slate-500 text-sm font-medium">/month</span>
                     </div>
                   </div>
                   
-                  <div className="flex-1 space-y-4 mb-8">
-                    <div className="flex items-center gap-3"><Check size={20} className="text-[#76b900]" /><span className="text-slate-600 font-medium">Up to {plan.features.maxProducts} Products</span></div>
-                    <div className="flex items-center gap-3"><Check size={20} className="text-[#76b900]" /><span className="text-slate-600 font-medium">{plan.features.storageLimit ? (plan.features.storageLimit >= 1000 ? `${plan.features.storageLimit / 1000}GB` : `${plan.features.storageLimit}MB`) : '500MB'} Storage</span></div>
-                    <div className="flex items-center gap-3">{plan.features.customDomain ? <Check size={20} className="text-[#76b900]" /> : <X size={20} className="text-slate-300" />}<span className={`font-medium ${plan.features.customDomain ? 'text-slate-600' : 'text-slate-400'}`}>Custom Domain</span></div>
-                    <div className="flex items-center gap-3">{plan.features.basicAnalytics ? <Check size={20} className="text-[#76b900]" /> : <X size={20} className="text-slate-300" />}<span className={`font-medium ${plan.features.basicAnalytics ? 'text-slate-600' : 'text-slate-400'}`}>Basic Analytics</span></div>
-                    <div className="flex items-center gap-3">{plan.features.advanceAnalytics ? <Check size={20} className="text-[#76b900]" /> : <X size={20} className="text-slate-300" />}<span className={`font-medium ${plan.features.advanceAnalytics ? 'text-slate-600' : 'text-slate-400'}`}>Advance Analytics</span></div>
-                    <div className="flex items-center gap-3">{plan.features.whatsappOrderButton ? <Check size={20} className="text-[#76b900]" /> : <X size={20} className="text-slate-300" />}<span className={`font-medium ${plan.features.whatsappOrderButton ? 'text-slate-600' : 'text-slate-400'}`}>WhatsApp Order Button</span></div>
-                    <div className="flex items-center gap-3">{plan.features.themes ? <Check size={20} className="text-[#76b900]" /> : <X size={20} className="text-slate-300" />}<span className={`font-medium ${plan.features.themes ? 'text-slate-600' : 'text-slate-400'}`}>Premium Themes</span></div>
-                    <div className="flex items-center gap-3">{plan.features.prioritySupport ? <Check size={20} className="text-[#76b900]" /> : <X size={20} className="text-slate-300" />}<span className={`font-medium ${plan.features.prioritySupport ? 'text-slate-600' : 'text-slate-400'}`}>Priority Support</span></div>
+                  <div className="flex-1 space-y-3 mb-6 text-sm">
+                    <div className="flex items-center gap-2"><Check size={18} className="text-[#76b900] shrink-0" /><span className="text-slate-600 font-medium">Up to {plan.features.maxProducts} Products</span></div>
+                    <div className="flex items-center gap-2"><Check size={18} className="text-[#76b900] shrink-0" /><span className="text-slate-600 font-medium">Up to {plan.features.storeLimit || 1} Store(s)</span></div>
+                    <div className="flex items-center gap-2"><Check size={18} className="text-[#76b900] shrink-0" /><span className="text-slate-600 font-medium">{plan.features.storageLimit ? (plan.features.storageLimit >= 1000 ? `${plan.features.storageLimit / 1000}GB` : `${plan.features.storageLimit}MB`) : '500MB'} Storage</span></div>
+                    <div className="flex items-center gap-2">{plan.features.customDomain ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.customDomain ? 'text-slate-600' : 'text-slate-400'}`}>Custom Domain</span></div>
+                    <div className="flex items-center gap-2">{plan.features.freeSsl ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.freeSsl ? 'text-slate-600' : 'text-slate-400'}`}>Free SSL/TLS HTTPS</span></div>
+                    <div className="flex items-center gap-2">{plan.features.securityHeaders ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.securityHeaders ? 'text-slate-600' : 'text-slate-400'}`}>Free Security Headers</span></div>
+                    <div className="flex items-center gap-2">{plan.features.basicAnalytics ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.basicAnalytics ? 'text-slate-600' : 'text-slate-400'}`}>Basic Analytics</span></div>
+                    <div className="flex items-center gap-2">{plan.features.advanceAnalytics ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.advanceAnalytics ? 'text-slate-600' : 'text-slate-400'}`}>Advance Analytics</span></div>
+                    <div className="flex items-center gap-2">{plan.features.whatsappOrderButton ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.whatsappOrderButton ? 'text-slate-600' : 'text-slate-400'}`}>WhatsApp Order Button</span></div>
+                    <div className="flex items-center gap-2">{plan.features.sevenDaysTrial !== false ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.sevenDaysTrial !== false ? 'text-slate-600' : 'text-slate-400'}`}>7-Days Trial</span></div>
+                    <div className="flex items-center gap-2">{plan.features.themes ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.themes ? 'text-slate-600' : 'text-slate-400'}`}>Premium Themes</span></div>
+                    <div className="flex items-center gap-2">{plan.features.prioritySupport ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.prioritySupport ? 'text-slate-600' : 'text-slate-400'}`}>Priority Support</span></div>
                   </div>
 
                   <button 
                     onClick={() => handleUpgrade(plan._id)}
                     disabled={isCurrentPlan}
-                    className={`w-full py-3.5 rounded-xl font-bold transition-all ${isCurrentPlan ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
+                    className={`w-full py-3.5 rounded-xl font-bold transition-all ${isCurrentPlan ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : isProPlan ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
                   >
                     {isCurrentPlan ? 'Current Plan' : 'Upgrade Plan'}
                   </button>
