@@ -13,6 +13,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [status, setStatus] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const [orders, setOrders] = useState([]);
+  const [toast, setToast] = useState(null);
   const [activeStoreId, setActiveStoreId] = useState('');
   const navigate = useNavigate();
 
@@ -103,6 +104,30 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     setCurrentStep(1);
   };
 
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleOpenCreateStore = () => {
+    let maxStoresAllowed = 1;
+    
+    stores.forEach(s => {
+      const plan = plans.find(p => p._id === s.planId);
+      if (plan && plan.features?.storeLimit) {
+        if (plan.features.storeLimit > maxStoresAllowed) {
+          maxStoresAllowed = plan.features.storeLimit;
+        }
+      }
+    });
+
+    if (stores.length >= maxStoresAllowed) {
+      showToast(`Store limit reached! Your current plans allow up to ${maxStoresAllowed} store(s). Please upgrade to create more.`, 'error');
+      return;
+    }
+    setIsCreatingStore(true);
+  };
+
   // Analytics Calculations
   const deliveredOrders = orders.filter(o => o.orderStatus === 'delivered');
   const totalSales = deliveredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
@@ -131,7 +156,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
 
         {stores.length === 0 && !isCreatingStore ? (
           <div 
-            onClick={() => setIsCreatingStore(true)}
+            onClick={handleOpenCreateStore}
             className="w-full max-w-2xl mx-auto min-h-[300px] flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 rounded-3xl hover:border-[#76b900] hover:bg-green-50/50 hover:text-[#76b900] transition-colors cursor-pointer group mt-10"
           >
             <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-[#76b900] group-hover:text-white transition-colors">
@@ -327,6 +352,14 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Custom Toast Notification */}
+      {toast && (
+        <div className={`fixed top-10 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl font-bold flex items-center gap-3 transition-all animate-fadeIn ${toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-[#76b900] text-white'}`}>
+          <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
+          {toast.message}
         </div>
       )}
     </AdminLayout>
