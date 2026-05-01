@@ -10,7 +10,8 @@ import {
   BarChart3, 
   CreditCard,
   Settings,
-  Layers
+  Layers,
+  HardDrive
 } from 'lucide-react';
 
 const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", children }) => {
@@ -28,6 +29,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     { name: 'Manage Store', icon: <Store size={20} />, path: activeStoreId ? `/store/${activeStoreId}` : '#' },
     { name: 'Products', icon: <Package size={20} />, path: activeStoreId ? `/store/${activeStoreId}/products` : '#' },
     { name: 'Categories', icon: <Layers size={20} />, path: activeStoreId ? `/store/${activeStoreId}/categories` : '#' },
+    { name: 'Storage', icon: <HardDrive size={20} />, path: activeStoreId ? `/store/${activeStoreId}/storage` : '#' },
     { name: 'Orders', icon: <ClipboardList size={20} />, path: activeStoreId ? `/store/${activeStoreId}/orders` : '#' },
     { name: 'Customers', icon: <Users size={20} />, path: activeStoreId ? `/store/${activeStoreId}/customers` : '#' },
     { name: 'Delivery', icon: <Truck size={20} />, path: '#' },

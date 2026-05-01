@@ -9,6 +9,7 @@ import ManageOrders from './pages/ManageOrders';
 import ManagePolicy from './pages/ManagePolicy';
 import ManageCustomer from './pages/ManageCustomer';
 import ManageCategory from './pages/ManageCategory';
+import ManageStorage from './pages/ManageStorage';
 
 
 function App() {
@@ -72,6 +73,10 @@ function App() {
         <Route 
           path="/store/:storeId/categories" 
           element={token ? <ManageCategory token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/store/:storeId/storage" 
+          element={token ? <ManageStorage token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/store/:storeId/customers" 
