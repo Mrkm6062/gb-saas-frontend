@@ -10,6 +10,7 @@ import ManagePolicy from './pages/ManagePolicy';
 import ManageCustomer from './pages/ManageCustomer';
 import ManageCategory from './pages/ManageCategory';
 import ManageStorage from './pages/ManageStorage';
+import PlatformPolicy from './pages/PlatformPolicy';
 
 
 function App() {
@@ -57,6 +58,10 @@ function App() {
         <Route 
           path="/login" 
           element={!token ? <Login onLoginSuccess={handleLoginSuccess} /> : <Navigate to="/" />} 
+        />
+        <Route 
+          path="/policies/:type" 
+          element={<PlatformPolicy />} 
         />
         <Route 
           path="/" 
