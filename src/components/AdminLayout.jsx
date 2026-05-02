@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import PlatformFooter from './PlatformFooter';
 
 const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", children }) => {
   const navigate = useNavigate();
@@ -155,9 +156,10 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
         </nav>
 
         {/* Page Content */}
-        <main className="w-full">
+        <main className="w-full flex-1">
           {children}
         </main>
+        <PlatformFooter />
       </div>
     </div>
   );
