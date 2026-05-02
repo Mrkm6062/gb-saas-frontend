@@ -15,7 +15,8 @@ import {
   Menu,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Globe
 } from 'lucide-react';
 import PlatformFooter from './PlatformFooter';
 
@@ -42,6 +43,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     { name: 'Manage Store', icon: <Store size={20} />, path: activeStoreId ? `/store/${activeStoreId}` : '#' },
     { name: 'Products', icon: <Package size={20} />, path: activeStoreId ? `/store/${activeStoreId}/products` : '#' },
     { name: 'Categories', icon: <Layers size={20} />, path: activeStoreId ? `/store/${activeStoreId}/categories` : '#' },
+    { name: 'Domains', icon: <Globe size={20} />, path: activeStoreId ? `/store/${activeStoreId}/domains` : '#' },
     { name: 'Storage', icon: <HardDrive size={20} />, path: activeStoreId ? `/store/${activeStoreId}/storage` : '#' },
     { name: 'Orders', icon: <ClipboardList size={20} />, path: activeStoreId ? `/store/${activeStoreId}/orders` : '#' },
     { name: 'Customers', icon: <Users size={20} />, path: activeStoreId ? `/store/${activeStoreId}/customers` : '#' },
