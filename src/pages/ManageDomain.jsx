@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { Globe, CheckCircle, Clock, AlertCircle, Trash2, Copy, RefreshCw } from 'lucide-react';
+import { Globe, CheckCircle, AlertCircle } from 'lucide-react';
+import DomainCard from '../components/DomainCard';
+import FixSSLModal from '../components/FixSSLModal';
 
 const ManageDomain = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
@@ -12,6 +14,7 @@ const ManageDomain = ({ token, stores, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
+  const [fixingSslFor, setFixingSslFor] = useState(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -118,6 +121,25 @@ const ManageDomain = ({ token, stores, onLogout }) => {
     showStatus('Copied to clipboard!', 'success');
   };
 
+  const handleCheckSSL = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/domains/check-ssl/${id}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        fetchDomains(); // Refresh domain list to show new SSL status
+        if (data.domain?.sslStatus === 'active') {
+          showStatus('SSL is successfully activated!', 'success');
+          setFixingSslFor(null); // Auto close modal on success
+        }
+      }
+    } catch (err) {
+      showStatus('Network error while checking SSL.', 'error');
+    }
+  };
+
   // Filter domains specifically belonging to the active store being managed
   const storeDomains = domains.filter(d => d.storeId && (d.storeId._id === currentStore._id || d.storeId === currentStore._id));
 
@@ -168,86 +190,28 @@ const ManageDomain = ({ token, stores, onLogout }) => {
             </div>
           ) : (
             storeDomains.map(domain => (
-              <div key={domain._id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-                <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <h4 className="text-xl font-bold text-slate-800">{domain.domain}</h4>
-                      {domain.status === 'connected' ? (
-                        <span className="px-2.5 py-1 bg-green-100 text-green-700 text-[10px] font-extrabold uppercase tracking-wider rounded-md flex items-center gap-1"><CheckCircle size={12} /> Connected</span>
-                      ) : domain.status === 'failed' ? (
-                        <span className="px-2.5 py-1 bg-red-100 text-red-700 text-[10px] font-extrabold uppercase tracking-wider rounded-md flex items-center gap-1"><AlertCircle size={12} /> Failed</span>
-                      ) : (
-                        <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-extrabold uppercase tracking-wider rounded-md flex items-center gap-1"><Clock size={12} /> Pending Setup</span>
-                      )}
-                    </div>
-                    <p className="text-sm text-slate-500">Added on {new Date(domain.createdAt).toLocaleDateString()}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <a href={`https://${domain.domain}`} target="_blank" rel="noreferrer" className="px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition">Visit Site</a>
-                    <button onClick={() => handleDeleteDomain(domain._id)} disabled={actionLoading} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 size={20} /></button>
-                  </div>
-                </div>
-
-                {domain.status !== 'connected' && (
-                  <div className="p-6">
-                    <h5 className="font-bold text-slate-800 mb-2 text-sm flex items-center gap-2"><AlertCircle size={16} className="text-amber-500"/> Action Required: Update your DNS records</h5>
-                    <p className="text-sm text-slate-600 mb-6">Log in to your domain provider and add the following <strong>two</strong> DNS records. DNS changes can take up to 24 hours to propagate globally.</p>
-                    
-                    {/* A Record */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Type</span>
-                        <span className="font-mono font-bold text-slate-800">A Record</span>
-                      </div>
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Name / Host</span>
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono font-bold text-slate-800">@</span>
-                          <button onClick={() => copyToClipboard('@')} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
-                        </div>
-                      </div>
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Value / Target</span>
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono font-bold text-slate-800">72.62.199.214</span>
-                          <button onClick={() => copyToClipboard('72.62.199.214')} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* CNAME Record */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Type</span>
-                        <span className="font-mono font-bold text-slate-800">CNAME</span>
-                      </div>
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Name / Host</span>
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono font-bold text-slate-800">www</span>
-                          <button onClick={() => copyToClipboard('www')} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
-                        </div>
-                      </div>
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Value / Target</span>
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono font-bold text-slate-800">cname.galibrand.cloud</span>
-                          <button onClick={() => copyToClipboard('cname.galibrand.cloud')} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button onClick={() => handleVerifyDomain(domain._id)} disabled={actionLoading} className="px-6 py-2.5 bg-slate-800 text-white text-sm font-bold rounded-xl hover:bg-slate-900 transition shadow-md flex items-center gap-2 disabled:opacity-50">
-                      <RefreshCw size={16} className={actionLoading ? 'animate-spin' : ''} /> Verify Connection
-                    </button>
-                  </div>
-                )}
-              </div>
+              <DomainCard 
+                key={domain._id} 
+                domain={domain} 
+                token={token}
+                currentStore={currentStore}
+                onDelete={handleDeleteDomain}
+                onVerify={handleVerifyDomain}
+                copyToClipboard={copyToClipboard}
+                onFixSSL={setFixingSslFor}
+              />
             ))
           )}
         </div>
       </div>
+
+      {fixingSslFor && (
+        <FixSSLModal 
+          domain={fixingSslFor} 
+          onClose={() => setFixingSslFor(null)} 
+          onRecheck={handleCheckSSL} 
+        />
+      )}
     </AdminLayout>
   );
 };
