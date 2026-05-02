@@ -209,8 +209,8 @@ const ManageDomain = ({ token, stores, onLogout }) => {
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Value / Target</span>
                         <div className="flex items-center justify-between">
-                          <span className="font-mono font-bold text-slate-800">cname.galibrand.cloud</span>
-                          <button onClick={() => copyToClipboard('cname.galibrand.cloud')} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
+                          <span className="font-mono font-bold text-slate-800">{currentStore.subdomain}</span>
+                          <button onClick={() => copyToClipboard(currentStore.subdomain)} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
                         </div>
                       </div>
                     </div>
