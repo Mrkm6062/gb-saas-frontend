@@ -192,8 +192,31 @@ const ManageDomain = ({ token, stores, onLogout }) => {
                 {domain.status !== 'connected' && (
                   <div className="p-6">
                     <h5 className="font-bold text-slate-800 mb-2 text-sm flex items-center gap-2"><AlertCircle size={16} className="text-amber-500"/> Action Required: Update your DNS records</h5>
-                    <p className="text-sm text-slate-600 mb-6">Log in to your domain provider and add the following CNAME record. DNS changes can take up to 24 hours to propagate globally.</p>
+                    <p className="text-sm text-slate-600 mb-6">Log in to your domain provider and add the following <strong>two</strong> DNS records. DNS changes can take up to 24 hours to propagate globally.</p>
                     
+                    {/* A Record */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Type</span>
+                        <span className="font-mono font-bold text-slate-800">A Record</span>
+                      </div>
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
+                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Name / Host</span>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-slate-800">@</span>
+                          <button onClick={() => copyToClipboard('@')} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
+                        </div>
+                      </div>
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
+                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Value / Target</span>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-slate-800">72.62.199.214</span>
+                          <button onClick={() => copyToClipboard('72.62.199.214')} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CNAME Record */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Type</span>
@@ -202,15 +225,15 @@ const ManageDomain = ({ token, stores, onLogout }) => {
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Name / Host</span>
                         <div className="flex items-center justify-between">
-                          <span className="font-mono font-bold text-slate-800">{domain.domain.startsWith('www.') ? 'www' : '@'}</span>
-                          <button onClick={() => copyToClipboard(domain.domain.startsWith('www.') ? 'www' : '@')} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
+                          <span className="font-mono font-bold text-slate-800">www</span>
+                          <button onClick={() => copyToClipboard('www')} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
                         </div>
                       </div>
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
                         <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Value / Target</span>
                         <div className="flex items-center justify-between">
-                          <span className="font-mono font-bold text-slate-800">{currentStore.subdomain}</span>
-                          <button onClick={() => copyToClipboard(currentStore.subdomain)} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
+                          <span className="font-mono font-bold text-slate-800">cname.galibrand.cloud</span>
+                          <button onClick={() => copyToClipboard('cname.galibrand.cloud')} className="text-slate-400 hover:text-[#76b900] transition"><Copy size={16} /></button>
                         </div>
                       </div>
                     </div>
