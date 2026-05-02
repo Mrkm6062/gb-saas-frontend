@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutGrid, 
@@ -11,12 +11,24 @@ import {
   CreditCard,
   Settings,
   Layers,
-  HardDrive
+  HardDrive,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", children }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('gb_sidebar_collapsed') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gb_sidebar_collapsed', isSidebarCollapsed);
+  }, [isSidebarCollapsed]);
   
   // Dynamically detect which store we are currently viewing based on the URL
   const pathParts = location.pathname.split('/');
@@ -41,16 +53,30 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 w-full overflow-hidden text-left">
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-64 min-h-screen bg-white border-r border-gray-100 flex flex-col p-4 shrink-0">
-        <div className="mb-10 px-2">
+      <div className={`fixed md:relative inset-y-0 left-0 z-50 w-64 ${isSidebarCollapsed ? 'md:w-20' : 'md:w-64'} min-h-screen bg-white border-r border-gray-100 flex flex-col p-4 shrink-0 transform transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className={`mb-10 px-2 flex items-center ${isSidebarCollapsed ? 'md:justify-center' : 'justify-between'}`}>
           <img 
             src="https://galibrand.cloud/public/Name.png" 
             alt="GB Galibrand Logo" 
-            className="h-12 w-auto"
+            className={`h-12 w-auto transition-opacity ${isSidebarCollapsed ? 'md:hidden' : ''}`}
           />
+          <div className={`hidden h-10 w-10 bg-gradient-to-br from-[#76b900] to-[#5a8d00] text-white rounded-xl items-center justify-center font-black text-xl shadow-md shrink-0 ${isSidebarCollapsed ? 'md:flex' : ''}`}>
+            GB
+          </div>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-1 text-slate-400 hover:text-red-500 transition-colors">
+            <X size={24} />
+          </button>
         </div>
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-2 overflow-y-auto">
           {menuItems.map((item) => {
             // Highlight the menu item based on current URL path
             const isActive = item.path !== '#' && location.pathname === item.path;
@@ -59,29 +85,46 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
               <button
                 key={item.name}
                 onClick={() => {
-                  if (item.path !== '#') navigate(item.path);
+                  if (item.path !== '#') {
+                    navigate(item.path);
+                    setIsMobileMenuOpen(false); // Close menu on mobile after navigating
+                  }
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                title={isSidebarCollapsed ? item.name : undefined}
+                className={`w-full flex items-center gap-3 py-3 rounded-xl transition-all duration-200 ${isSidebarCollapsed ? 'md:justify-center px-4 md:px-0' : 'px-4'} ${
                   isActive 
                     ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
                     : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                 }`}
               >
-                <span className={isActive ? "text-[#76b900]" : "text-gray-400"}>
+                <span className={`${isActive ? "text-[#76b900]" : "text-gray-400"} shrink-0`}>
                   {item.icon}
                 </span>
-                <span className="text-sm tracking-wide">{item.name}</span>
+                <span className={`text-sm tracking-wide truncate ${isSidebarCollapsed ? 'md:hidden' : ''}`}>{item.name}</span>
               </button>
             );
           })}
         </nav>
+
+        {/* Desktop Collapse Button */}
+        <div className="mt-4 pt-4 border-t border-slate-100 hidden md:block">
+          <button 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="w-full flex items-center justify-center py-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
+          >
+            {isSidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </button>
+        </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-y-auto">
         {/* Top Navigation Bar */}
-        <nav className="bg-white shadow-sm border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10 shrink-0">
-          <div className="flex items-center gap-4">
+        <nav className="bg-white shadow-sm border-b border-slate-200 px-4 sm:px-6 py-4 flex justify-between items-center sticky top-0 z-10 shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-1 -ml-1 text-slate-600 hover:bg-slate-100 rounded-md md:hidden transition-colors">
+              <Menu size={24} />
+            </button>
             <span className="text-xl font-bold text-slate-800">{headerTitle}</span>
             
             {/* Store Switcher Dropdown (hidden on Overview page) */}

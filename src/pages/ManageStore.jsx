@@ -283,7 +283,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
       {/* Your Stores List */}
       <div className="mb-12">
         <h2 className="text-2xl font-bold mb-6 text-slate-800">Your Stores</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6">
           {stores.map((s) => (
             <div key={s._id} className={`bg-white rounded-2xl shadow-sm border-2 p-6 flex flex-col transition-all ${s.storeId === storeId ? 'border-[#76b900] ring-4 ring-green-50' : 'border-slate-100 hover:border-slate-300'}`}>
               <div className="flex justify-between items-start mb-4">
@@ -326,7 +326,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-8">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
         <h2 className="text-2xl font-bold mb-6 text-slate-800">Settings for {currentStore.storeName}</h2>
         

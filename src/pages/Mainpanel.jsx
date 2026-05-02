@@ -182,7 +182,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
             </div>
 
             {/* 4 Analytics Metric Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6">
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center shrink-0">
                   <IndianRupee size={28} />

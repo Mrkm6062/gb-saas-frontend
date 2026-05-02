@@ -74,7 +74,7 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
         {loading ? (
           <div className="flex justify-center py-20 text-slate-400 font-bold animate-pulse">Loading plans...</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-6">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4 xl:gap-6">
             {plans.map(plan => {
               const isCurrentPlan = currentStore.planId === plan._id || (!currentStore.planId && plan.name === 'Free');
               const isProPlan = plan.name === 'Pro'; // Identify the Pro plan
