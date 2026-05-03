@@ -27,11 +27,23 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('gb_sidebar_collapsed') === 'true';
   });
+  const [platformLogo, setPlatformLogo] = useState("https://galibrand.cloud/public/Name.png");
 
   useEffect(() => {
     localStorage.setItem('gb_sidebar_collapsed', isSidebarCollapsed);
   }, [isSidebarCollapsed]);
   
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
+        if (res.ok) setPlatformLogo((await res.json()).mainLogoUrl);
+      } catch (e) {}
+    };
+    fetchSettings();
+  }, []);
+
   // Dynamically detect which store we are currently viewing based on the URL
   const pathParts = location.pathname.split('/');
   const activeStoreId = pathParts[1] === 'store' && pathParts[2] 
@@ -68,7 +80,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       <div className={`fixed md:relative inset-y-0 left-0 z-50 w-64 ${isSidebarCollapsed ? 'md:w-20' : 'md:w-64'} min-h-screen bg-white border-r border-gray-100 flex flex-col p-4 shrink-0 transform transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className={`mb-10 px-2 flex items-center ${isSidebarCollapsed ? 'md:justify-center' : 'justify-between'}`}>
           <img 
-            src="https://galibrand.cloud/public/Name.png" 
+            src={platformLogo} 
             alt="GB Galibrand Logo" 
             className={`h-12 w-auto transition-opacity ${isSidebarCollapsed ? 'md:hidden' : ''}`}
           />

@@ -32,7 +32,7 @@ const FixSSLModal = ({ domain, onClose, onRecheck }) => {
               <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 shrink-0">2</div>
               <div><p className="font-bold text-slate-800">Check DNS settings:</p>
               <ul className="text-sm text-slate-500 list-disc ml-5 mt-1 space-y-1">
-                <li><strong>A record</strong> (@ &rarr; your server IP)</li>
+                <li><strong>A record</strong> (@ &rarr; Enter IP:- 72.62.199.214)</li>
                 <li><strong>CNAME</strong> (www &rarr; cname.galibrand.cloud)</li>
                 <li><strong>Proxy status</strong> must be ON (orange cloud ☁️)</li>
               </ul></div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PlatformFooter from '../components/PlatformFooter';
 
 function Login({ onLoginSuccess }) {
@@ -8,8 +8,21 @@ function Login({ onLoginSuccess }) {
   const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
   const [status, setStatus] = useState('');
+  const [settings, setSettings] = useState({ mainLogoUrl: "https://galibrand.cloud/public/Name.png", loginImageGrid: [] });
 
-  const logoUrl = "https://galibrand.cloud/public/Name.png"; // REPLACE WITH YOUR ACTUAL LOGO
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.mainLogoUrl || data.loginImageGrid?.length > 0) setSettings(data);
+        }
+      } catch (e) {}
+    };
+    fetchSettings();
+  }, []);
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -70,7 +83,7 @@ function Login({ onLoginSuccess }) {
         {/* Left Side: Login Form */}
         <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-24 py-12 overflow-y-auto">
         <div className="mb-8">
-          <img src={logoUrl} alt="Galibrand Logo" className="h-16 w-auto" />
+          <img src={settings.mainLogoUrl} alt="Galibrand Logo" className="h-16 w-auto" />
         </div>
 
         <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4 leading-tight">
@@ -156,38 +169,11 @@ function Login({ onLoginSuccess }) {
         {/* Right Side: Image Grid Overlay */}
         <div className="hidden md:flex w-1/2 relative bg-gradient-to-r from-[#76b900] via-[#ff8a00] to-[#76b900] bg-[length:200%_200%] animate-gradient items-center justify-center shadow-inner overflow-hidden">
           <div className="grid grid-cols-3 gap-4 lg:gap-6 transform rotate-12 scale-125 opacity-90 w-[130%] max-w-4xl">
-            {/* Row 1 */}
-            <div className="w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 border-[#ff8a00] shadow-xl">
-                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300" alt="Shop" className="w-full h-full object-cover" />
-            </div>
-            <div className="w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 border-[#76b900] shadow-xl translate-y-[20%]">
-                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300" alt="Market" className="w-full h-full object-cover" />
-            </div>
-            <div className="w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 border-[#ff8a00] shadow-xl">
-                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300" alt="Groceries" className="w-full h-full object-cover" />
-            </div>
-            
-            {/* Row 2 */}
-            <div className="w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 border-[#76b900] shadow-xl">
-                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300" alt="Shop" className="w-full h-full object-cover" />
-            </div>
-            <div className="w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 border-[#ff8a00] shadow-xl translate-y-[20%]">
-                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300" alt="Market" className="w-full h-full object-cover" />
-            </div>
-            <div className="w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 border-[#76b900] shadow-xl">
-                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300" alt="Groceries" className="w-full h-full object-cover" />
-            </div>
-
-            {/* Row 3 */}
-            <div className="w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 border-[#ff8a00] shadow-xl">
-                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300" alt="Shop" className="w-full h-full object-cover" />
-            </div>
-            <div className="w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 border-[#76b900] shadow-xl translate-y-[20%]">
-                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300" alt="Market" className="w-full h-full object-cover" />
-            </div>
-            <div className="w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 border-[#ff8a00] shadow-xl">
-                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300" alt="Groceries" className="w-full h-full object-cover" />
-            </div>
+            {(settings.loginImageGrid.length > 0 ? settings.loginImageGrid : Array(9).fill("https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300")).slice(0, 9).map((img, idx) => (
+              <div key={idx} className={`w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 shadow-xl ${idx % 2 === 0 ? 'border-[#ff8a00]' : 'border-[#76b900]'} ${idx % 3 === 1 ? 'translate-y-[20%]' : ''}`}>
+                <img src={img} alt={`Login Grid Image ${idx + 1}`} className="w-full h-full object-cover" />
+              </div>
+            ))}
           </div>
         </div>
       </div>
