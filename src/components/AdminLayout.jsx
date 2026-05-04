@@ -137,7 +137,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-y-auto">
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Top Navigation Bar */}
         <nav className="bg-white shadow-sm border-b border-slate-200 px-4 sm:px-6 py-4 flex justify-between items-center sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -174,7 +174,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
         </nav>
 
         {/* Page Content */}
-        <main className="w-full flex-1">
+        <main className="w-full flex-1 overflow-y-auto">
           {children}
         </main>
         <PlatformFooter />
