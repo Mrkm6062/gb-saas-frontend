@@ -30,6 +30,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     return localStorage.getItem('gb_sidebar_collapsed') === 'true';
   });
   const [platformLogo, setPlatformLogo] = useState("https://storage.googleapis.com/galibrand/superadmin/products/galibrandfullname-logo.png");
+  const [platformMiniLogo, setPlatformMiniLogo] = useState("");
 
   useEffect(() => {
     localStorage.setItem('gb_sidebar_collapsed', isSidebarCollapsed);
@@ -40,7 +41,11 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       try {
         const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
-        if (res.ok) setPlatformLogo((await res.json()).mainLogoUrl);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.mainLogoUrl) setPlatformLogo(data.mainLogoUrl);
+          if (data.miniLogoUrl) setPlatformMiniLogo(data.miniLogoUrl);
+        }
       } catch (e) {}
     };
     fetchSettings();
@@ -99,9 +104,17 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
             alt="GB Galibrand Logo" 
             className={`h-12 w-auto transition-opacity ${isSidebarCollapsed ? 'md:hidden' : ''}`}
           />
-          <div className={`hidden h-10 w-10 bg-gradient-to-br from-[#76b900] to-[#5a8d00] text-white rounded-xl items-center justify-center font-black text-xl shadow-md shrink-0 ${isSidebarCollapsed ? 'md:flex' : ''}`}>
-            GB
-          </div>
+          {platformMiniLogo ? (
+            <img 
+              src={platformMiniLogo} 
+              alt="GB Mini Logo" 
+              className={`hidden h-10 w-auto object-contain shrink-0 ${isSidebarCollapsed ? 'md:block' : ''}`}
+            />
+          ) : (
+            <div className={`hidden h-10 w-10 bg-gradient-to-br from-[#76b900] to-[#5a8d00] text-white rounded-xl items-center justify-center font-black text-xl shadow-md shrink-0 ${isSidebarCollapsed ? 'md:flex' : ''}`}>
+              GB
+            </div>
+          )}
           <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-1 text-slate-400 hover:text-red-500 transition-colors">
             <X size={24} />
           </button>
