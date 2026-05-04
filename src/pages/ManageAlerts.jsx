@@ -18,6 +18,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [activeTab, setActiveTab] = useState('config');
 
   const DEFAULT_TEMPLATES = {
     order_placed: {
@@ -290,6 +291,8 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
                  ))
                )}
             </div>
+        </div>
+      )}
           </div>
         </div>
       </div>
