@@ -32,7 +32,7 @@ const PlatformPolicy = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
         <Link to="/" className="flex items-center gap-2">
-          <img src="https://galibrand.cloud/public/Name.png" alt="Galibrand" className="h-8 w-auto" />
+          <img src="https://storage.googleapis.com/galibrand/superadmin/products/galibrandfullname-logo.png" alt="Galibrand" className="h-8 w-auto" />
         </Link>
         <Link to="/login" className="text-sm font-bold text-slate-500 hover:text-[#76b900] transition">
           Back to Home

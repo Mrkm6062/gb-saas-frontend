@@ -29,7 +29,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('gb_sidebar_collapsed') === 'true';
   });
-  const [platformLogo, setPlatformLogo] = useState("https://galibrand.cloud/public/Name.png");
+  const [platformLogo, setPlatformLogo] = useState("https://storage.googleapis.com/galibrand/superadmin/products/galibrandfullname-logo.png");
 
   useEffect(() => {
     localStorage.setItem('gb_sidebar_collapsed', isSidebarCollapsed);

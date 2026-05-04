@@ -8,7 +8,7 @@ function Login({ onLoginSuccess }) {
   const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
   const [status, setStatus] = useState('');
-  const [settings, setSettings] = useState({ mainLogoUrl: "https://galibrand.cloud/public/Name.png", loginImageGrid: [] });
+  const [settings, setSettings] = useState({ mainLogoUrl: "https://storage.googleapis.com/galibrand/superadmin/products/galibrandfullname-logo.png", loginImageGrid: [] });
 
   useEffect(() => {
     const fetchSettings = async () => {

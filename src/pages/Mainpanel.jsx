@@ -14,10 +14,14 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [orders, setOrders] = useState([]);
   const [toast, setToast] = useState(null);
-  const [activeStoreId, setActiveStoreId] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [resendingOrderId, setResendingOrderId] = useState(null);
   const navigate = useNavigate();
+
+  const activeStoreIdLocal = localStorage.getItem('gb_active_store_id');
+  const currentStore = stores.find(s => s.storeId === activeStoreIdLocal) || stores[0] || {};
+  const activeStoreObjId = currentStore._id;
+  const activeStoreStringId = currentStore.storeId;
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -35,12 +39,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     };
     fetchPlans();
   }, []);
-
-  useEffect(() => {
-    if (stores.length > 0 && !activeStoreId) {
-      setActiveStoreId(stores[0]._id);
-    }
-  }, [stores, activeStoreId]);
 
   useEffect(() => {
     const fetchOrders = async () => {
