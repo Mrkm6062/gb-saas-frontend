@@ -144,7 +144,7 @@ const ManageCoupon = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Coupons">
-      <div className="p-6 mx-auto mt-6 max-w-6xl">
+      <div className="w-full px-6 py-10">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
           <div>
             <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Discount Coupons</h2>

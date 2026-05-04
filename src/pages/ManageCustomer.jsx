@@ -178,7 +178,7 @@ const ManageCustomer = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Customers">
-      <div className="p-6 mx-auto mt-6">
+      <div className="w-full px-6 py-10">
         <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Customer Directory</h2>
         <p className="text-slate-500 mb-8">View customer details and lifetime value for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
 
