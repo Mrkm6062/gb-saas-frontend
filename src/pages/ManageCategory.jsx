@@ -165,8 +165,8 @@ const ManageCategory = ({ token, stores, onLogout }) => {
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Categories">
       <div className="w-full px-6 py-10">
-        <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Categories</h2>
-        <p className="text-slate-500 mb-8">Manage product categories for <span className="font-bold">{currentStore.storeName}</span></p>
+        {/* <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Categories</h2>
+        <p className="text-slate-500 mb-8">Manage product categories for <span className="font-bold">{currentStore.storeName}</span></p> */}
         {status && <div className="p-4 mb-6 rounded-xl font-medium text-sm border bg-green-50 text-green-700 border-green-200">{status}</div>}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 h-fit">

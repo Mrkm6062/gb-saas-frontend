@@ -146,10 +146,10 @@ const ManageDomain = ({ token, stores, onLogout }) => {
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Custom Domains">
       <div className="w-full px-6 py-10">
-        <div className="mb-8">
+        {/* <div className="mb-8">
           <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Manage Domains</h2>
           <p className="text-slate-500">Connect a custom domain to <span className="font-bold text-slate-700">{currentStore.storeName}</span> to build your brand.</p>
-        </div>
+        </div> */}
 
         {status.message && (
           <div className={`p-4 mb-6 rounded-xl font-medium text-sm border flex items-center gap-3 animate-fadeIn ${status.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>

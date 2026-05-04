@@ -174,8 +174,8 @@ const ManageOrders = ({ token, stores, onLogout }) => {
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Orders">
       <div className="w-full px-6 py-10">
-        <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Order Management</h2>
-        <p className="text-slate-500 mb-8">View and process incoming orders for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
+        {/* <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Order Management</h2>
+        <p className="text-slate-500 mb-8">View and process incoming orders for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p> */}
 
         {error && <div className="p-4 mb-6 bg-red-50 text-red-600 rounded-xl border border-red-200">{error}</div>}
 
