@@ -12,6 +12,7 @@ import ManageCategory from './pages/ManageCategory';
 import ManageStorage from './pages/ManageStorage';
 import PlatformPolicy from './pages/PlatformPolicy';
 import ManageDomain from './pages/ManageDomain';
+import ManageCoupon from './pages/ManageCoupon';
 
 
 function App() {
@@ -91,6 +92,10 @@ function App() {
         <Route 
           path="/store/:storeId/customers" 
           element={token ? <ManageCustomer token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/store/:storeId/coupons" 
+          element={token ? <ManageCoupon token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/store/:storeId/plan" 
