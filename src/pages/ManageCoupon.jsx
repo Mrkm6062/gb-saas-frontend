@@ -71,6 +71,8 @@ const ManageCoupon = ({ token, stores, onLogout }) => {
         },
         body: JSON.stringify({
           ...formData,
+          startDate: new Date(formData.startDate).toISOString(),
+          endDate: new Date(formData.endDate).toISOString(),
           storeId: currentStore._id,
           discountValue: Number(formData.discountValue) || 0,
           minOrderAmount: Number(formData.minOrderAmount) || 0,
