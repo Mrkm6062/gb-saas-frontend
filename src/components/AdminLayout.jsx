@@ -48,9 +48,15 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
 
   // Dynamically detect which store we are currently viewing based on the URL
   const pathParts = location.pathname.split('/');
-  const activeStoreId = pathParts[1] === 'store' && pathParts[2] 
+  let activeStoreId = pathParts[1] === 'store' && pathParts[2] 
     ? pathParts[2] 
-    : (localStorage.getItem('gb_active_store_id') || (stores?.length > 0 ? stores[0].storeId : null));
+    : localStorage.getItem('gb_active_store_id');
+
+  // Fallback to first store if localStorage has invalid/old ID format
+  const isValidStore = stores?.some(s => s.storeId === activeStoreId);
+  if (!isValidStore && stores?.length > 0) {
+    activeStoreId = stores[0].storeId;
+  }
 
   useEffect(() => {
     if (activeStoreId) {

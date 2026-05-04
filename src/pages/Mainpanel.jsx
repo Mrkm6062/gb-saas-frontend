@@ -44,10 +44,10 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
 
   useEffect(() => {
     const fetchOrders = async () => {
-      if (!activeStoreId) return;
+      if (!activeStoreObjId) return;
       try {
         const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
-        const response = await fetch(`${API_BASE_URL}/api/orders?storeId=${activeStoreId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/orders?storeId=${activeStoreObjId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -59,7 +59,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
       }
     };
     fetchOrders();
-  }, [activeStoreId, token]);
+  }, [activeStoreObjId, token]);
 
   const handleCreateStore = async (e) => {
     e.preventDefault();
