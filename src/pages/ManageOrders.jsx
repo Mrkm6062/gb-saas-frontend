@@ -180,6 +180,22 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot className="bg-slate-50/80 border-t border-slate-200">
+                      <tr>
+                        <td colSpan="3" className="p-3 text-right font-semibold text-slate-600">Subtotal:</td>
+                        <td className="p-3 text-right font-bold text-slate-800">₹{selectedOrder.totalAmount + (selectedOrder.discountAmount || 0)}</td>
+                      </tr>
+                      {selectedOrder.couponCode && (
+                        <tr>
+                          <td colSpan="3" className="p-3 text-right font-semibold text-green-600">Discount ({selectedOrder.couponCode}):</td>
+                          <td className="p-3 text-right font-bold text-green-600">-₹{selectedOrder.discountAmount}</td>
+                        </tr>
+                      )}
+                      <tr>
+                        <td colSpan="3" className="p-3 text-right font-bold text-slate-800 text-base">Final Total:</td>
+                        <td className="p-3 text-right font-extrabold text-slate-900 text-base">₹{selectedOrder.totalAmount}</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </div>
