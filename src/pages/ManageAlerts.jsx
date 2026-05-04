@@ -218,82 +218,103 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <form onSubmit={handleSave} className="p-6 sm:p-8">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-6 mb-6">
-              <div><h3 className="font-bold text-lg text-slate-800">Email Automation</h3><p className="text-sm text-slate-500">Send an automatic invoice receipt to your customers.</p></div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" checked={config.isEmailEnabled} onChange={e => setConfig({...config, isEmailEnabled: e.target.checked})} />
-                <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#76b900]"></div>
-              </label>
-            </div>
+        {/* Navigation Tabs */}
+        <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
+          <button 
+            type="button"
+            onClick={() => setActiveTab('config')} 
+            className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'config' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+          >
+            Alerts Configuration
+          </button>
+          <button 
+            type="button"
+            onClick={() => setActiveTab('templates')} 
+            className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'templates' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+          >
+            Email Templates
+          </button>
+        </div>
 
-            <div className={`space-y-5 transition-opacity ${!config.isEmailEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2"><Settings size={16}/> Mail Provider</label><select value={config.provider} onChange={handleProviderChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] bg-white text-sm"><option value="gmail">Gmail / Google Workspace</option><option value="custom">Custom SMTP Server</option></select></div>
-                {config.provider === 'custom' && (<>
-                  <div><label className="block text-sm font-bold text-slate-700 mb-1">SMTP Host</label><input required type="text" value={config.smtpHost} onChange={e=>setConfig({...config, smtpHost: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="mail.yourdomain.com" /></div>
-                  <div><label className="block text-sm font-bold text-slate-700 mb-1">SMTP Port</label><input required type="number" value={config.smtpPort} onChange={e=>setConfig({...config, smtpPort: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="465 or 587" /></div>
-                </>)}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          {activeTab === 'config' && (
+            <>
+              <form onSubmit={handleSave} className="p-6 sm:p-8">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-6 mb-6">
+                  <div><h3 className="font-bold text-lg text-slate-800">Email Automation</h3><p className="text-sm text-slate-500">Send an automatic invoice receipt to your customers.</p></div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={config.isEmailEnabled} onChange={e => setConfig({...config, isEmailEnabled: e.target.checked})} />
+                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#76b900]"></div>
+                  </label>
+                </div>
+
+                <div className={`space-y-5 transition-opacity ${!config.isEmailEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2"><Settings size={16}/> Mail Provider</label><select value={config.provider} onChange={handleProviderChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] bg-white text-sm"><option value="gmail">Gmail / Google Workspace</option><option value="custom">Custom SMTP Server</option></select></div>
+                    {config.provider === 'custom' && (<>
+                      <div><label className="block text-sm font-bold text-slate-700 mb-1">SMTP Host</label><input required type="text" value={config.smtpHost} onChange={e=>setConfig({...config, smtpHost: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="mail.yourdomain.com" /></div>
+                      <div><label className="block text-sm font-bold text-slate-700 mb-1">SMTP Port</label><input required type="number" value={config.smtpPort} onChange={e=>setConfig({...config, smtpPort: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="465 or 587" /></div>
+                    </>)}
+                  </div>
+                  
+                  <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2"><Mail size={16}/> Sending Email Address</label><input required type="email" value={config.emailAddress} onChange={e=>setConfig({...config, emailAddress: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="support@yourstore.com" /></div>
+                  <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2"><Key size={16}/> App Password</label><input required type="password" value={config.appPassword} onChange={e=>setConfig({...config, appPassword: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="••••••••••••" />
+                    {config.provider === 'gmail' && <p className="text-xs text-slate-500 mt-2 flex items-start gap-1"><ShieldCheck size={14} className="shrink-0 text-blue-500" /> Since you are using Gmail, do not use your standard password. You must generate a 16-digit "App Password" inside your Google Account Security Settings.</p>}
+                  </div>
+
+                  <button type="submit" disabled={loading} className="w-full md:w-auto px-8 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition mt-6 disabled:opacity-50">
+                    {loading ? 'Saving...' : 'Save Configuration'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Test Mail Section */}
+              <div className={`border-t border-slate-100 bg-slate-50 p-6 sm:p-8 transition-opacity ${!config.isEmailEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><CheckCircle2 size={18} className="text-[#76b900]"/> Test Your Connection</h4>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input type="email" placeholder="Enter recipient email address..." value={testEmailTo} onChange={e => setTestEmailTo(e.target.value)} className="flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" />
+                  <button onClick={handleTestMail} type="button" disabled={testing || !testEmailTo} className="px-6 py-3 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition whitespace-nowrap disabled:opacity-50 shadow-lg shadow-green-100">
+                    {testing ? 'Sending...' : 'Send Test Mail'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'templates' && (
+            <div className={`p-6 sm:p-8 transition-opacity ${!config.isEmailEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className="flex justify-between items-center mb-6">
+                 <div>
+                   <h4 className="font-bold text-slate-800 text-lg">Email Templates</h4>
+                   <p className="text-sm text-slate-500 mt-1">Customize the emails sent to your customers for various events.</p>
+                 </div>
+                 <button type="button" onClick={handleAddTemplate} className="px-4 py-2 bg-[#76b900] text-white font-bold rounded-lg hover:bg-[#659e00] transition text-sm whitespace-nowrap shadow-md">+ Add Template</button>
               </div>
               
-              <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2"><Mail size={16}/> Sending Email Address</label><input required type="email" value={config.emailAddress} onChange={e=>setConfig({...config, emailAddress: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="support@yourstore.com" /></div>
-              <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2"><Key size={16}/> App Password</label><input required type="password" value={config.appPassword} onChange={e=>setConfig({...config, appPassword: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="••••••••••••" />
-                {config.provider === 'gmail' && <p className="text-xs text-slate-500 mt-2 flex items-start gap-1"><ShieldCheck size={14} className="shrink-0 text-blue-500" /> Since you are using Gmail, do not use your standard password. You must generate a 16-digit "App Password" inside your Google Account Security Settings.</p>}
-              </div>
-
-              <button type="submit" disabled={loading} className="w-full md:w-auto px-8 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition mt-6 disabled:opacity-50">
-                {loading ? 'Saving...' : 'Save Configuration'}
-              </button>
-            </div>
-          </form>
-
-          {/* Test Mail Section */}
-          <div className={`border-t border-slate-100 bg-slate-50 p-6 sm:p-8 transition-opacity ${!config.isEmailEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
-            <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><CheckCircle2 size={18} className="text-[#76b900]"/> Test Your Connection</h4>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input type="email" placeholder="Enter recipient email address..." value={testEmailTo} onChange={e => setTestEmailTo(e.target.value)} className="flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" />
-              <button onClick={handleTestMail} type="button" disabled={testing || !testEmailTo} className="px-6 py-3 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition whitespace-nowrap disabled:opacity-50 shadow-lg shadow-green-100">
-                {testing ? 'Sending...' : 'Send Test Mail'}
-              </button>
-            </div>
-          </div>
-
-          {/* Templates Section */}
-          <div className={`border-t border-slate-100 p-6 sm:p-8 transition-opacity ${!config.isEmailEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
-            <div className="flex justify-between items-center mb-6">
-               <div>
-                 <h4 className="font-bold text-slate-800 text-lg">Email Templates</h4>
-                 <p className="text-sm text-slate-500 mt-1">Customize the emails sent to your customers for various events.</p>
-               </div>
-               <button type="button" onClick={handleAddTemplate} className="px-4 py-2 bg-[#76b900] text-white font-bold rounded-lg hover:bg-[#659e00] transition text-sm whitespace-nowrap shadow-md">+ Add Template</button>
-            </div>
-            
-            <div className="space-y-4">
-               {config.templates.length === 0 ? (
-                 <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-500 font-medium">No custom templates created. Standard default emails will be used.</div>
-               ) : (
-                 config.templates.map((tpl, idx) => (
-                   <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-5 border border-slate-200 rounded-xl bg-white shadow-sm hover:shadow-md transition">
-                      <div className="mb-4 sm:mb-0">
-                        <div className="flex items-center gap-3 mb-1">
-                          <p className="font-bold text-slate-800 text-lg">{tpl.name}</p>
-                          <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold ${tpl.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{tpl.isActive ? 'Active' : 'Inactive'}</span>
+              <div className="space-y-4">
+                 {config.templates.length === 0 ? (
+                   <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-500 font-medium">No custom templates created. Standard default emails will be used.</div>
+                 ) : (
+                   config.templates.map((tpl, idx) => (
+                     <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-5 border border-slate-200 rounded-xl bg-white shadow-sm hover:shadow-md transition">
+                        <div className="mb-4 sm:mb-0">
+                          <div className="flex items-center gap-3 mb-1">
+                            <p className="font-bold text-slate-800 text-lg">{tpl.name}</p>
+                            <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold ${tpl.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{tpl.isActive ? 'Active' : 'Inactive'}</span>
+                          </div>
+                          <p className="text-sm text-slate-600 mb-1"><span className="font-semibold">Event:</span> <span className="bg-slate-100 px-2 py-0.5 rounded font-mono text-xs">{tpl.eventType}</span></p>
+                          <p className="text-sm text-slate-600"><span className="font-semibold">Subject:</span> {tpl.subject}</p>
                         </div>
-                        <p className="text-sm text-slate-600 mb-1"><span className="font-semibold">Event:</span> <span className="bg-slate-100 px-2 py-0.5 rounded font-mono text-xs">{tpl.eventType}</span></p>
-                        <p className="text-sm text-slate-600"><span className="font-semibold">Subject:</span> {tpl.subject}</p>
-                      </div>
-                      <div className="flex gap-3">
-                        <button type="button" onClick={() => handleEditTemplate(idx)} className="px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">Edit</button>
-                        <button type="button" onClick={() => handleDeleteTemplate(idx)} className="px-4 py-2 text-sm font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">Delete</button>
-                      </div>
-                   </div>
-                 ))
-               )}
+                        <div className="flex gap-3">
+                          <button type="button" onClick={() => handleEditTemplate(idx)} className="px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">Edit</button>
+                          <button type="button" onClick={() => handleDeleteTemplate(idx)} className="px-4 py-2 text-sm font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">Delete</button>
+                        </div>
+                     </div>
+                   ))
+                 )}
+              </div>
             </div>
-        </div>
-      )}
-          </div>
+          )}
         </div>
       </div>
 
