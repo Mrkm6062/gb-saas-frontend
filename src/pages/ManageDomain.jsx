@@ -145,7 +145,7 @@ const ManageDomain = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Custom Domains">
-      <div className="p-6 max-w-5xl mx-auto mt-6">
+      <div className="w-full px-6 py-10">
         <div className="mb-8">
           <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Manage Domains</h2>
           <p className="text-slate-500">Connect a custom domain to <span className="font-bold text-slate-700">{currentStore.storeName}</span> to build your brand.</p>

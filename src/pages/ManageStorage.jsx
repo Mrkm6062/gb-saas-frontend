@@ -91,7 +91,7 @@ const ManageStorage = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Storage & Media">
-      <div className="p-6 max-w-7xl mx-auto mt-6">
+      <div className="w-full px-6 py-10">
         <div className="mb-8">
           <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Media Library</h2>
           <p className="text-slate-500">Manage all uploaded product images, banners, and logos for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
