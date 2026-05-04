@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
+import { AlertCircle, HelpCircle, Mail, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ManageOrders = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
@@ -10,6 +11,13 @@ const ManageOrders = ({ token, stores, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', type: '', pendingData: null });
+  const [resendingOrderId, setResendingOrderId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentFilter, setPaymentFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -38,9 +46,20 @@ const ManageOrders = ({ token, stores, onLogout }) => {
     }
   }, [currentStore._id]);
 
-  const handleStatusChange = async (orderId, type, newValue) => {
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, paymentFilter]);
+
+  const executeStatusChange = async (orderId, type, newValue, additionalPayload = {}) => {
     try {
-      const payload = type === 'order' ? { orderStatus: newValue } : { paymentStatus: newValue };
+      let payload = { ...additionalPayload };
+      if (type === 'order') {
+        payload.orderStatus = newValue;
+      } else {
+        payload.paymentStatus = newValue;
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
@@ -60,6 +79,98 @@ const ManageOrders = ({ token, stores, onLogout }) => {
     }
   };
 
+  const handleStatusChange = (orderId, type, newValue, order) => {
+    if (type === 'order') {
+      if (newValue === 'canceled') {
+        setConfirmModal({
+          isOpen: true,
+          title: 'Cancel Order',
+          message: 'Are you sure you want to cancel this order? This action cannot be undone.',
+          confirmText: 'Yes, Cancel Order',
+          cancelText: 'Keep Order',
+          confirmColor: 'bg-red-600 hover:bg-red-700 shadow-red-100 text-white',
+          icon: <AlertCircle size={28} className="text-red-500" />,
+          pendingData: { orderId, type, newValue, subType: 'cancel' }
+        });
+        return;
+      }
+
+      if (newValue === 'delivered' && order.paymentStatus !== 'paid') {
+        setConfirmModal({
+          isOpen: true,
+          title: 'Payment Received?',
+          message: 'Has the payment been received for this order?',
+          confirmText: 'Yes, Mark as Paid',
+          cancelText: 'No, Keep Pending',
+          confirmColor: 'bg-[#76b900] hover:bg-[#659e00] shadow-green-100 text-white',
+          icon: <HelpCircle size={28} className="text-[#76b900]" />,
+          pendingData: { orderId, type, newValue, subType: 'payment_check' }
+        });
+        return;
+      }
+    }
+
+    executeStatusChange(orderId, type, newValue);
+  };
+
+  const handleModalConfirm = () => {
+    const { orderId, type, newValue, subType } = confirmModal.pendingData;
+    let additionalPayload = {};
+    if (subType === 'payment_check') additionalPayload.paymentStatus = 'paid';
+    executeStatusChange(orderId, type, newValue, additionalPayload);
+    setConfirmModal({ ...confirmModal, isOpen: false });
+  };
+
+  const handleModalCancel = () => {
+    const { orderId, type, newValue, subType } = confirmModal.pendingData;
+    if (subType === 'payment_check') executeStatusChange(orderId, type, newValue);
+    else if (subType === 'cancel') setOrders([...orders]); // Re-render to reset dropdown UI
+    setConfirmModal({ ...confirmModal, isOpen: false });
+  };
+
+  const handleResendEmail = async (order) => {
+    if (!order.customerEmail) return alert("This order does not have a customer email address associated with it.");
+    if (!window.confirm(`Resend the "${order.orderStatus}" email notification to ${order.customerEmail}?`)) return;
+    
+    setResendingOrderId(order._id);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/orders/${order._id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ resendEmail: true })
+      });
+
+      if (response.ok) {
+        alert('Email notification resent successfully!');
+      } else {
+        alert('Failed to resend email. Please verify your SMTP settings.');
+      }
+    } catch (err) {
+      alert('Network error resending email.');
+    } finally {
+      setResendingOrderId(null);
+    }
+  };
+
+  const filteredOrders = orders.filter(order => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = (order.customerName || '').toLowerCase().includes(searchLower) ||
+                          (order.customerEmail || '').toLowerCase().includes(searchLower) ||
+                          (order._id || '').toLowerCase().includes(searchLower);
+    
+    const matchesStatus = statusFilter === 'all' || order.orderStatus === statusFilter;
+    const matchesPayment = paymentFilter === 'all' || order.paymentStatus === paymentFilter;
+    
+    return matchesSearch && matchesStatus && matchesPayment;
+  });
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Orders">
       <div className="p-6 max-w-7xl mx-auto mt-6">
@@ -67,6 +178,35 @@ const ManageOrders = ({ token, stores, onLogout }) => {
         <p className="text-slate-500 mb-8">View and process incoming orders for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
 
         {error && <div className="p-4 mb-6 bg-red-50 text-red-600 rounded-xl border border-red-200">{error}</div>}
+
+        {/* Search & Filters */}
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <input 
+              type="text" 
+              placeholder="Search by customer name, email, or Order ID..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm transition"
+            />
+          </div>
+          <div className="flex gap-3">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white font-medium text-slate-700">
+              <option value="all">All Statuses</option>
+              <option value="placed">Placed</option>
+              <option value="shipped">Shipped</option>
+              <option value="delivered">Delivered</option>
+              <option value="canceled">Canceled</option>
+              <option value="returned">Returned</option>
+            </select>
+            <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white font-medium text-slate-700">
+              <option value="all">All Payments</option>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+        </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
@@ -86,8 +226,10 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                   <tr><td colSpan="6" className="p-8 text-center text-slate-400 font-medium animate-pulse">Loading orders...</td></tr>
                 ) : orders.length === 0 ? (
                   <tr><td colSpan="6" className="p-8 text-center text-slate-500 font-medium">No orders received yet.</td></tr>
+                ) : filteredOrders.length === 0 ? (
+                  <tr><td colSpan="6" className="p-8 text-center text-slate-500 font-medium">No orders match your search and filters.</td></tr>
                 ) : (
-                  orders.map(order => (
+                  paginatedOrders.map(order => (
                     <tr key={order._id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                       <td className="p-4">
                         <div className="text-sm font-bold text-slate-700">{new Date(order.createdAt).toLocaleDateString()}</div>
@@ -106,16 +248,18 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                       </td>
                       <td className="p-4 font-extrabold text-green-600">₹{order.totalAmount}</td>
                       <td className="p-4">
-                        <select value={order.paymentStatus} onChange={(e) => handleStatusChange(order._id, 'payment', e.target.value)} className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.paymentStatus === 'paid' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                        <select value={order.paymentStatus} onChange={(e) => handleStatusChange(order._id, 'payment', e.target.value, order)} className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.paymentStatus === 'paid' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
                           <option value="pending">Pending</option>
                           <option value="paid">Paid</option>
                         </select>
                       </td>
                       <td className="p-4">
-                        <select value={order.orderStatus} onChange={(e) => handleStatusChange(order._id, 'order', e.target.value)} className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.orderStatus === 'delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' : order.orderStatus === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                      <select value={order.orderStatus} onChange={(e) => handleStatusChange(order._id, 'order', e.target.value, order)} className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.orderStatus === 'delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' : order.orderStatus === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : order.orderStatus === 'canceled' ? 'bg-red-50 text-red-700 border-red-200' : order.orderStatus === 'returned' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
                           <option value="placed">Placed</option>
                           <option value="shipped">Shipped</option>
                           <option value="delivered">Delivered</option>
+                        <option value="canceled">Canceled</option>
+                        <option value="returned">Returned</option>
                         </select>
                       </td>
                     </tr>
@@ -124,6 +268,43 @@ const ManageOrders = ({ token, stores, onLogout }) => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {filteredOrders.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50 gap-4">
+              <div className="text-sm text-slate-500 flex items-center gap-2">
+                Showing <span className="font-bold text-slate-800">{startIndex + 1}</span> to <span className="font-bold text-slate-800">{Math.min(startIndex + itemsPerPage, filteredOrders.length)}</span> of <span className="font-bold text-slate-800">{filteredOrders.length}</span> orders
+                <select 
+                  value={itemsPerPage} 
+                  onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} 
+                  className="ml-2 bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-[#76b900]"
+                >
+                  <option value={10}>10 per page</option>
+                  <option value={20}>20 per page</option>
+                  <option value={50}>50 per page</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="text-sm font-medium text-slate-600 px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-sm">
+                  {currentPage} / {totalPages || 1}
+                </div>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Order Details Modal */}
@@ -136,9 +317,20 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                   <h3 className="text-xl font-bold text-slate-800">Order Details</h3>
                   <p className="text-xs text-slate-500 font-mono mt-1">ID: {selectedOrder._id}</p>
                 </div>
-                <button onClick={() => setSelectedOrder(null)} className="text-slate-400 hover:text-red-500 transition-colors text-3xl leading-none">
-                  &times;
-                </button>
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => handleResendEmail(selectedOrder)} 
+                    disabled={resendingOrderId === selectedOrder._id}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold rounded-lg text-sm transition-colors disabled:opacity-50"
+                    title="Resend email notification for current status"
+                  >
+                    <Mail size={16} />
+                    {resendingOrderId === selectedOrder._id ? 'Sending...' : 'Resend Email'}
+                  </button>
+                  <button onClick={() => setSelectedOrder(null)} className="text-slate-400 hover:text-red-500 transition-colors text-3xl leading-none">
+                    &times;
+                  </button>
+                </div>
               </div>
               
               {/* Modal Body */}
@@ -203,6 +395,35 @@ const ManageOrders = ({ token, stores, onLogout }) => {
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform transition-all scale-100 opacity-100">
+            <div className="p-6 pt-8 text-center flex flex-col items-center">
+              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 border-2 border-slate-100">
+                {confirmModal.icon}
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-800 mb-2">{confirmModal.title}</h3>
+              <p className="text-sm text-slate-500 mb-6 px-2">{confirmModal.message}</p>
+              <div className="flex flex-col sm:flex-row w-full gap-3">
+                <button 
+                  onClick={handleModalCancel}
+                  className="flex-1 px-6 py-3 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                >
+                  {confirmModal.cancelText}
+                </button>
+                <button 
+                  onClick={handleModalConfirm}
+                  className={`flex-1 px-6 py-3 font-bold rounded-xl transition-colors shadow-lg ${confirmModal.confirmColor}`}
+                >
+                  {confirmModal.confirmText}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };
