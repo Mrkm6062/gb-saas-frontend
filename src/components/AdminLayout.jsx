@@ -50,7 +50,13 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
   const pathParts = location.pathname.split('/');
   const activeStoreId = pathParts[1] === 'store' && pathParts[2] 
     ? pathParts[2] 
-    : (stores?.length > 0 ? stores[0].storeId : null);
+    : (localStorage.getItem('gb_active_store_id') || (stores?.length > 0 ? stores[0].storeId : null));
+
+  useEffect(() => {
+    if (activeStoreId) {
+      localStorage.setItem('gb_active_store_id', activeStoreId);
+    }
+  }, [activeStoreId]);
 
   const menuItems = [
     { name: 'Overview', icon: <LayoutGrid size={20} />, path: '/' },
@@ -146,16 +152,21 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
             </button>
             <span className="text-xl font-bold text-slate-800">{headerTitle}</span>
             
-            {/* Store Switcher Dropdown (hidden on Overview page) */}
-            {stores && stores.length > 0 && activeStoreId && location.pathname !== '/' && (
+            {/* Store Switcher Dropdown */}
+            {stores && stores.length > 0 && activeStoreId && (
               <div className="ml-4 flex items-center gap-2 border-l border-slate-200 pl-4 hidden sm:flex">
                 <span className="text-sm font-medium text-slate-500">Store:</span>
                 <select
                   value={activeStoreId}
                   onChange={(e) => {
                     const newStoreId = e.target.value;
-                    const currentSubPath = pathParts.slice(3).join('/'); // Preserves current sub-route like /products
-                    navigate(`/store/${newStoreId}${currentSubPath ? `/${currentSubPath}` : ''}`);
+                    localStorage.setItem('gb_active_store_id', newStoreId);
+                    if (location.pathname === '/') {
+                      window.location.reload();
+                    } else {
+                      const currentSubPath = pathParts.slice(3).join('/'); // Preserves current sub-route like /products
+                      navigate(`/store/${newStoreId}${currentSubPath ? `/${currentSubPath}` : ''}`);
+                    }
                   }}
                   className="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-[#76b900] focus:border-[#76b900] block py-1.5 px-3 outline-none font-semibold cursor-pointer max-w-[200px] truncate"
                 >

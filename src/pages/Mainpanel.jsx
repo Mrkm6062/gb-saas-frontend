@@ -239,17 +239,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
           </div>
         ) : stores.length > 0 ? (
           <>
-            {/* Store Selection Dropdown for Analytics */}
-            <div className="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-5 rounded-2xl shadow-sm border border-slate-200 gap-4">
-              <span className="font-bold text-slate-700">Displaying data for:</span>
-              <select
-                value={activeStoreId}
-                onChange={(e) => setActiveStoreId(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-[#76b900] focus:border-[#76b900] px-4 py-2.5 font-semibold outline-none min-w-[200px] cursor-pointer"
-              >
-                {stores.map(s => <option key={s._id} value={s._id}>{s.storeName}</option>)}
-              </select>
-            </div>
 
             {/* 4 Analytics Metric Cards */}
             <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6">
@@ -376,7 +365,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-slate-800">Recent Orders</h3>
                 <button 
-                  onClick={() => navigate(`/store/${activeStoreId}/orders`)}
+                  onClick={() => navigate(`/store/${activeStoreStringId}/orders`)}
                   className="text-sm font-bold text-[#76b900] hover:text-[#659e00] bg-green-50 hover:bg-green-100 px-4 py-2 rounded-xl transition-colors"
                 >
                   View All Orders
