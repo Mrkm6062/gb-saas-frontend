@@ -206,10 +206,10 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Alerts">
-      <div className="p-6 mx-auto mt-6 max-w-4xl">
+      <div className="w-full px-6 py-10">
         <div className="mb-8">
-          <h2 className="text-3xl font-extrabold mb-2 text-slate-800 flex items-center gap-3"><Bell className="text-[#76b900]" /> Notifications & Alerts</h2>
-          <p className="text-slate-500">Configure automated order confirmation emails for customers of <span className="font-bold text-slate-700">{currentStore.storeName}</span>.</p>
+          {/* <h2 className="text-3xl font-extrabold mb-2 text-slate-800 flex items-center gap-3"><Bell className="text-[#76b900]" /> Notifications & Alerts</h2>
+          <p className="text-slate-500">Configure automated order confirmation emails for customers of <span className="font-bold text-slate-700">{currentStore.storeName}</span>.</p> */}
         </div>
 
         {status && (
