@@ -623,6 +623,12 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                         <td className="p-3 text-right font-bold text-green-600">-₹{selectedOrder.discountAmount}</td>
                       </tr>
                     )}
+                    {selectedOrder.shippingCharge > 0 && (
+                      <tr>
+                        <td colSpan="3" className="p-3 text-right font-semibold text-slate-600">Shipping Charge:</td>
+                        <td className="p-3 text-right font-bold text-slate-800">₹{selectedOrder.shippingCharge}</td>
+                      </tr>
+                    )}
                     <tr>
                       <td colSpan="3" className="p-3 text-right font-bold text-slate-800 text-base">Final Total:</td>
                       <td className="p-3 text-right font-extrabold text-slate-900 text-base">₹{selectedOrder.totalAmount}</td>

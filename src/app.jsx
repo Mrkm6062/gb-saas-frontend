@@ -14,6 +14,7 @@ import PlatformPolicy from './pages/PlatformPolicy';
 import ManageDomain from './pages/ManageDomain';
 import ManageCoupon from './pages/ManageCoupon';
 import ManageAlerts from './pages/ManageAlerts';
+import ManageDelivery from './pages/ManageDelivery';
 
 
 function App() {
@@ -102,6 +103,10 @@ function App() {
           path="/store/:storeId/alerts" 
           element={token ? <ManageAlerts token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
+      <Route 
+        path="/store/:storeId/delivery" 
+        element={token ? <ManageDelivery token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+      />
         <Route 
           path="/store/:storeId/plan" 
           element={token ? <UpgradePlan token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 

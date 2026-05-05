@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { AlertCircle, HelpCircle, Mail, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle, HelpCircle, Mail, Search, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
 
 const ManageOrders = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
@@ -13,6 +13,7 @@ const ManageOrders = ({ token, stores, onLogout }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', type: '', pendingData: null });
   const [resendingOrderId, setResendingOrderId] = useState(null);
+  const [printingOrderId, setPrintingOrderId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
@@ -152,6 +153,106 @@ const ManageOrders = ({ token, stores, onLogout }) => {
       alert('Network error resending email.');
     } finally {
       setResendingOrderId(null);
+    }
+  };
+
+  const handlePrintBill = async (order) => {
+    // Open window immediately to prevent browser popup blockers
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups for this website to print bills.');
+      return;
+    }
+    setPrintingOrderId(order._id);
+    try {
+      let templateBody = '';
+      const response = await fetch(`${API_BASE_URL}/api/store-alerts/${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const billTemplate = data.templates?.find(t => t.eventType === 'bill_receipt' && t.isActive);
+        if (billTemplate) {
+          templateBody = billTemplate.body;
+        }
+      }
+
+      if (!templateBody) {
+        templateBody = `<div style="font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; border: 1px solid #ddd;">
+  <div style="text-align: center; margin-bottom: 20px;">
+    <h1 style="margin: 0; color: #333;">INVOICE</h1>
+    <h2 style="margin: 5px 0; color: #76b900;">{{storeName}}</h2>
+  </div>
+  <div style="display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px;">
+    <div>
+      <p style="margin: 2px 0;"><strong>Billed To:</strong></p>
+      <p style="margin: 2px 0;">{{customerName}}</p>
+      <p style="margin: 2px 0;">{{customerPhone}}</p>
+      <p style="margin: 2px 0;">{{customerEmail}}</p>
+      <p style="margin: 2px 0;">{{customerAddress}}</p>
+    </div>
+    <div style="text-align: right;">
+      <p style="margin: 2px 0;"><strong>Invoice #:</strong> {{orderId}}</p>
+      <p style="margin: 2px 0;"><strong>Date:</strong> {{orderDate}}</p>
+    </div>
+  </div>
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+    <thead>
+      <tr style="background-color: #f8f9fa;">
+        <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">Item</th>
+        <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">Qty</th>
+        <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">Price</th>
+        <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{billItems}}
+    </tbody>
+  </table>
+  <div style="width: 100%; display: flex; justify-content: flex-end;">
+    <table style="width: 300px; border-collapse: collapse;">
+      <tr><td style="padding: 5px 10px; text-align: left;"><strong>Subtotal:</strong></td><td style="padding: 5px 10px; text-align: right;">₹{{subTotal}}</td></tr>
+      <tr><td style="padding: 5px 10px; text-align: left;"><strong>Discount:</strong></td><td style="padding: 5px 10px; text-align: right;">-₹{{discountAmount}}</td></tr>
+      <tr><td style="padding: 5px 10px; text-align: left;"><strong>Shipping:</strong></td><td style="padding: 5px 10px; text-align: right;">₹{{shippingCharge}}</td></tr>
+      <tr><td style="padding: 10px; text-align: left; font-size: 18px; border-top: 2px solid #333;"><strong>Total:</strong></td><td style="padding: 10px; text-align: right; font-size: 18px; border-top: 2px solid #333;"><strong>₹{{totalAmount}}</strong></td></tr>
+    </table>
+  </div>
+  <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #777;"><p>Thank you for your business!</p></div>
+</div>`;
+      }
+
+      const orderItemsTable = order.orderItems?.map(item => `<tr><td style="padding:8px; border-bottom:1px solid #ddd;">${item.qty}x ${item.name}</td><td style="padding:8px; border-bottom:1px solid #ddd; text-align:right;">₹${item.price * item.qty}</td></tr>`).join('');
+      const billItemsHtml = order.orderItems?.map(item => `<tr><td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">${item.name}</td><td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">${item.qty}</td><td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${item.price}</td><td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹${item.price * item.qty}</td></tr>`).join('');
+      const subTotal = (order.totalAmount || 0) + (order.discountAmount || 0) - (order.shippingCharge || 0);
+      const fullAddress = order.address ? `${order.address.addressLine1 || ''} ${order.address.city || ''}, ${order.address.state || ''} ${order.address.pincode || ''}` : '';
+
+      const finalHtml = templateBody
+        .replace(/{{storeName}}/g, currentStore.storeName || "")
+        .replace(/{{customerName}}/g, order.customerName || "")
+        .replace(/{{customerPhone}}/g, order.customerPhone || "")
+        .replace(/{{customerEmail}}/g, order.customerEmail || "")
+        .replace(/{{customerAddress}}/g, fullAddress)
+        .replace(/{{orderDate}}/g, new Date(order.createdAt).toLocaleDateString())
+        .replace(/{{orderId}}/g, order._id.toString().slice(-6).toUpperCase())
+        .replace(/{{orderItems}}/g, `<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">${orderItemsTable}</table>`)
+        .replace(/{{billItems}}/g, billItemsHtml)
+        .replace(/{{subTotal}}/g, subTotal)
+        .replace(/{{totalAmount}}/g, order.totalAmount || 0)
+        .replace(/{{discountAmount}}/g, order.discountAmount || 0)
+        .replace(/{{shippingCharge}}/g, order.shippingCharge || 0);
+
+      printWindow.document.write(`<html><head><title>Invoice - ${order._id.toString().slice(-6).toUpperCase()}</title><style>@media print { body { -webkit-print-color-adjust: exact; } }</style></head><body>${finalHtml}</body></html>`);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    } catch (err) {
+      if (printWindow) printWindow.close();
+      alert('Failed to generate bill.');
+    } finally {
+      setPrintingOrderId(null);
     }
   };
 
@@ -319,6 +420,15 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                 </div>
                 <div className="flex items-center gap-4">
                   <button 
+                    onClick={() => handlePrintBill(selectedOrder)} 
+                    disabled={printingOrderId === selectedOrder._id}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 font-bold rounded-lg text-sm transition-colors disabled:opacity-50"
+                    title="Print Bill / Invoice"
+                  >
+                    <Printer size={16} />
+                    {printingOrderId === selectedOrder._id ? 'Generating...' : 'Print Bill'}
+                  </button>
+                  <button 
                     onClick={() => handleResendEmail(selectedOrder)} 
                     disabled={resendingOrderId === selectedOrder._id}
                     className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold rounded-lg text-sm transition-colors disabled:opacity-50"
@@ -381,6 +491,12 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                         <tr>
                           <td colSpan="3" className="p-3 text-right font-semibold text-green-600">Discount ({selectedOrder.couponCode}):</td>
                           <td className="p-3 text-right font-bold text-green-600">-₹{selectedOrder.discountAmount}</td>
+                        </tr>
+                      )}
+                      {selectedOrder.shippingCharge > 0 && (
+                        <tr>
+                          <td colSpan="3" className="p-3 text-right font-semibold text-slate-600">Shipping Charge:</td>
+                          <td className="p-3 text-right font-bold text-slate-800">₹{selectedOrder.shippingCharge}</td>
                         </tr>
                       )}
                       <tr>

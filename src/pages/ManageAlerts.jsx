@@ -50,6 +50,51 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
       name: "Custom Template",
       subject: "Update from {{storeName}}",
       body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #76b900;">Store Update</h2>\n  <p>Hi {{customerName}},</p>\n  <p>Here is an update regarding your order <strong>#{{orderId}}</strong>.</p>\n  <p>[Your message here]</p>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via Galibrand Cloud.</p>\n</div>`
+    },
+    bill_receipt: {
+      name: "Customer Bill Receipt",
+      subject: "Invoice - {{storeName}}",
+      body: `<div style="font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; border: 1px solid #ddd;">
+  <div style="text-align: center; margin-bottom: 20px;">
+    <h1 style="margin: 0; color: #333;">INVOICE</h1>
+    <h2 style="margin: 5px 0; color: #76b900;">{{storeName}}</h2>
+  </div>
+  <div style="display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px;">
+    <div>
+      <p style="margin: 2px 0;"><strong>Billed To:</strong></p>
+      <p style="margin: 2px 0;">{{customerName}}</p>
+      <p style="margin: 2px 0;">{{customerPhone}}</p>
+      <p style="margin: 2px 0;">{{customerEmail}}</p>
+      <p style="margin: 2px 0;">{{customerAddress}}</p>
+    </div>
+    <div style="text-align: right;">
+      <p style="margin: 2px 0;"><strong>Invoice #:</strong> {{orderId}}</p>
+      <p style="margin: 2px 0;"><strong>Date:</strong> {{orderDate}}</p>
+    </div>
+  </div>
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+    <thead>
+      <tr style="background-color: #f8f9fa;">
+        <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">Item</th>
+        <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">Qty</th>
+        <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">Price</th>
+        <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{billItems}}
+    </tbody>
+  </table>
+  <div style="width: 100%; display: flex; justify-content: flex-end;">
+    <table style="width: 300px; border-collapse: collapse;">
+      <tr><td style="padding: 5px 10px; text-align: left;"><strong>Subtotal:</strong></td><td style="padding: 5px 10px; text-align: right;">₹{{subTotal}}</td></tr>
+      <tr><td style="padding: 5px 10px; text-align: left;"><strong>Discount:</strong></td><td style="padding: 5px 10px; text-align: right;">-₹{{discountAmount}}</td></tr>
+      <tr><td style="padding: 5px 10px; text-align: left;"><strong>Shipping:</strong></td><td style="padding: 5px 10px; text-align: right;">₹{{shippingCharge}}</td></tr>
+      <tr><td style="padding: 10px; text-align: left; font-size: 18px; border-top: 2px solid #333;"><strong>Total:</strong></td><td style="padding: 10px; text-align: right; font-size: 18px; border-top: 2px solid #333;"><strong>₹{{totalAmount}}</strong></td></tr>
+    </table>
+  </div>
+  <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #777;"><p>Thank you for your business!</p></div>
+</div>`
     }
   };
 
@@ -195,13 +240,35 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
     `;
     const dummyOrderItemsTable = `<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">${dummyItems}</table>`;
 
+    const dummyBillItems = `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">Sample Product A</td>
+        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">1</td>
+        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹500</td>
+        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹500</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">Sample Product B</td>
+        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">2</td>
+        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹500</td>
+        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">₹1000</td>
+      </tr>
+    `;
+
     return htmlTemplate
       .replace(/{{storeName}}/g, currentStore.storeName || "My Awesome Store")
       .replace(/{{customerName}}/g, "John Doe")
+      .replace(/{{customerPhone}}/g, "+91 9876543210")
+      .replace(/{{customerEmail}}/g, "john@example.com")
+      .replace(/{{customerAddress}}/g, "123 Main Street, City, State 123456")
+      .replace(/{{orderDate}}/g, new Date().toLocaleDateString())
       .replace(/{{orderId}}/g, "ORD-123456")
       .replace(/{{orderItems}}/g, dummyOrderItemsTable)
+      .replace(/{{billItems}}/g, dummyBillItems)
+      .replace(/{{subTotal}}/g, "1500")
       .replace(/{{totalAmount}}/g, "1500")
-      .replace(/{{discountAmount}}/g, "100");
+      .replace(/{{discountAmount}}/g, "100")
+      .replace(/{{shippingCharge}}/g, "50");
   };
 
   return (
@@ -342,6 +409,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
                           <option value="order_delivered">Order Delivered</option>
                           <option value="order_canceled">Order Canceled</option>
                           <option value="order_returned">Order Returned</option>
+                          <option value="bill_receipt">Bill Receipt</option>
                           <option value="custom">Custom</option>
                        </select>
                        <button 
@@ -375,7 +443,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
                        {isPreviewMode ? 'Edit Code' : 'Preview HTML'}
                      </button>
                    </div>
-                   <p className="text-xs text-slate-500 mb-2 font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">Variables: {'{{storeName}}'}, {'{{customerName}}'}, {'{{orderId}}'}, {'{{orderItems}}'}, {'{{totalAmount}}'}, {'{{discountAmount}}'}</p>
+                 <p className="text-xs text-slate-500 mb-2 font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">Variables: {'{{storeName}}'}, {'{{customerName}}'}, {'{{customerPhone}}'}, {'{{customerEmail}}'}, {'{{customerAddress}}'}, {'{{orderDate}}'}, {'{{orderId}}'}, {'{{orderItems}}'}, {'{{billItems}}'}, {'{{subTotal}}'}, {'{{totalAmount}}'}, {'{{discountAmount}}'}, {'{{shippingCharge}}'}</p>
                    {isPreviewMode ? (
                      <div className="w-full px-4 py-4 border border-slate-200 rounded-xl bg-white min-h-[200px] max-h-[400px] overflow-y-auto" dangerouslySetInnerHTML={{ __html: getPreviewHtml(templateForm.body) }}></div>
                    ) : (
