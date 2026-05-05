@@ -15,6 +15,7 @@ import ManageDomain from './pages/ManageDomain';
 import ManageCoupon from './pages/ManageCoupon';
 import ManageAlerts from './pages/ManageAlerts';
 import ManageDelivery from './pages/ManageDelivery';
+import ManageCheckout from './pages/ManageCheckout';
 
 
 function App() {
@@ -106,6 +107,10 @@ function App() {
       <Route 
         path="/store/:storeId/delivery" 
         element={token ? <ManageDelivery token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+      />
+      <Route 
+        path="/store/:storeId/checkout" 
+        element={token ? <ManageCheckout token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
       />
         <Route 
           path="/store/:storeId/plan" 

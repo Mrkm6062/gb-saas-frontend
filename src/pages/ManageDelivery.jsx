@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { Truck, MapPin, IndianRupee, ShieldCheck, X } from 'lucide-react';
 
@@ -7,6 +7,7 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
   const currentStore = stores.find(s => s.storeId === storeId) || {};
 
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
 
@@ -161,6 +162,9 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
             <h2 className="text-3xl font-extrabold mb-2 text-slate-800 flex items-center gap-3"><Truck className="text-[#76b900]" /> Delivery Settings</h2>
             <p className="text-slate-500">Configure shipping zones and delivery charges for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
           </div>
+          <button onClick={() => navigate(`/store/${storeId}/checkout`)} className="px-6 py-2.5 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition whitespace-nowrap border border-blue-200">
+             Payment & Checkout Settings &rarr;
+          </button>
         </div>
 
         {status && (

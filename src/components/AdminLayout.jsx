@@ -81,6 +81,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     { name: 'Coupons&Offers', icon: <Ticket size={20} />, path: activeStoreId ? `/store/${activeStoreId}/coupons` : '#' },
     { name: 'Alerts & Emails', icon: <Bell size={20} />, path: activeStoreId ? `/store/${activeStoreId}/alerts` : '#' },
     { name: 'Delivery', icon: <Truck size={20} />, path: activeStoreId ? `/store/${activeStoreId}/delivery` : '#' },
+    { name: 'Checkout & Payment', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/checkout` : '#' },
     { name: 'Analytics', icon: <BarChart3 size={20} />, path: '#' },
     { name: 'Store Policy', icon: <ClipboardList size={20} />, path: activeStoreId ? `/store/${activeStoreId}/policies` : '#' },
     { name: 'Plan & Billing', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' },
