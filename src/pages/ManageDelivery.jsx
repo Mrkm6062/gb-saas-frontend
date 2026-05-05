@@ -18,18 +18,52 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
     allowedPincodes: []
   });
 
-  const [pincodeInput, setPincodeInput] = useState('');
-  
-  // Standard list of Indian States & UTs
-  const [availableStates] = useState([
-    "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh",
-    "Chhattisgarh", "Dadra and Nagar Haveli", "Daman and Diu", "Delhi", "Goa", "Gujarat", "Haryana",
-    "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep",
-    "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry",
-    "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
-  ]);
+  const [locationMap, setLocationMap] = useState([]);
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [offices, setOffices] = useState([]);
+  const [selectedOffice, setSelectedOffice] = useState(''); // Stores the pincode value
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+
+  // Fetch state & district map
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/delivery-settings/locations`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setLocationMap(data);
+        }
+      } catch (e) {
+        console.error("Failed to load locations", e);
+      }
+    };
+    fetchLocations();
+  }, [API_BASE_URL, token]);
+
+  // Fetch offices when district changes
+  useEffect(() => {
+    const fetchOffices = async () => {
+      if (!selectedState || !selectedDistrict) {
+        setOffices([]);
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/delivery-settings/offices?state=${encodeURIComponent(selectedState)}&district=${encodeURIComponent(selectedDistrict)}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          setOffices(await res.json());
+        }
+      } catch (e) {
+        console.error("Failed to load offices", e);
+      }
+    };
+    fetchOffices();
+  }, [selectedState, selectedDistrict, API_BASE_URL, token]);
 
   useEffect(() => {
     const fetchDeliverySettings = async () => {
@@ -69,11 +103,21 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
 
   const handleAddPincode = (e) => {
     e.preventDefault();
-    const cleaned = pincodeInput.trim();
+    const cleaned = selectedOffice.toString().trim();
     if (cleaned && !formData.allowedPincodes.includes(cleaned)) {
       setFormData(prev => ({ ...prev, allowedPincodes: [...prev.allowedPincodes, cleaned] }));
     }
-    setPincodeInput('');
+  };
+
+  const handleAddEntireDistrict = (e) => {
+    e.preventDefault();
+    if (offices.length === 0) return;
+    
+    setFormData(prev => {
+      const districtPincodes = offices.map(o => o.pincode.toString());
+      const merged = Array.from(new Set([...prev.allowedPincodes, ...districtPincodes]));
+      return { ...prev, allowedPincodes: merged };
+    });
   };
 
   const handleRemovePincode = (code) => {
@@ -197,12 +241,14 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
               <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 animate-fadeIn">
                 <p className="text-sm font-bold text-slate-700 mb-4">Select Allowed States ({formData.allowedStates.length} selected)</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                  {availableStates.map(state => (
-                    <label key={state} className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 hover:text-slate-900 bg-white p-2 rounded-lg border border-slate-200">
-                      <input type="checkbox" checked={formData.allowedStates.includes(state)} onChange={() => handleStateToggle(state)} className="w-4 h-4 rounded text-[#76b900] focus:ring-[#76b900]" />
-                      <span className="truncate">{state}</span>
+                  {locationMap.length > 0 ? locationMap.map(loc => (
+                    <label key={loc.stateName} className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 hover:text-slate-900 bg-white p-2 rounded-lg border border-slate-200">
+                      <input type="checkbox" checked={formData.allowedStates.includes(loc.stateName)} onChange={() => handleStateToggle(loc.stateName)} className="w-4 h-4 rounded text-[#76b900] focus:ring-[#76b900]" />
+                      <span className="truncate">{loc.stateName}</span>
                     </label>
-                  ))}
+                  )) : (
+                    <p className="text-xs text-slate-500 col-span-full">Loading states from database...</p>
+                  )}
                 </div>
               </div>
             )}
@@ -210,9 +256,33 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
             {formData.deliveryMode === 'pincode' && (
               <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 animate-fadeIn">
                 <p className="text-sm font-bold text-slate-700 mb-4">Allowed Pincodes ({formData.allowedPincodes.length} selected)</p>
-                <div className="flex gap-3 mb-6">
-                  <input type="text" value={pincodeInput} onChange={(e) => setPincodeInput(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Enter 6-digit Pincode" maxLength="6" className="flex-1 px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#76b900] font-medium" />
-                  <button type="button" onClick={handleAddPincode} disabled={pincodeInput.length !== 6} className="px-6 py-2 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition disabled:opacity-50 whitespace-nowrap">Add Pincode</button>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setSelectedDistrict(''); setSelectedOffice(''); }} className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#76b900] text-sm">
+                    <option value="">Select State</option>
+                    {locationMap.map(loc => (
+                      <option key={loc.stateName} value={loc.stateName}>{loc.stateName}</option>
+                    ))}
+                  </select>
+                  
+                  <select value={selectedDistrict} onChange={e => { setSelectedDistrict(e.target.value); setSelectedOffice(''); }} disabled={!selectedState} className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#76b900] text-sm disabled:opacity-50">
+                    <option value="">Select District</option>
+                    {locationMap.find(loc => loc.stateName === selectedState)?.districts.map(dist => (
+                      <option key={dist} value={dist}>{dist}</option>
+                    ))}
+                  </select>
+
+                  <select value={selectedOffice} onChange={e => setSelectedOffice(e.target.value)} disabled={!selectedDistrict || offices.length === 0} className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#76b900] text-sm disabled:opacity-50">
+                    <option value="">Select Office / Pincode</option>
+                    {offices.map(off => (
+                      <option key={off._id} value={off.pincode}>{off.officeName} ({off.pincode})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-3 mb-6 border-b border-slate-200 pb-6">
+                  <button type="button" onClick={handleAddEntireDistrict} disabled={!selectedDistrict || offices.length === 0} className="px-6 py-2 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition disabled:opacity-50 whitespace-nowrap">Add Entire District</button>
+                  <button type="button" onClick={handleAddPincode} disabled={!selectedOffice} className="px-6 py-2 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition disabled:opacity-50 whitespace-nowrap">Add Pincode</button>
                 </div>
                 {formData.allowedPincodes.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
