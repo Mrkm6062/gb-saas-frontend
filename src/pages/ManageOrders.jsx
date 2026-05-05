@@ -349,6 +349,9 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                       </td>
                       <td className="p-4 font-extrabold text-green-600">₹{order.totalAmount}</td>
                       <td className="p-4">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          {order.paymentMethod === 'whatsapp' ? 'WhatsApp' : order.paymentMethod === 'razorpay' ? 'Online' : 'COD'}
+                        </div>
                         <select value={order.paymentStatus} onChange={(e) => handleStatusChange(order._id, 'payment', e.target.value, order)} className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.paymentStatus === 'paid' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
                           <option value="pending">Pending</option>
                           <option value="paid">Paid</option>
@@ -499,6 +502,10 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                           <td className="p-3 text-right font-bold text-slate-800">₹{selectedOrder.shippingCharge}</td>
                         </tr>
                       )}
+                      <tr>
+                        <td colSpan="3" className="p-3 text-right font-semibold text-slate-600">Payment Method:</td>
+                        <td className="p-3 text-right font-bold text-slate-800 uppercase">{selectedOrder.paymentMethod === 'whatsapp' ? 'WhatsApp' : selectedOrder.paymentMethod === 'razorpay' ? 'Online' : 'COD'}</td>
+                      </tr>
                       <tr>
                         <td colSpan="3" className="p-3 text-right font-bold text-slate-800 text-base">Final Total:</td>
                         <td className="p-3 text-right font-extrabold text-slate-900 text-base">₹{selectedOrder.totalAmount}</td>
