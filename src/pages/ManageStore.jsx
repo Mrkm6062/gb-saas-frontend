@@ -376,19 +376,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
   };
 
   const handleOpenCreateStore = () => {
-    let maxStoresAllowed = 1;
-    
-    activeStores.forEach(s => {
-      const plan = plans.find(p => p._id === s.planId);
-      if (plan && plan.features?.storeLimit) {
-        if (plan.features.storeLimit > maxStoresAllowed) {
-          maxStoresAllowed = plan.features.storeLimit;
-        }
-      }
-    });
-
-    if (activeStores.length >= maxStoresAllowed) {
-      showToast(`Store limit reached! Your current plans allow up to ${maxStoresAllowed} store(s). Please upgrade to create more.`, 'error');
+    if (activeStores.length >= 1) {
+      showToast(`Store limit reached! You can only create 1 store per account.`, 'error');
       return;
     }
     setIsCreatingStore(true);
@@ -417,9 +406,21 @@ const ManageStore = ({ token, stores, onLogout }) => {
                 </span>
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-1 truncate" title={s.storeName}>{s.storeName}</h3>
-              {s.subdomain && (
-                <a href={`http://${s.subdomain}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline mb-5 truncate">
-                  {s.subdomain}
+              
+              {s.planExpiryDate && (
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-bold tracking-wider ${s.isTrialActive ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                    {s.isTrialActive ? 'Trial' : 'Premium'}
+                  </span>
+                  <span className="text-xs font-medium text-slate-500">
+                    Expires: {new Date(s.planExpiryDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+
+              {(s.customDomain || s.subdomain) && (
+                <a href={`https://${s.customDomain || s.subdomain}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline mb-5 truncate block">
+                  {s.customDomain || s.subdomain}
                 </a>
               )}
               <button 
@@ -431,15 +432,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
               </button>
             </div>
           ))}
-          
-          {/* Create New Store Card */}
-          <div onClick={handleOpenCreateStore} className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 p-6 flex flex-col items-center justify-center text-slate-500 hover:border-[#76b900] hover:bg-green-50/50 hover:text-[#76b900] transition-all cursor-pointer min-h-[200px] group">
-            <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm group-hover:bg-[#76b900] group-hover:text-white transition-colors">
-              <Plus size={24} />
-            </div>
-            <span className="font-bold text-lg">Create New Store</span>
-            <span className="text-xs mt-1 text-center">Launch another outlet</span>
-          </div>
           
         </div>
       </div>

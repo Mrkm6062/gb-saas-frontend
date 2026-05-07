@@ -245,19 +245,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   };
 
   const handleOpenCreateStore = () => {
-    let maxStoresAllowed = 1;
-    
-    activeStores.forEach(s => {
-      const plan = plans.find(p => p._id === s.planId);
-      if (plan && plan.features?.storeLimit) {
-        if (plan.features.storeLimit > maxStoresAllowed) {
-          maxStoresAllowed = plan.features.storeLimit;
-        }
-      }
-    });
-
-    if (activeStores.length >= maxStoresAllowed) {
-      showToast(`Store limit reached! Your current plans allow up to ${maxStoresAllowed} store(s). Please upgrade to create more.`, 'error');
+    if (activeStores.length >= 1) {
+      showToast(`Store limit reached! You can only create 1 store per account.`, 'error');
       return;
     }
     setIsCreatingStore(true);

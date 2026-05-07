@@ -70,6 +70,15 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     }
   }, [activeStoreId]);
 
+  // Calculate trial days remaining for the active store
+  const currentStoreInfo = stores?.find(s => s.storeId === activeStoreId);
+  let trialDaysLeft = null;
+  if (currentStoreInfo && currentStoreInfo.isTrialActive && currentStoreInfo.planExpiryDate) {
+    const diff = new Date(currentStoreInfo.planExpiryDate) - new Date();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    trialDaysLeft = days > 0 ? days : 0;
+  }
+
   const menuItems = [
     { name: 'Overview', icon: <LayoutGrid size={20} />, path: '/' },
     { name: 'Manage Store', icon: <Store size={20} />, path: activeStoreId ? `/store/${activeStoreId}` : '#' },
@@ -86,7 +95,6 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     { name: 'Analytics', icon: <BarChart3 size={20} />, path: '#' },
     { name: 'Store Policy', icon: <ClipboardList size={20} />, path: activeStoreId ? `/store/${activeStoreId}/policies` : '#' },
     { name: 'Plan & Billing', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' },
-    { name: 'SaaS Platform Billing', icon: <ShieldCheck size={20} />, path: '/superadmin/payments' },
   ];
 
   return (
@@ -172,31 +180,12 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
               <Menu size={24} />
             </button>
             <span className="text-xl font-bold text-slate-800">{headerTitle}</span>
-            
-            {/* Store Switcher Dropdown */}
-            {stores && stores.length > 0 && activeStoreId && (
-              <div className="ml-4 flex items-center gap-2 border-l border-slate-200 pl-4 hidden sm:flex">
-                <span className="text-sm font-medium text-slate-500">Store:</span>
-                <select
-                  value={activeStoreId}
-                  onChange={(e) => {
-                    const newStoreId = e.target.value;
-                    localStorage.setItem('gb_active_store_id', newStoreId);
-                    if (location.pathname === '/') {
-                      window.location.reload();
-                    } else {
-                      const currentSubPath = pathParts.slice(3).join('/'); // Preserves current sub-route like /products
-                      navigate(`/store/${newStoreId}${currentSubPath ? `/${currentSubPath}` : ''}`);
-                    }
-                  }}
-                  className="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-[#76b900] focus:border-[#76b900] block py-1.5 px-3 outline-none font-semibold cursor-pointer max-w-[200px] truncate"
-                >
-                  {stores.map(store => (
-                    <option key={store.storeId} value={store.storeId}>
-                      {store.storeName}
-                    </option>
-                  ))}
-                </select>
+
+            {/* Trial Banner */}
+            {trialDaysLeft !== null && (
+              <div className={`ml-4 hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border ${trialDaysLeft > 0 ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                <span className="text-[10px] font-bold uppercase tracking-wider">{trialDaysLeft > 0 ? 'Free Trial' : 'Trial Expired'}</span>
+                {trialDaysLeft > 0 && <span className="text-sm font-extrabold">{trialDaysLeft} Days Left</span>}
               </div>
             )}
           </div>

@@ -170,7 +170,6 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
                   
                   <div className="flex-1 space-y-3 mb-6 text-sm">
                     <div className="flex items-center gap-2"><Check size={18} className="text-[#76b900] shrink-0" /><span className="text-slate-600 font-medium">Up to {plan.features.maxProducts} Products</span></div>
-                    <div className="flex items-center gap-2"><Check size={18} className="text-[#76b900] shrink-0" /><span className="text-slate-600 font-medium">Up to {plan.features.storeLimit || 1} Store(s)</span></div>
                     <div className="flex items-center gap-2"><Check size={18} className="text-[#76b900] shrink-0" /><span className="text-slate-600 font-medium">{plan.features.storageLimit ? (plan.features.storageLimit >= 1000 ? `${plan.features.storageLimit / 1000}GB` : `${plan.features.storageLimit}MB`) : '500MB'} Storage</span></div>
                     <div className="flex items-center gap-2">{plan.features.customDomain ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.customDomain ? 'text-slate-600' : 'text-slate-400'}`}>Custom Domain</span></div>
                     <div className="flex items-center gap-2">{plan.features.freeSsl ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.freeSsl ? 'text-slate-600' : 'text-slate-400'}`}>Free SSL/TLS HTTPS</span></div>
