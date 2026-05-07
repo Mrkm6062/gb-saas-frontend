@@ -16,6 +16,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Globe,
   Ticket,
   Bell,
@@ -32,6 +33,20 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
   });
   const [platformLogo, setPlatformLogo] = useState("https://storage.googleapis.com/galibrand/superadmin/products/galibrandfullname-logo.png");
   const [platformMiniLogo, setPlatformMiniLogo] = useState("");
+
+  // Dynamically detect which store we are currently viewing based on the URL
+  const pathParts = location.pathname.split('/');
+  let activeStoreId = pathParts[1] === 'store' && pathParts[2] 
+    ? pathParts[2] 
+    : localStorage.getItem('gb_active_store_id');
+
+  const [openMenus, setOpenMenus] = useState(() => {
+    return {
+      Overview: location.pathname === '/' || location.pathname === `/store/${activeStoreId}`,
+      Inventory: location.pathname.includes('/products') || location.pathname.includes('/categories'),
+      Settings: location.pathname.includes('/alerts') || location.pathname.includes('/delivery') || location.pathname.includes('/checkout') || location.pathname.includes('/policies')
+    };
+  });
 
   useEffect(() => {
     localStorage.setItem('gb_sidebar_collapsed', isSidebarCollapsed);
@@ -52,11 +67,6 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     fetchSettings();
   }, []);
 
-  // Dynamically detect which store we are currently viewing based on the URL
-  const pathParts = location.pathname.split('/');
-  let activeStoreId = pathParts[1] === 'store' && pathParts[2] 
-    ? pathParts[2] 
-    : localStorage.getItem('gb_active_store_id');
 
   // Fallback to first store if localStorage has invalid/old ID format
   const isValidStore = stores?.some(s => s.storeId === activeStoreId);
@@ -79,21 +89,43 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     trialDaysLeft = days > 0 ? days : 0;
   }
 
+  const toggleMenu = (menuName) => {
+    if (isSidebarCollapsed) {
+      setIsSidebarCollapsed(false);
+    }
+    setOpenMenus(prev => ({ ...prev, [menuName]: !prev[menuName] }));
+  };
+
   const menuItems = [
-    { name: 'Overview', icon: <LayoutGrid size={20} />, path: '/' },
-    { name: 'Manage Store', icon: <Store size={20} />, path: activeStoreId ? `/store/${activeStoreId}` : '#' },
-    { name: 'Products', icon: <Package size={20} />, path: activeStoreId ? `/store/${activeStoreId}/products` : '#' },
-    { name: 'Categories', icon: <Layers size={20} />, path: activeStoreId ? `/store/${activeStoreId}/categories` : '#' },
-    { name: 'Domains', icon: <Globe size={20} />, path: activeStoreId ? `/store/${activeStoreId}/domains` : '#' },
-    { name: 'Storage', icon: <HardDrive size={20} />, path: activeStoreId ? `/store/${activeStoreId}/storage` : '#' },
+    { 
+      name: 'Overview', icon: <LayoutGrid size={20} />, 
+      subItems: [
+        { name: 'Live Dashboard', path: '/' },
+        { name: 'Manage Store', path: activeStoreId ? `/store/${activeStoreId}` : '#' }
+      ]
+    },
+    { 
+      name: 'Inventory', icon: <Package size={20} />, 
+      subItems: [
+        { name: 'Categories', path: activeStoreId ? `/store/${activeStoreId}/categories` : '#' },
+        { name: 'Products', path: activeStoreId ? `/store/${activeStoreId}/products` : '#' }
+      ]
+    },
     { name: 'Orders', icon: <ClipboardList size={20} />, path: activeStoreId ? `/store/${activeStoreId}/orders` : '#' },
     { name: 'Customers', icon: <Users size={20} />, path: activeStoreId ? `/store/${activeStoreId}/customers` : '#' },
-    { name: 'Coupons&Offers', icon: <Ticket size={20} />, path: activeStoreId ? `/store/${activeStoreId}/coupons` : '#' },
-    { name: 'Alerts & Emails', icon: <Bell size={20} />, path: activeStoreId ? `/store/${activeStoreId}/alerts` : '#' },
-    { name: 'Delivery', icon: <Truck size={20} />, path: activeStoreId ? `/store/${activeStoreId}/delivery` : '#' },
-    { name: 'Checkout & Payment', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/checkout` : '#' },
+    { name: 'Coupons & Offers', icon: <Ticket size={20} />, path: activeStoreId ? `/store/${activeStoreId}/coupons` : '#' },
+    { name: 'Domains', icon: <Globe size={20} />, path: activeStoreId ? `/store/${activeStoreId}/domains` : '#' },
+    { name: 'Storage', icon: <HardDrive size={20} />, path: activeStoreId ? `/store/${activeStoreId}/storage` : '#' },
     { name: 'Analytics', icon: <BarChart3 size={20} />, path: '#' },
-    { name: 'Store Policy', icon: <ClipboardList size={20} />, path: activeStoreId ? `/store/${activeStoreId}/policies` : '#' },
+    { 
+      name: 'Settings', icon: <Settings size={20} />, 
+      subItems: [
+        { name: 'Alerts & Emails', path: activeStoreId ? `/store/${activeStoreId}/alerts` : '#' },
+        { name: 'Delivery', path: activeStoreId ? `/store/${activeStoreId}/delivery` : '#' },
+        { name: 'Checkout & Payment', path: activeStoreId ? `/store/${activeStoreId}/checkout` : '#' },
+        { name: 'Store Policy', path: activeStoreId ? `/store/${activeStoreId}/policies` : '#' }
+      ]
+    },
     { name: 'Plan & Billing', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' },
   ];
 
@@ -130,32 +162,89 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
             <X size={24} />
           </button>
         </div>
-        <nav className="flex-1 space-y-2 overflow-y-auto">
+        <nav className="flex-1 space-y-1 overflow-y-auto pb-4 custom-scrollbar">
           {menuItems.map((item) => {
-            // Highlight the menu item based on current URL path
+            if (item.subItems) {
+              const isSubMenuOpen = openMenus[item.name];
+              const isAnyChildActive = item.subItems.some(sub => sub.path !== '#' && location.pathname === sub.path);
+              
+              return (
+                <div key={item.name} className="px-2 pb-1">
+                  <button
+                    onClick={() => toggleMenu(item.name)}
+                    title={isSidebarCollapsed ? item.name : undefined}
+                    className={`w-full flex items-center justify-between py-2.5 rounded-xl transition-all duration-200 ${isSidebarCollapsed ? 'md:justify-center px-2 md:px-0' : 'px-3'} ${
+                      isAnyChildActive && !isSubMenuOpen
+                        ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
+                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`${isAnyChildActive ? "text-[#76b900]" : "text-gray-400"} shrink-0`}>
+                        {item.icon}
+                      </span>
+                      <span className={`text-sm tracking-wide truncate ${isSidebarCollapsed ? 'md:hidden' : ''}`}>{item.name}</span>
+                    </div>
+                    {!isSidebarCollapsed && (
+                      <span className={`text-gray-400 transition-transform duration-300 ${isSubMenuOpen ? 'rotate-90' : ''}`}>
+                        <ChevronRight size={16} />
+                      </span>
+                    )}
+                  </button>
+                  
+                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSubMenuOpen && !isSidebarCollapsed ? 'max-h-64 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
+                    <div className="space-y-1 pl-9 pr-2 pb-1">
+                      {item.subItems.map(subItem => {
+                        const isActive = subItem.path !== '#' && location.pathname === subItem.path;
+                        return (
+                          <button
+                            key={subItem.name}
+                            onClick={() => {
+                              if (subItem.path !== '#') {
+                                navigate(subItem.path);
+                                setIsMobileMenuOpen(false);
+                              }
+                            }}
+                            className={`w-full text-left py-2 px-3 rounded-lg text-sm transition-all duration-200 ${
+                              isActive 
+                                ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
+                                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                            }`}
+                          >
+                            {subItem.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             const isActive = item.path !== '#' && location.pathname === item.path;
             
             return (
-              <button
-                key={item.name}
-                onClick={() => {
-                  if (item.path !== '#') {
-                    navigate(item.path);
-                    setIsMobileMenuOpen(false); // Close menu on mobile after navigating
-                  }
-                }}
-                title={isSidebarCollapsed ? item.name : undefined}
-                className={`w-full flex items-center gap-3 py-3 rounded-xl transition-all duration-200 ${isSidebarCollapsed ? 'md:justify-center px-4 md:px-0' : 'px-4'} ${
-                  isActive 
-                    ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
-                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <span className={`${isActive ? "text-[#76b900]" : "text-gray-400"} shrink-0`}>
-                  {item.icon}
-                </span>
-                <span className={`text-sm tracking-wide truncate ${isSidebarCollapsed ? 'md:hidden' : ''}`}>{item.name}</span>
-              </button>
+              <div key={item.name} className="px-2 pb-1">
+                <button
+                  onClick={() => {
+                    if (item.path !== '#') {
+                      navigate(item.path);
+                      setIsMobileMenuOpen(false);
+                    }
+                  }}
+                  title={isSidebarCollapsed ? item.name : undefined}
+                  className={`w-full flex items-center gap-3 py-2.5 rounded-xl transition-all duration-200 ${isSidebarCollapsed ? 'md:justify-center px-2 md:px-0' : 'px-3'} ${
+                    isActive 
+                      ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
+                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <span className={`${isActive ? "text-[#76b900]" : "text-gray-400"} shrink-0`}>
+                    {item.icon}
+                  </span>
+                  <span className={`text-sm tracking-wide truncate ${isSidebarCollapsed ? 'md:hidden' : ''}`}>{item.name}</span>
+                </button>
+              </div>
             );
           })}
         </nav>
