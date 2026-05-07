@@ -6,9 +6,10 @@ import { Check, X } from 'lucide-react';
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
   return new Promise((resolve) => {
-    // Check if the Razorpay SDK is already loaded in the window
-    if (window.Razorpay) {
-      return resolve(true);
+    // Safely check if the Razorpay SDK is already loaded
+    if ('Razorpay' in window) {
+      resolve(true);
+      return;
     }
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
