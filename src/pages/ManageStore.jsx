@@ -3,6 +3,24 @@ import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { Link as LinkIcon, Trash2, Plus, CreditCard } from 'lucide-react';
 
+// Helper to dynamically load razorpay
+const loadRazorpay = () => {
+  return new Promise((resolve) => {
+    if ('Razorpay' in window) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = (err) => {
+      console.error("Razorpay script failed to load. You may have an adblocker enabled.", err);
+      resolve(false);
+    };
+    document.body.appendChild(script);
+  });
+};
+
 const SocialIcon = ({ platform, size = 20, className }) => {
   const getPath = () => {
     switch(platform.toLowerCase()) {
@@ -25,8 +43,11 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const { storeId } = useParams(); // Gets the store ID from the URL
   const navigate = useNavigate();
 
-  // Find the current store to initialize the form state
-  const currentStore = stores.find(s => s.storeId === storeId) || {};
+  // Group stores
+  const activeStores = stores.filter(s => !s.isDeleted);
+  const deletedStores = stores.filter(s => s.isDeleted);
+
+  const currentStore = activeStores.find(s => s.storeId === storeId) || activeStores[0] || {};
 
   // Form states
   const [storeName, setStoreName] = useState(currentStore.storeName || '');
@@ -217,8 +238,23 @@ const ManageStore = ({ token, stores, onLogout }) => {
     e.preventDefault();
     setCreateStatus('Creating store...');
 
+    const selectedPlanObj = plans.find(p => p._id === newStorePlan);
+    const planPrice = selectedPlanObj ? selectedPlanObj.price : 0;
+
     try {
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+
+      let keyData = null;
+      if (planPrice > 0) {
+        const keyRes = await fetch(`${API_BASE_URL}/api/platform-payments/public-key`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        keyData = await keyRes.json();
+        if (!keyData.razorpayEnabled) {
+          return setCreateStatus('Error: Platform payments are currently disabled. Cannot purchase paid plans.');
+        }
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/store`, {
         method: 'POST',
         headers: {
@@ -236,8 +272,71 @@ const ManageStore = ({ token, stores, onLogout }) => {
       const data = await response.json();
 
       if (response.ok) {
-        closeForm();
-        window.location.reload(); // Refresh the app state to fetch and display the new store
+        const createdStore = data.store;
+        
+        if (planPrice === 0) {
+          closeForm();
+          window.location.reload();
+        } else {
+          setCreateStatus('Initializing payment...');
+          const isLoaded = await loadRazorpay();
+          if (!isLoaded) return setCreateStatus('Error: Failed to load Razorpay SDK. Check your internet connection.');
+
+          const orderRes = await fetch(`${API_BASE_URL}/api/platform-payments/create-order`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ amount: planPrice, storeId: createdStore._id })
+          });
+          const orderData = await orderRes.json();
+          if (!orderRes.ok) throw new Error(orderData.message || 'Failed to create order');
+
+          const options = {
+            key: keyData.razorpayKeyId,
+            amount: orderData.amount,
+            currency: orderData.currency,
+            name: "Galibrand Cloud",
+            description: `${selectedPlanObj.name} Plan Subscription`,
+            order_id: orderData.id,
+            handler: async function (paymentResponse) {
+              setCreateStatus('Verifying payment...');
+              const verifyRes = await fetch(`${API_BASE_URL}/api/platform-payments/verify-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ ...paymentResponse, storeId: createdStore._id, planId: newStorePlan })
+              });
+              const verifyData = await verifyRes.json();
+              if (verifyData.success) {
+                setCreateStatus('Payment successful! Store created.');
+                setTimeout(() => window.location.reload(), 1500);
+              } else {
+                setCreateStatus('Payment verification failed. If money was deducted, please contact support.');
+              }
+            },
+            modal: {
+              ondismiss: async function() {
+                setCreateStatus('Payment canceled. Cleaning up...');
+                try {
+                  await fetch(`${API_BASE_URL}/api/store/${createdStore._id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                } catch (e) {
+                  console.error("Cleanup failed", e);
+                }
+                setCreateStatus('Payment canceled. Store creation aborted.');
+                setTimeout(() => {
+                  closeForm();
+                }, 1500);
+              }
+            },
+            prefill: { name: newStoreName },
+            theme: { color: "#76b900" }
+          };
+
+          const paymentObject = new window.Razorpay(options);
+          paymentObject.open();
+          setCreateStatus('');
+        }
       } else {
         setCreateStatus(`Error: ${data.message || 'Failed to create store'}`);
       }
@@ -252,6 +351,25 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setCurrentStep(1);
   };
 
+  const handleRestoreStore = async (storeObjId) => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const response = await fetch(`${API_BASE_URL}/api/store/${storeObjId}/restore`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        showToast('Store restored successfully!', 'success');
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        showToast(`Error: ${data.message}`, 'error');
+      }
+    } catch (err) {
+      showToast(`Error: ${err.message}`, 'error');
+    }
+  };
+
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -260,7 +378,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const handleOpenCreateStore = () => {
     let maxStoresAllowed = 1;
     
-    stores.forEach(s => {
+    activeStores.forEach(s => {
       const plan = plans.find(p => p._id === s.planId);
       if (plan && plan.features?.storeLimit) {
         if (plan.features.storeLimit > maxStoresAllowed) {
@@ -269,7 +387,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
       }
     });
 
-    if (stores.length >= maxStoresAllowed) {
+    if (activeStores.length >= maxStoresAllowed) {
       showToast(`Store limit reached! Your current plans allow up to ${maxStoresAllowed} store(s). Please upgrade to create more.`, 'error');
       return;
     }
@@ -284,7 +402,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
       <div className="mb-12">
         <h2 className="text-2xl font-bold mb-6 text-slate-800">Your Stores</h2>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6">
-          {stores.map((s) => (
+          {activeStores.map((s) => (
             <div key={s._id} className={`bg-white rounded-2xl shadow-sm border-2 p-6 flex flex-col transition-all ${s.storeId === storeId ? 'border-[#76b900] ring-4 ring-green-50' : 'border-slate-100 hover:border-slate-300'}`}>
               <div className="flex justify-between items-start mb-4">
                 {s.logo ? (
@@ -325,6 +443,41 @@ const ManageStore = ({ token, stores, onLogout }) => {
           
         </div>
       </div>
+
+      {/* Recycle Bin (Deleted Stores) */}
+      {deletedStores.length > 0 && (
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold mb-6 text-slate-800">Recycle Bin</h2>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6">
+            {deletedStores.map((s) => {
+              const deletionDate = new Date(s.deletedAt);
+              const expiryDate = new Date(deletionDate);
+              expiryDate.setDate(expiryDate.getDate() + 30);
+              const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+
+              return (
+                <div key={s._id} className="bg-white rounded-2xl shadow-sm border-2 border-red-100 p-6 flex flex-col transition-all opacity-80 hover:opacity-100">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="h-12 w-12 rounded-xl bg-red-50 text-red-400 flex items-center justify-center">
+                      <Trash2 size={24} />
+                    </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold tracking-wide bg-red-100 text-red-700">
+                      Deleted
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-1 truncate line-through" title={s.storeName}>{s.storeName}</h3>
+                  <p className="text-sm font-medium text-red-500 mb-5">
+                    Permanently deleting in {daysLeft} day(s)
+                  </p>
+                  <button onClick={() => handleRestoreStore(s._id)} className="mt-auto w-full py-2.5 font-bold rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition-colors">
+                    Restore Store
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-8">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">

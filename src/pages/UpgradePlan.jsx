@@ -24,7 +24,8 @@ const loadRazorpay = () => {
 
 const UpgradePlan = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
-  const currentStore = stores.find(s => s.storeId === storeId) || {};
+  const activeStores = stores.filter(s => !s.isDeleted);
+  const currentStore = activeStores.find(s => s.storeId === storeId) || {};
   
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);

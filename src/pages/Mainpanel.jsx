@@ -3,6 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { CreditCard, TrendingUp, ShoppingBag, Users, IndianRupee, Mail } from 'lucide-react';
 
+// Helper to dynamically load razorpay
+const loadRazorpay = () => {
+  return new Promise((resolve) => {
+    // Safely check if the Razorpay SDK is already loaded
+    if ('Razorpay' in window) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = (err) => {
+      console.error("Razorpay script failed to load. You may have an adblocker enabled.", err);
+      resolve(false);
+    };
+    document.body.appendChild(script);
+  });
+};
+
 const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [isCreatingStore, setIsCreatingStore] = useState(false);
   const [newStoreName, setNewStoreName] = useState('');
@@ -18,8 +37,9 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [resendingOrderId, setResendingOrderId] = useState(null);
   const navigate = useNavigate();
 
+  const activeStores = stores.filter(s => !s.isDeleted);
   const activeStoreIdLocal = localStorage.getItem('gb_active_store_id');
-  const currentStore = stores.find(s => s.storeId === activeStoreIdLocal) || stores[0] || {};
+  const currentStore = activeStores.find(s => s.storeId === activeStoreIdLocal) || activeStores[0] || {};
   const activeStoreObjId = currentStore._id;
   const activeStoreStringId = currentStore.storeId;
 
@@ -63,8 +83,23 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     e.preventDefault();
     setStatus('Creating store...');
 
+    const selectedPlanObj = plans.find(p => p._id === newStorePlan);
+    const planPrice = selectedPlanObj ? selectedPlanObj.price : 0;
+
     try {
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+
+      let keyData = null;
+      if (planPrice > 0) {
+        const keyRes = await fetch(`${API_BASE_URL}/api/platform-payments/public-key`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        keyData = await keyRes.json();
+        if (!keyData.razorpayEnabled) {
+          return setStatus('Error: Platform payments are currently disabled. Cannot purchase paid plans.');
+        }
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/store`, {
         method: 'POST',
         headers: {
@@ -82,14 +117,86 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
       const data = await response.json();
 
       if (response.ok) {
-        setStatus('');
-        setIsCreatingStore(false);
-        setNewStoreName('');
-        setNewStoreCategory('Kirana Stores');
-        setNewStoreMeta('');
-        setCurrentStep(1);
-        // Add the new store to the local list
-        setStores([...stores, data.store || { storeId: 'GBS-NEW', storeName: newStoreName, status: 'active', category: newStoreCategory }]);
+        const createdStore = data.store || { storeId: 'GBS-NEW', storeName: newStoreName, status: 'active', category: newStoreCategory };
+
+        if (planPrice === 0) {
+          setStatus('');
+          setIsCreatingStore(false);
+          setNewStoreName('');
+          setNewStoreCategory('Kirana Stores');
+          setNewStoreMeta('');
+          setCurrentStep(1);
+          setStores([...stores, createdStore]);
+          showToast('Store created successfully!', 'success');
+        } else {
+          setStatus('Initializing payment...');
+          const isLoaded = await loadRazorpay();
+          if (!isLoaded) return setStatus('Error: Failed to load Razorpay SDK. Check your internet connection.');
+
+          const orderRes = await fetch(`${API_BASE_URL}/api/platform-payments/create-order`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ amount: planPrice, storeId: createdStore._id })
+          });
+          const orderData = await orderRes.json();
+          if (!orderRes.ok) throw new Error(orderData.message || 'Failed to create order');
+
+          const options = {
+            key: keyData.razorpayKeyId,
+            amount: orderData.amount,
+            currency: orderData.currency,
+            name: "Galibrand Cloud",
+            description: `${selectedPlanObj.name} Plan Subscription`,
+            order_id: orderData.id,
+            handler: async function (paymentResponse) {
+              setStatus('Verifying payment...');
+              const verifyRes = await fetch(`${API_BASE_URL}/api/platform-payments/verify-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ ...paymentResponse, storeId: createdStore._id, planId: newStorePlan })
+              });
+              const verifyData = await verifyRes.json();
+              if (verifyData.success) {
+                setStatus('');
+                setIsCreatingStore(false);
+                setNewStoreName('');
+                setNewStoreCategory('Kirana Stores');
+                setNewStoreMeta('');
+                setCurrentStep(1);
+                setStores([...stores, createdStore]);
+                showToast('Store created & payment successful!', 'success');
+              } else {
+                setStatus('Payment verification failed. If money was deducted, please contact support.');
+              }
+            },
+            modal: {
+              ondismiss: async function() {
+                setStatus('Payment canceled. Cleaning up...');
+                try {
+                  await fetch(`${API_BASE_URL}/api/store/${createdStore._id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                } catch (e) {
+                  console.error("Cleanup failed", e);
+                }
+                setStatus('');
+                setIsCreatingStore(false);
+                setNewStoreName('');
+                setNewStoreCategory('Kirana Stores');
+                setNewStoreMeta('');
+                setCurrentStep(1);
+                showToast('Payment canceled. Store creation aborted.', 'error');
+              }
+            },
+            prefill: { name: newStoreName },
+            theme: { color: "#76b900" }
+          };
+
+          const paymentObject = new window.Razorpay(options);
+          paymentObject.open();
+          setStatus('');
+        }
       } else {
         setStatus(`Error: ${data.message || 'Failed to create store'}`);
       }
@@ -140,7 +247,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const handleOpenCreateStore = () => {
     let maxStoresAllowed = 1;
     
-    stores.forEach(s => {
+    activeStores.forEach(s => {
       const plan = plans.find(p => p._id === s.planId);
       if (plan && plan.features?.storeLimit) {
         if (plan.features.storeLimit > maxStoresAllowed) {
@@ -149,7 +256,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
       }
     });
 
-    if (stores.length >= maxStoresAllowed) {
+    if (activeStores.length >= maxStoresAllowed) {
       showToast(`Store limit reached! Your current plans allow up to ${maxStoresAllowed} store(s). Please upgrade to create more.`, 'error');
       return;
     }
@@ -222,7 +329,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
            </div>
         )}
 
-        {stores.length === 0 && !isCreatingStore ? (
+        {activeStores.length === 0 && !isCreatingStore ? (
           <div 
             onClick={handleOpenCreateStore}
             className="w-full max-w-2xl mx-auto min-h-[300px] flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 rounded-3xl hover:border-[#76b900] hover:bg-green-50/50 hover:text-[#76b900] transition-colors cursor-pointer group mt-10"
@@ -235,7 +342,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
             <h3 className="text-lg font-bold text-slate-700 group-hover:text-[#76b900] mb-1">Create Your First Store</h3>
             <p className="text-sm text-center px-4">Click here to launch your online ordering system.</p>
           </div>
-        ) : stores.length > 0 ? (
+        ) : activeStores.length > 0 ? (
           <>
 
             {/* 4 Analytics Metric Cards */}
