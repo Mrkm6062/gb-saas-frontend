@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
+import { DownloadCloud } from 'lucide-react';
 
 const ManageProduct = ({ token, stores, onLogout }) => {
   const { storeId } = useParams(); 
@@ -16,6 +17,15 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [mediaImages, setMediaImages] = useState([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
+  
+  // Default Product Import States
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importStoreType, setImportStoreType] = useState('kirana');
+  const [defaultProducts, setDefaultProducts] = useState([]);
+  const [loadingDefaults, setLoadingDefaults] = useState(false);
+  const [selectedDefaultProducts, setSelectedDefaultProducts] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const initialForm = {
     name: '', description: '', category: '', unitType: 'piece',
@@ -73,6 +83,31 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       fetchCategories();
     }
   }, [currentStore._id]);
+
+  // Fetch default products when modal opens or store type changes
+  useEffect(() => {
+    if (isImportModalOpen && currentStore._id) {
+      const fetchDefaultProducts = async () => {
+        setLoadingDefaults(true);
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/default-products?storeType=${importStoreType}&limit=100`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setDefaultProducts(data.data || []);
+            setSelectedDefaultProducts((data.data || []).map(p => p._id)); // Auto-select all by default
+          }
+        } catch (error) {
+          console.error("Failed to fetch default products:", error);
+        } finally {
+          setLoadingDefaults(false);
+        }
+      };
+      setSearchQuery('');
+      fetchDefaultProducts();
+    }
+  }, [isImportModalOpen, importStoreType, currentStore._id, API_BASE_URL, token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -158,6 +193,59 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     }
   };
 
+  const toggleDefaultProductSelection = (id) => {
+    setSelectedDefaultProducts(prev => 
+      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
+    );
+  };
+
+  const filteredDefaultProducts = defaultProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  const toggleAllDefaultProducts = () => {
+    const filteredIds = filteredDefaultProducts.map(p => p._id);
+    const allFilteredSelected = filteredIds.length > 0 && filteredIds.every(id => selectedDefaultProducts.includes(id));
+
+    if (allFilteredSelected) {
+      setSelectedDefaultProducts(prev => prev.filter(id => !filteredIds.includes(id)));
+    } else {
+      const newSelections = new Set([...selectedDefaultProducts, ...filteredIds]);
+      setSelectedDefaultProducts(Array.from(newSelections));
+    }
+  };
+
+  const handleImportDefaultProducts = async () => {
+    setImporting(true);
+    setStatus('Importing products...');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/default-products/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          storeId: currentStore._id,
+          storeType: importStoreType,
+          importOnlyMissing: true,
+          productIds: selectedDefaultProducts
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setStatus(`✅ Successfully imported ${data.count} products!`);
+        setIsImportModalOpen(false);
+        fetchProducts(); // Refresh the grid
+      } else {
+        setStatus(`Error: ${data.message || 'Failed to import products'}`);
+      }
+    } catch (err) {
+      setStatus(`Error: ${err.message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -227,9 +315,14 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Product Management</h2>
           <p className="text-slate-500">Manage inventory and variants for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
         </div>
-        <button onClick={() => setIsFormOpen(true)} className="px-6 py-3 bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white font-bold rounded-xl hover:shadow-lg transition flex items-center gap-2">
-          <span className="text-xl leading-none">+</span> Add Product
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button onClick={() => setIsImportModalOpen(true)} className="px-6 py-3 bg-white text-[#76b900] border-2 border-[#76b900] font-bold rounded-xl hover:bg-green-50 transition flex items-center justify-center gap-2">
+            <DownloadCloud size={20} /> Import Catalog
+          </button>
+          <button onClick={() => setIsFormOpen(true)} className="px-6 py-3 bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white font-bold rounded-xl hover:shadow-lg transition flex items-center justify-center gap-2">
+            <span className="text-xl leading-none">+</span> Add Product
+          </button>
+        </div>
       </div>
 
       {status && (
@@ -411,6 +504,83 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Import Default Products Modal */}
+    {isImportModalOpen && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity overflow-y-auto">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
+            <h3 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2"><DownloadCloud className="text-[#76b900]" /> Import Default Catalog</h3>
+            <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors text-3xl leading-none">&times;</button>
+          </div>
+
+          <div className="p-8 overflow-y-auto flex-1 bg-slate-50">
+            <div className="mb-6 flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Select Catalog to Preview:</label>
+                <select value={importStoreType} onChange={(e) => setImportStoreType(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] bg-white font-medium text-slate-700 shadow-sm">
+                  <option value="kirana">Kirana / Grocery</option>
+                  <option value="vegetable">Vegetables & Fruits</option>
+                  <option value="nasta">Nasta / Snacks Corner</option>
+                  <option value="restaurant">Restaurant / Cafe</option>
+                  <option value="clothes">Clothing & Apparel</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Search Catalog:</label>
+                <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search products..."
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] bg-white font-medium text-slate-700 shadow-sm"
+                />
+              </div>
+            </div>
+
+            {loadingDefaults ? (
+              <div className="py-20 text-center text-slate-500 font-bold animate-pulse">Loading preview catalog...</div>
+            ) : defaultProducts.length === 0 ? (
+              <div className="py-20 text-center text-slate-500 border-2 border-dashed border-slate-300 rounded-2xl bg-white font-medium">No default products found for this category.</div>
+            ) : filteredDefaultProducts.length === 0 ? (
+              <div className="py-20 text-center text-slate-500 border-2 border-dashed border-slate-300 rounded-2xl bg-white font-medium">No products match your search.</div>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-sm text-slate-500 font-semibold">Showing {filteredDefaultProducts.length} products. Select the ones you want to import.</p>
+                  <button type="button" onClick={toggleAllDefaultProducts} className="text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors">
+                    {filteredDefaultProducts.length > 0 && filteredDefaultProducts.every(p => selectedDefaultProducts.includes(p._id)) ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {filteredDefaultProducts.map(p => {
+                    const isSelected = selectedDefaultProducts.includes(p._id);
+                    return (
+                    <div key={p._id} onClick={() => toggleDefaultProductSelection(p._id)} className={`bg-white p-4 rounded-xl border relative cursor-pointer shadow-sm flex flex-col gap-2 transition-all ${isSelected ? 'border-[#76b900] ring-2 ring-green-100' : 'border-slate-200 hover:border-[#76b900] opacity-75 hover:opacity-100'}`}>
+                      <div className="absolute top-2 right-2 z-10"><input type="checkbox" checked={isSelected} readOnly className="w-5 h-5 rounded text-[#76b900] cursor-pointer" /></div>
+                      <div className={`h-24 w-full rounded-lg flex items-center justify-center overflow-hidden transition-opacity ${isSelected ? 'opacity-100' : 'opacity-70 bg-slate-100'}`}>
+                        {p.images && p.images[0] ? <img src={p.images[0]} alt={p.name} className={`w-full h-full object-cover ${isSelected ? '' : 'grayscale'}`} /> : <span className="text-slate-400 text-xs">No Image</span>}
+                      </div>
+                      <div className={`font-bold text-sm truncate transition-colors ${isSelected ? 'text-slate-800' : 'text-slate-500'}`} title={p.name}>{p.name}</div>
+                      <div className={`font-bold text-sm transition-colors ${isSelected ? 'text-[#76b900]' : 'text-slate-400'}`}>₹{p.basePrice}/{p.unitType}</div>
+                    </div>
+                  )})}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-4 rounded-b-3xl sticky bottom-0">
+            <button type="button" onClick={() => setIsImportModalOpen(false)} className="px-6 py-2.5 font-bold text-slate-500 hover:text-slate-800 transition-colors">
+              Cancel
+            </button>
+            <button type="button" onClick={handleImportDefaultProducts} disabled={importing || selectedDefaultProducts.length === 0} className="px-8 py-2.5 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition-colors shadow-lg shadow-green-100 disabled:opacity-50 flex items-center gap-2">
+              {importing ? 'Importing...' : `Import ${selectedDefaultProducts.length} Products`}
+            </button>
           </div>
         </div>
       </div>
