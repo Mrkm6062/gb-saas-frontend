@@ -3,6 +3,17 @@ import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { Check, X } from 'lucide-react';
 
+// Helper to dynamically load razorpay
+const loadRazorpay = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 const UpgradePlan = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
   const currentStore = stores.find(s => s.storeId === storeId) || {};
@@ -32,26 +43,80 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
     fetchPlans();
   }, []);
 
-  const handleUpgrade = async (planId) => {
-    setStatus('Processing upgrade...');
-    try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
-      // Calls a backend endpoint to upgrade the plan for the current store context
-      const response = await fetch(`${API_BASE_URL}/api/store/${currentStore._id}/plan`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ planId })
-      });
+  const handleUpgrade = async (plan) => {
+    setStatus('Initializing payment...');
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
-      const data = await response.json();
-      if (response.ok) {
-        setStatus('Plan upgraded successfully! Please reload the page to see changes.');
-      } else {
-        setStatus(`Error: ${data.message}`);
+    // If plan is free, fallback to the old direct upgrade logic (if applicable)
+    if (plan.price === 0) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/store/${currentStore._id}/plan`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ planId: plan._id })
+        });
+
+        if (response.ok) {
+          setStatus('Plan changed successfully! Reloading...');
+          setTimeout(() => window.location.reload(), 2000);
+        } else {
+          const data = await response.json();
+          setStatus(`Error: ${data.message}`);
+        }
+      } catch (err) {
+        setStatus(`Error: ${err.message}`);
       }
+      return;
+    }
+
+    // Paid Plan - Initialize Razorpay Checkout
+    try {
+      const keyRes = await fetch(`${API_BASE_URL}/api/platform-payments/public-key`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const keyData = await keyRes.json();
+      if (!keyData.razorpayEnabled) return setStatus('Error: Platform payments are currently disabled. Contact support.');
+
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) return setStatus('Error: Failed to load Razorpay SDK. Check your internet connection.');
+
+      const orderRes = await fetch(`${API_BASE_URL}/api/platform-payments/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ amount: plan.price, storeId: currentStore._id })
+      });
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) throw new Error(orderData.message || 'Failed to create order');
+
+      const options = {
+        key: keyData.razorpayKeyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Galibrand Cloud",
+        description: `${plan.name} Plan Subscription`,
+        order_id: orderData.id,
+        handler: async function (response) {
+          setStatus('Verifying payment...');
+          const verifyRes = await fetch(`${API_BASE_URL}/api/platform-payments/verify-payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ ...response, storeId: currentStore._id, planId: plan._id })
+          });
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            setStatus('Payment successful! Plan upgraded. Reloading...');
+            setTimeout(() => window.location.reload(), 2000);
+          } else {
+            setStatus('Payment verification failed. If money was deducted, please contact support.');
+          }
+        },
+        prefill: { name: currentStore.storeName },
+        theme: { color: "#76b900" }
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+      setStatus('');
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     }
@@ -75,9 +140,14 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
           <div className="flex justify-center py-20 text-slate-400 font-bold animate-pulse">Loading plans...</div>
         ) : (
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4 xl:gap-6">
-            {plans.map(plan => {
+            {(() => {
+              const currentPlanObj = plans.find(p => p._id === currentStore.planId) || plans.find(p => p.price === 0) || { price: 0 };
+              const currentPrice = currentPlanObj.price || 0;
+              
+              return plans.map(plan => {
               const isCurrentPlan = currentStore.planId === plan._id || (!currentStore.planId && plan.name === 'Free');
               const isProPlan = plan.name === 'Pro'; // Identify the Pro plan
+              const isDowngrade = !isCurrentPlan && plan.price < currentPrice;
               
               return (
                 <div key={plan._id} className={`bg-white rounded-2xl shadow-sm border-2 flex flex-col p-5 md:p-6 transition-all ${isCurrentPlan ? 'border-[#76b900] ring-4 ring-green-50' : isProPlan ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100 hover:border-slate-300'}`}>
@@ -105,15 +175,15 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
                   </div>
 
                   <button 
-                    onClick={() => handleUpgrade(plan._id)}
-                    disabled={isCurrentPlan}
-                    className={`w-full py-3.5 rounded-xl font-bold transition-all ${isCurrentPlan ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : isProPlan ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
+                    onClick={() => handleUpgrade(plan)}
+                    disabled={isCurrentPlan || isDowngrade}
+                    className={`w-full py-3.5 rounded-xl font-bold transition-all ${isCurrentPlan ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : isDowngrade ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : isProPlan ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
                   >
-                    {isCurrentPlan ? 'Current Plan' : 'Upgrade Plan'}
+                    {isCurrentPlan ? 'Current Plan' : isDowngrade ? 'Cannot Downgrade' : 'Upgrade Plan'}
                   </button>
                 </div>
               );
-            })}
+            })})()}
           </div>
         )}
       </div>
