@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Globe,
   Ticket,
-  Bell
+  Bell,
+  ShieldCheck
 } from 'lucide-react';
 import PlatformFooter from './PlatformFooter';
 
@@ -85,6 +86,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     { name: 'Analytics', icon: <BarChart3 size={20} />, path: '#' },
     { name: 'Store Policy', icon: <ClipboardList size={20} />, path: activeStoreId ? `/store/${activeStoreId}/policies` : '#' },
     { name: 'Plan & Billing', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' },
+    { name: 'SaaS Platform Billing', icon: <ShieldCheck size={20} />, path: '/superadmin/payments' },
   ];
 
   return (
