@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';                                                                                             
-import { DownloadCloud } from 'lucide-react';
 import { DownloadCloud, UploadCloud } from 'lucide-react';
 
 const ManageProduct = ({ token, stores, onLogout }) => {
@@ -427,17 +426,6 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Product Management</h2>
           <p className="text-slate-500">Manage inventory and variants for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <select
-            value={stockFilter}
-            onChange={(e) => setStockFilter(e.target.value)}
-            className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white"
-          >
-            <option value="all">All Products</option>
-            <option value="out_of_stock">Out of Stock</option>
-          </select>
-          <button onClick={() => setIsImportModalOpen(true)} className="px-6 py-3 bg-white text-[#76b900] border-2 border-[#76b900] font-bold rounded-xl hover:bg-green-50 transition flex items-center justify-center gap-2">
-            <DownloadCloud size={20} /> Import Catalog
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <select
@@ -463,7 +451,6 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           <button onClick={handleExportCSV} className="px-4 py-2.5 bg-white text-blue-600 border-2 border-blue-200 font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap">
             <DownloadCloud size={18} /> Export Stock CSV
           </button>
-          <button onClick={() => setIsFormOpen(true)} className="px-6 py-3 bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white font-bold rounded-xl hover:shadow-lg transition flex items-center justify-center gap-2">
 
           <label className="px-4 py-2.5 bg-white text-indigo-600 border-2 border-indigo-200 font-bold rounded-xl hover:bg-indigo-50 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap cursor-pointer">
             <UploadCloud size={18} /> Bulk Update Stock
