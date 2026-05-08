@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import AdminLayout from '../components/AdminLayout';
+import AdminLayout from '../components/AdminLayout';                                                                                             
 import { DownloadCloud } from 'lucide-react';
+import { DownloadCloud, UploadCloud } from 'lucide-react';
 
 const ManageProduct = ({ token, stores, onLogout }) => {
   const { storeId } = useParams(); 
@@ -26,6 +27,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [selectedDefaultProducts, setSelectedDefaultProducts] = useState([]);
   const [importing, setImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [stockFilter, setStockFilter] = useState('all');
+  const [stockThreshold, setStockThreshold] = useState(5);
 
   const initialForm = {
     name: '', description: '', category: '', unitType: 'piece',
@@ -307,6 +310,115 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     }
   };
 
+  // --- CSV Export & Import Handlers ---
+  const handleExportCSV = () => {
+    let csvContent = "ProductID,VariantID,ProductName,VariantName,CurrentStock,AddStock\n";
+    displayedProducts.forEach(p => {
+      if (p.variants && p.variants.length > 0) {
+        p.variants.forEach(v => {
+          csvContent += `"${p._id}","${v._id}","${p.name.replace(/"/g, '""')}","${v.name.replace(/"/g, '""')}",${v.stock},0\n`;
+        });
+      } else {
+        csvContent += `"${p._id}","","${p.name.replace(/"/g, '""')}","",${p.totalStock !== undefined ? p.totalStock : (p.stock || 0)},0\n`;
+      }
+    });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', `stock_update_${currentStore.storeName.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setLoading(true);
+    setStatus('Processing CSV update...');
+
+    const parseCSVRow = (str) => {
+      const result = [];
+      let cur = '';
+      let inQuote = false;
+      for (let i = 0; i < str.length; i++) {
+        if (str[i] === '"') inQuote = !inQuote;
+        else if (str[i] === ',' && !inQuote) { result.push(cur.trim()); cur = ''; }
+        else cur += str[i];
+      }
+      result.push(cur.trim());
+      return result.map(s => s.replace(/^"|"$/g, '').replace(/""/g, '"'));
+    };
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      const rows = text.split('\n').filter(line => line.trim()).map(parseCSVRow);
+      const dataRows = rows.slice(1).filter(r => r.length >= 6); // Skip header
+
+      const updatesByProduct = {};
+
+      dataRows.forEach(row => {
+        const [pId, vId, pName, vName, currentStockStr, addStockStr] = row;
+        const addStock = parseInt(addStockStr, 10);
+        
+        if (addStock && addStock !== 0) {
+          if (!updatesByProduct[pId]) {
+            const originalProduct = products.find(p => p._id === pId);
+            if (originalProduct) {
+               updatesByProduct[pId] = { ...originalProduct, variants: originalProduct.variants ? JSON.parse(JSON.stringify(originalProduct.variants)) : [] };
+            }
+          }
+          const productToUpdate = updatesByProduct[pId];
+          if (productToUpdate) {
+            if (vId) {
+              const variant = productToUpdate.variants.find(v => v._id === vId);
+              if (variant) variant.stock = (Number(variant.stock) || 0) + addStock;
+            } else {
+              productToUpdate.totalStock = (Number(productToUpdate.totalStock) || 0) + addStock;
+            }
+          }
+        }
+      });
+
+      const updatePromises = Object.values(updatesByProduct).map(async (updatedProduct) => {
+         if (updatedProduct.variants && updatedProduct.variants.length > 0) {
+           updatedProduct.totalStock = updatedProduct.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+         }
+         const response = await fetch(`${API_BASE_URL}/api/products/${updatedProduct._id}`, {
+           method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(updatedProduct)
+         });
+         return response.ok;
+      });
+
+      try {
+        await Promise.all(updatePromises);
+        setStatus(`✅ Successfully added stock for ${Object.keys(updatesByProduct).length} products.`);
+        fetchProducts(); 
+      } catch (err) {
+        setStatus('❌ Error during bulk update.');
+      } finally {
+        setLoading(false);
+        e.target.value = null; // Reset input
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Filter products for the table
+  const displayedProducts = products.filter(p => {
+    const stock = p.totalStock !== undefined ? p.totalStock : (p.stock || 0);
+    if (stockFilter === 'out_of_stock') {
+      const stock = p.totalStock !== undefined ? p.totalStock : (p.stock || 0);
+      return stock <= 0;
+    }
+    if (stockFilter === 'low_stock') {
+      return stock <= stockThreshold;
+    }
+    return true;
+  });
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
     <div className="w-full px-6 py-10">
@@ -316,10 +428,53 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           <p className="text-slate-500">Manage inventory and variants for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
+          <select
+            value={stockFilter}
+            onChange={(e) => setStockFilter(e.target.value)}
+            className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white"
+          >
+            <option value="all">All Products</option>
+            <option value="out_of_stock">Out of Stock</option>
+          </select>
           <button onClick={() => setIsImportModalOpen(true)} className="px-6 py-3 bg-white text-[#76b900] border-2 border-[#76b900] font-bold rounded-xl hover:bg-green-50 transition flex items-center justify-center gap-2">
             <DownloadCloud size={20} /> Import Catalog
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <select
+              value={stockFilter}
+              onChange={(e) => setStockFilter(e.target.value)}
+              className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white"
+            >
+              <option value="all">All Products</option>
+              <option value="out_of_stock">Out of Stock</option>
+              <option value="low_stock">Low Stock (≤)</option>
+            </select>
+            {stockFilter === 'low_stock' && (
+              <input 
+                type="number" 
+                value={stockThreshold}
+                onChange={(e) => setStockThreshold(Number(e.target.value))}
+                className="w-16 px-2 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white text-center"
+                min="0"
+              />
+            )}
+          </div>
+
+          <button onClick={handleExportCSV} className="px-4 py-2.5 bg-white text-blue-600 border-2 border-blue-200 font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap">
+            <DownloadCloud size={18} /> Export Stock CSV
           </button>
           <button onClick={() => setIsFormOpen(true)} className="px-6 py-3 bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white font-bold rounded-xl hover:shadow-lg transition flex items-center justify-center gap-2">
+
+          <label className="px-4 py-2.5 bg-white text-indigo-600 border-2 border-indigo-200 font-bold rounded-xl hover:bg-indigo-50 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap cursor-pointer">
+            <UploadCloud size={18} /> Bulk Update Stock
+            <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} disabled={loading} />
+          </label>
+
+          <button onClick={() => setIsImportModalOpen(true)} className="px-4 py-2.5 bg-white text-[#76b900] border-2 border-[#76b900] font-bold rounded-xl hover:bg-green-50 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap">
+            <DownloadCloud size={18} /> Import Catalog
+          </button>
+          
+          <button onClick={() => setIsFormOpen(true)} className="px-6 py-2.5 bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white font-bold rounded-xl hover:shadow-lg transition flex items-center justify-center gap-2 whitespace-nowrap">
             <span className="text-xl leading-none">+</span> Add Product
           </button>
         </div>
@@ -338,8 +493,10 @@ const ManageProduct = ({ token, stores, onLogout }) => {
         </div>
         {products.length === 0 ? (
           <div className="p-8 text-center text-slate-500 font-medium">No products found. Add your first product above!</div>
+        ) : displayedProducts.length === 0 ? (
+          <div className="p-8 text-center text-slate-500 font-medium">No products match the selected filter.</div>
         ) : (
-          products.map(p => (
+          displayedProducts.map(p => (
             <div key={p._id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 items-center hover:bg-slate-50 transition">
               <div className="col-span-4">
                 <div className="font-semibold text-slate-800">{p.name}</div>
