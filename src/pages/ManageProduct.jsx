@@ -360,23 +360,34 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
       dataRows.forEach(row => {
         const [pId, vId, pName, vName, currentStockStr, addStockStr] = row;
-        const addStock = parseInt(addStockStr, 10);
         
-        if (addStock && addStock !== 0) {
+        const originalProduct = products.find(p => p._id === pId);
+        if (!originalProduct) return;
+
+        let actualDbStock = 0;
+        if (vId) {
+          const variant = originalProduct.variants?.find(v => v._id === vId);
+          if (variant) actualDbStock = Number(variant.stock) || 0;
+        } else {
+          actualDbStock = originalProduct.totalStock !== undefined ? Number(originalProduct.totalStock) : (Number(originalProduct.stock) || 0);
+        }
+
+        const parsedCurrentStock = parseInt(currentStockStr, 10);
+        const addStock = parseInt(addStockStr, 10) || 0;
+        const baseStock = isNaN(parsedCurrentStock) ? actualDbStock : parsedCurrentStock;
+        const newStock = baseStock + addStock;
+
+        if (newStock !== actualDbStock) {
           if (!updatesByProduct[pId]) {
-            const originalProduct = products.find(p => p._id === pId);
-            if (originalProduct) {
-               updatesByProduct[pId] = { ...originalProduct, variants: originalProduct.variants ? JSON.parse(JSON.stringify(originalProduct.variants)) : [] };
-            }
+             updatesByProduct[pId] = { ...originalProduct, variants: originalProduct.variants ? JSON.parse(JSON.stringify(originalProduct.variants)) : [] };
           }
           const productToUpdate = updatesByProduct[pId];
-          if (productToUpdate) {
-            if (vId) {
-              const variant = productToUpdate.variants.find(v => v._id === vId);
-              if (variant) variant.stock = (Number(variant.stock) || 0) + addStock;
-            } else {
-              productToUpdate.totalStock = (Number(productToUpdate.totalStock) || 0) + addStock;
-            }
+          if (vId) {
+            const variant = productToUpdate.variants.find(v => v._id === vId);
+            if (variant) variant.stock = newStock;
+          } else {
+            productToUpdate.totalStock = newStock;
+            productToUpdate.stock = newStock;
           }
         }
       });
