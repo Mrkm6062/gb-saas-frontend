@@ -354,18 +354,21 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     reader.onload = async (event) => {
       const text = event.target.result;
       const rows = text.split('\n').filter(line => line.trim()).map(parseCSVRow);
-      const dataRows = rows.slice(1).filter(r => r.length >= 6); // Skip header
+      // Lower the requirement to 5 columns in case 'AddStock' is deleted or omitted in Excel
+      const dataRows = rows.slice(1).filter(r => r.length >= 5); // Skip header
 
       const updatesByProduct = {};
 
       dataRows.forEach(row => {
-        const [pId, vId, pName, vName, currentStockStr, addStockStr] = row;
+        const [pId, vIdRaw, pName, vName, currentStockStr, addStockStr] = row;
+        const vId = vIdRaw ? vIdRaw.trim() : "";
+        const hasVariant = vId !== "" && vId !== "null" && vId !== "undefined";
         
         const originalProduct = products.find(p => p._id === pId);
         if (!originalProduct) return;
 
         let actualDbStock = 0;
-        if (vId) {
+        if (hasVariant) {
           const variant = originalProduct.variants?.find(v => v._id === vId);
           if (variant) actualDbStock = Number(variant.stock) || 0;
         } else {
@@ -382,7 +385,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
              updatesByProduct[pId] = { ...originalProduct, variants: originalProduct.variants ? JSON.parse(JSON.stringify(originalProduct.variants)) : [] };
           }
           const productToUpdate = updatesByProduct[pId];
-          if (vId) {
+          if (hasVariant) {
             const variant = productToUpdate.variants.find(v => v._id === vId);
             if (variant) variant.stock = newStock;
           } else {
@@ -395,6 +398,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       const updatePromises = Object.values(updatesByProduct).map(async (updatedProduct) => {
          if (updatedProduct.variants && updatedProduct.variants.length > 0) {
            updatedProduct.totalStock = updatedProduct.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+         } else {
+           updatedProduct.totalStock = Number(updatedProduct.totalStock) || 0;
          }
          const response = await fetch(`${API_BASE_URL}/api/products/${updatedProduct._id}`, {
            method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(updatedProduct)
