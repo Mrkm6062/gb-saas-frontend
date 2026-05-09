@@ -128,8 +128,10 @@ const ManageProduct = ({ token, stores, onLogout }) => {
         },
         body: JSON.stringify({ 
           ...formData,
-          basePrice: Number(formData.basePrice) || 0,
-          totalStock: Number(formData.totalStock) || 0,
+          basePrice: formData.basePrice !== '' ? Number(formData.basePrice) : 0,
+          totalStock: formData.totalStock !== '' ? Number(formData.totalStock) : 0,
+          price: formData.basePrice !== '' ? Number(formData.basePrice) : 0,
+          stock: formData.totalStock !== '' ? Number(formData.totalStock) : 0,
           storeId: currentStore._id // Explicitly bind product to this store
         })
       });
