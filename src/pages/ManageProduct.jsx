@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';                                                                                             
-import { DownloadCloud, UploadCloud } from 'lucide-react';
+import { DownloadCloud, UploadCloud, Lock } from 'lucide-react';
 
 const ManageProduct = ({ token, stores, onLogout }) => {
   const { storeId } = useParams(); 
+  const navigate = useNavigate();
   const currentStore = stores.find(s => s.storeId === storeId) || {};
 
   const [products, setProducts] = useState([]);
@@ -28,6 +29,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [stockFilter, setStockFilter] = useState('all');
   const [stockThreshold, setStockThreshold] = useState(5);
+  const [plans, setPlans] = useState([]);
 
   const initialForm = {
     name: '', description: '', category: '', unitType: 'piece',
@@ -85,6 +87,20 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       fetchCategories();
     }
   }, [currentStore._id]);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/plans`);
+        if (response.ok) {
+          setPlans(await response.json());
+        }
+      } catch (err) {
+        console.error("Failed to fetch plans:", err);
+      }
+    };
+    fetchPlans();
+  }, [API_BASE_URL]);
 
   // Fetch default products when modal opens or store type changes
   useEffect(() => {
@@ -436,6 +452,11 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     return true;
   });
 
+  // Check if the current plan limits have been reached
+  const activePlan = plans.find(p => p._id === currentStore.planId) || plans.find(p => p.price === 0) || {};
+  const maxProducts = activePlan?.features?.maxProducts || 0;
+  const isLimitReached = maxProducts > 0 && products.length >= maxProducts;
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
     <div className="w-full px-6 py-10">
@@ -443,6 +464,11 @@ const ManageProduct = ({ token, stores, onLogout }) => {
         <div>
           <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Product Management</h2>
           <p className="text-slate-500">Manage inventory and variants for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
+          {maxProducts > 0 && (
+            <p className={`text-sm font-bold mt-1 ${isLimitReached ? 'text-red-500' : 'text-slate-500'}`}>
+              Plan Limit: {products.length} / {maxProducts} Products Used
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
@@ -475,12 +501,12 @@ const ManageProduct = ({ token, stores, onLogout }) => {
             <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} disabled={loading} />
           </label>
 
-          <button onClick={() => setIsImportModalOpen(true)} className="px-4 py-2.5 bg-white text-[#76b900] border-2 border-[#76b900] font-bold rounded-xl hover:bg-green-50 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap">
-            <DownloadCloud size={18} /> Import Catalog
+          <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsImportModalOpen(true)} className={`px-4 py-2.5 border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm whitespace-nowrap ${isLimitReached ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-[#76b900] border-[#76b900] hover:bg-green-50'}`}>
+            {isLimitReached ? <Lock size={18} /> : <DownloadCloud size={18} />} {isLimitReached ? 'Upgrade to Import' : 'Import Catalog'}
           </button>
           
-          <button onClick={() => setIsFormOpen(true)} className="px-6 py-2.5 bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white font-bold rounded-xl hover:shadow-lg transition flex items-center justify-center gap-2 whitespace-nowrap">
-            <span className="text-xl leading-none">+</span> Add Product
+          <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsFormOpen(true)} className={`px-6 py-2.5 font-bold rounded-xl transition flex items-center justify-center gap-2 whitespace-nowrap ${isLimitReached ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm' : 'bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white hover:shadow-lg'}`}>
+            {isLimitReached ? <><Lock size={18} /> Upgrade to Add</> : <><span className="text-xl leading-none">+</span> Add Product</>}
           </button>
         </div>
       </div>
