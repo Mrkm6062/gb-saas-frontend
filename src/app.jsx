@@ -16,6 +16,7 @@ import ManageCoupon from './pages/ManageCoupon';
 import ManageAlerts from './pages/ManageAlerts';
 import ManageDelivery from './pages/ManageDelivery';
 import ManageCheckout from './pages/ManageCheckout';
+import ManageTheme from './pages/ManageTheme';
 
 
 function App() {
@@ -91,6 +92,10 @@ function App() {
         <Route 
           path="/store/:storeId/storage" 
           element={token ? <ManageStorage token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/store/:storeId/themes" 
+          element={token ? <ManageTheme token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/store/:storeId/customers" 
