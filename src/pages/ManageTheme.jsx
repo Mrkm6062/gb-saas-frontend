@@ -79,7 +79,7 @@ const ManageTheme = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Themes">
-      <div className="w-full px-6 py-10 max-w-6xl mx-auto">
+      <div className="w-full px-6 py-10 mx-auto">
         <div className="mb-8">
           <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Storefront Themes</h2>
           <p className="text-slate-500">Choose the perfect design for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
