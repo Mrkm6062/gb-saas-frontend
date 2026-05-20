@@ -3,14 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { CheckCircle, Lock, Eye, ExternalLink } from 'lucide-react';
 
-const THEMES = [
-  { id: 'default', name: 'Default Theme', description: 'The standard robust theme.', type: 'free', image: 'https://placehold.co/600x400/f8fafc/475569?text=Default+Theme' },
-  { id: 'theme-free', name: 'Free Theme', description: 'A basic, clean storefront.', type: 'free', image: 'https://placehold.co/600x400/f8fafc/475569?text=Free+Theme' },
-  { id: 'minimal', name: 'Minimal', description: 'A sleek, minimalist design focusing on products.', type: 'premium', image: 'https://placehold.co/600x400/f8fafc/475569?text=Minimal+Theme' },
-  { id: 'modern', name: 'Modern', description: 'Bold and modern look for contemporary brands.', type: 'premium', image: 'https://placehold.co/600x400/f8fafc/475569?text=Modern+Theme' },
-  { id: 'premium', name: 'Premium', description: 'A high-end, luxurious storefront experience.', type: 'premium', image: 'https://placehold.co/600x400/f8fafc/475569?text=Premium+Theme' }
-];
-
 const ManageTheme = ({ token, stores, onLogout }) => {
   const { storeId } = useParams(); 
   const navigate = useNavigate();
@@ -20,6 +12,7 @@ const ManageTheme = ({ token, stores, onLogout }) => {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState([]);
+  const [themes, setThemes] = useState([]);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -30,6 +23,18 @@ const ManageTheme = ({ token, stores, onLogout }) => {
   }, [currentStore]);
 
   useEffect(() => {
+    const fetchThemes = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/themes`);
+        if (response.ok) {
+          setThemes(await response.json());
+        }
+      } catch (err) {
+        console.error('Failed to fetch themes:', err);
+      }
+    };
+    fetchThemes();
+
     const fetchPlans = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/plans`);
@@ -92,15 +97,17 @@ const ManageTheme = ({ token, stores, onLogout }) => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {THEMES.map((theme) => {
-            const isActive = activeTheme === theme.id;
+          {themes.length === 0 ? (
+            <div className="col-span-full py-10 text-center text-slate-500 font-medium">No themes available.</div>
+          ) : themes.map((theme) => {
+            const isActive = activeTheme === theme.themeId;
             const isPremiumTheme = theme.type === 'premium';
             const isLocked = isPremiumTheme && !isPremiumAllowed;
 
             return (
-              <div key={theme.id} className={`bg-white rounded-2xl overflow-hidden border-2 transition-all flex flex-col ${isActive ? 'border-[#76b900] shadow-md ring-4 ring-green-50' : 'border-slate-200 hover:border-slate-300 shadow-sm'}`}>
+              <div key={theme._id} className={`bg-white rounded-2xl overflow-hidden border-2 transition-all flex flex-col ${isActive ? 'border-[#76b900] shadow-md ring-4 ring-green-50' : 'border-slate-200 hover:border-slate-300 shadow-sm'}`}>
                 <div className="h-48 bg-slate-100 flex items-center justify-center border-b border-slate-100 relative">
-                  <img src={theme.image} alt={`${theme.name} Preview`} className="w-full h-full object-cover" />
+                  <img src={theme.previewImage || 'https://placehold.co/600x400/f8fafc/475569?text=No+Preview'} alt={`${theme.name} Preview`} className="w-full h-full object-cover" />
                   {isActive && (
                     <div className="absolute top-4 right-4 bg-[#76b900] text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-md z-10">
                       <CheckCircle size={14} /> Active
@@ -118,11 +125,12 @@ const ManageTheme = ({ token, stores, onLogout }) => {
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-xl font-bold text-slate-800">{theme.name}</h3>
                     {theme.type === 'premium' && <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-lg uppercase tracking-wider">Premium</span>}
+                    {theme.type === 'paid' && <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg uppercase tracking-wider">Paid</span>}
                   </div>
                   <p className="text-slate-500 text-sm mb-6 flex-1">{theme.description}</p>
                   <div className="mt-auto flex flex-col gap-2">
                     <a 
-                      href={`http://${currentStore.subdomain}?preview_theme=${theme.id}`}
+                      href={`http://${currentStore.subdomain}?preview_theme=${theme.themeId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors text-sm"
@@ -130,7 +138,7 @@ const ManageTheme = ({ token, stores, onLogout }) => {
                       <Eye size={16} /> Live Preview <ExternalLink size={14} className="ml-1 opacity-50" />
                     </a>
                     <button 
-                      onClick={() => isLocked ? navigate(`/store/${storeId}/plan`) : handleApplyTheme(theme.id)} 
+                      onClick={() => isLocked ? navigate(`/store/${storeId}/plan`) : handleApplyTheme(theme.themeId)} 
                       disabled={isActive || (loading && !isLocked)} 
                       className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${isActive ? 'bg-green-50 text-[#76b900]' : isLocked ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                     >
