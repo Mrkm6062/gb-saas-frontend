@@ -61,6 +61,9 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [mapLocation, setMapLocation] = useState(currentStore.mapLocation || '');
   const [status, setStatus] = useState('');
   const [uploadingField, setUploadingField] = useState(null); // 'logo' or 'favicon'
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadSpeed, setUploadSpeed] = useState('');
+  const [activeXhr, setActiveXhr] = useState(null);
   
   // Social Media states
   const [socialLinks, setSocialLinks] = useState([]);
@@ -178,28 +181,78 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
     setUploadingField(field);
     setStatus(`Uploading ${field}...`);
+    setUploadProgress(0);
+    setUploadSpeed('Calculating...');
 
-    try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
-      const response = await fetch(`${API_BASE_URL}/api/upload`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: uploadData
-      });
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+    const startTime = Date.now();
+    let lastLoaded = 0;
+    let lastTime = startTime;
 
-      const data = await response.json();
-      if (response.ok && data.urls && data.urls.length > 0) {
-        if (field === 'logo') setLogo(data.urls[0]);
-        if (field === 'favicon') setFavicon(data.urls[0]);
-        if (field === 'banner') setBanner(prev => [...prev, ...data.urls]);
-        setStatus(`${field.charAt(0).toUpperCase() + field.slice(1)} uploaded successfully!`);
+    const xhr = new XMLHttpRequest();
+    setActiveXhr(xhr);
+    xhr.open('POST', `${API_BASE_URL}/api/upload`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
+        setUploadProgress(percentComplete);
+
+        const currentTime = Date.now();
+        const timeDiff = (currentTime - lastTime) / 1000; // in seconds
+        
+        if (timeDiff > 0.5) { // update speed every 500ms
+          const bytesDiff = event.loaded - lastLoaded;
+          const speedBps = bytesDiff / timeDiff;
+          let speedText = '';
+          if (speedBps > 1024 * 1024) speedText = (speedBps / (1024 * 1024)).toFixed(2) + ' MB/s';
+          else if (speedBps > 1024) speedText = (speedBps / 1024).toFixed(2) + ' KB/s';
+          else speedText = Math.round(speedBps) + ' B/s';
+          
+          setUploadSpeed(speedText);
+          lastLoaded = event.loaded;
+          lastTime = currentTime;
+        }
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const data = JSON.parse(xhr.responseText);
+        if (data.urls && data.urls.length > 0) {
+          if (field === 'logo') setLogo(data.urls[0]);
+          if (field === 'favicon') setFavicon(data.urls[0]);
+          if (field === 'banner') setBanner(prev => [...prev, ...data.urls]);
+          setStatus(`${field.charAt(0).toUpperCase() + field.slice(1)} uploaded successfully!`);
+        } else setStatus(`Upload Error: Failed to read returned URLs`);
       } else {
+        let data;
+        try { data = JSON.parse(xhr.responseText); } catch (e) { data = { message: 'Upload Failed' }; }
         setStatus(`Upload Error: ${data.message || 'Failed to upload'}`);
       }
-    } catch (err) {
-      setStatus(`Upload Error: ${err.message}`);
-    } finally {
       setUploadingField(null);
+      setActiveXhr(null);
+    };
+
+    xhr.onerror = () => {
+      setStatus('Upload Error: Network failure');
+      setUploadingField(null);
+      setActiveXhr(null);
+    };
+
+    xhr.onabort = () => {
+      setStatus('Upload canceled.');
+      setUploadingField(null);
+      setActiveXhr(null);
+    };
+
+    xhr.send(uploadData);
+  };
+
+  const cancelUpload = () => {
+    if (activeXhr) {
+      activeXhr.abort();
     }
   };
 
@@ -562,6 +615,18 @@ const ManageStore = ({ token, stores, onLogout }) => {
                 <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleImageUpload(e, 'banner')} disabled={uploadingField !== null} />
               </label>
             </div>
+            {uploadingField === 'banner' && (
+              <div className="mb-4 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <div className="flex justify-between items-center text-sm font-bold text-blue-800 mb-2">
+                  <span>Uploading Banners... {uploadProgress}%</span>
+                  <div className="flex items-center gap-3">
+                    <span>{uploadSpeed}</span>
+                    <button type="button" onClick={cancelUpload} className="px-2 py-1 bg-red-100 text-red-600 hover:bg-red-200 rounded text-xs font-bold transition-colors">Cancel</button>
+                  </div>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2.5 overflow-hidden"><div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }}></div></div>
+              </div>
+            )}
             
             <div className="space-y-3">
               {banner.map((url, idx) => (
