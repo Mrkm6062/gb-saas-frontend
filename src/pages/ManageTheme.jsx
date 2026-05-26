@@ -220,7 +220,7 @@ const ManageTheme = ({ token, stores, onLogout }) => {
                   <p className="text-slate-500 text-sm mb-6 flex-1">{theme.description}</p>
                   <div className="mt-auto flex flex-col gap-2">
                     <a 
-                      href={`http://${currentStore.subdomain}?preview_theme=${theme.themeId}`}
+                      href={`//${currentStore.customDomain || currentStore.subdomain}?preview_theme=${theme.themeFolder || theme.themeId}&preview_id=${theme.themeId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors text-sm"
