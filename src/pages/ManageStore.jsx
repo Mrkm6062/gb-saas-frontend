@@ -54,7 +54,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [websiteTitle, setWebsiteTitle] = useState(currentStore.websiteTitle || '');
   const [logo, setLogo] = useState(currentStore.logo || '');
   const [favicon, setFavicon] = useState(currentStore.favicon || '');
-  const [banner, setBanner] = useState(currentStore.banner || '');
+  const [banner, setBanner] = useState(Array.isArray(currentStore.banner) ? currentStore.banner : (currentStore.banner ? [currentStore.banner] : []));
   const [status, setStatus] = useState('');
   const [uploadingField, setUploadingField] = useState(null); // 'logo' or 'favicon'
   
@@ -81,7 +81,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setWebsiteTitle(currentStore.websiteTitle || '');
     setLogo(currentStore.logo || '');
     setFavicon(currentStore.favicon || '');
-    setBanner(currentStore.banner || '');
+    setBanner(Array.isArray(currentStore.banner) ? currentStore.banner : (currentStore.banner ? [currentStore.banner] : []));
     setStatus('');
   }, [storeId, currentStore.storeName, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner]);
 
@@ -157,7 +157,12 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
     const uploadData = new FormData();
     uploadData.append('storeId', currentStore._id);
-    uploadData.append('images', files[0]); // Just one file for logo/favicon
+    
+    if (field === 'banner') {
+      files.forEach(file => uploadData.append('images', file));
+    } else {
+      uploadData.append('images', files[0]); // Just one file for logo/favicon
+    }
 
     setUploadingField(field);
     setStatus(`Uploading ${field}...`);
@@ -174,7 +179,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
       if (response.ok && data.urls && data.urls.length > 0) {
         if (field === 'logo') setLogo(data.urls[0]);
         if (field === 'favicon') setFavicon(data.urls[0]);
-        if (field === 'banner') setBanner(data.urls[0]);
+        if (field === 'banner') setBanner(prev => [...prev, ...data.urls]);
         setStatus(`${field.charAt(0).toUpperCase() + field.slice(1)} uploaded successfully!`);
       } else {
         setStatus(`Upload Error: ${data.message || 'Failed to upload'}`);
@@ -538,21 +543,40 @@ const ManageStore = ({ token, stores, onLogout }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Banner URL</label>
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                value={banner}
-                onChange={(e) => setBanner(e.target.value)}
-                placeholder="https://example.com/banner.jpg"
-                className="flex-1 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
-              />
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-semibold text-slate-700">Banner Images (Carousel)</label>
               <label className={`cursor-pointer px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap ${uploadingField === 'banner' ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                {uploadingField === 'banner' ? 'Uploading...' : 'Upload'}
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'banner')} disabled={uploadingField !== null} />
+                {uploadingField === 'banner' ? 'Uploading...' : 'Upload Banners'}
+                <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleImageUpload(e, 'banner')} disabled={uploadingField !== null} />
               </label>
             </div>
-            {banner && <img src={banner} alt="Banner Preview" className="mt-3 h-24 w-full object-cover rounded-lg border border-slate-200" />}
+            
+            <div className="space-y-3">
+              {banner.map((url, idx) => (
+                <div key={idx} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <img src={url} alt={`Banner ${idx + 1}`} className="h-16 w-32 object-cover rounded-lg border border-slate-200 shrink-0" />
+                  <input 
+                    type="text" 
+                    value={url}
+                    onChange={(e) => {
+                      const newBanners = [...banner];
+                      newBanners[idx] = e.target.value;
+                      setBanner(newBanners);
+                    }}
+                    placeholder="https://example.com/banner.jpg"
+                    className="flex-1 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
+                  />
+                  <button type="button" onClick={() => setBanner(prev => prev.filter((_, i) => i !== idx))} className="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-bold transition shrink-0 w-full sm:w-auto">
+                    Remove
+                  </button>
+                </div>
+              ))}
+              {banner.length === 0 && (
+                <div className="text-center py-6 text-slate-500 text-sm border-2 border-dashed border-slate-200 rounded-xl">
+                  No banners added. Upload images to create a carousel.
+                </div>
+              )}
+            </div>
           </div>
 
           <button 

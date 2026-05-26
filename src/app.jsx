@@ -17,6 +17,7 @@ import ManageAlerts from './pages/ManageAlerts';
 import ManageDelivery from './pages/ManageDelivery';
 import ManageCheckout from './pages/ManageCheckout';
 import ManageTheme from './pages/ManageTheme';
+import ManageThemeCustomization from './pages/ManageThemeCustomization';
 
 
 function App() {
@@ -96,6 +97,10 @@ function App() {
         <Route 
           path="/store/:storeId/themes" 
           element={token ? <ManageTheme token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/store/:storeId/theme-customization" 
+          element={token ? <ManageThemeCustomization token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/store/:storeId/customers" 
