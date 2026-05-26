@@ -194,10 +194,10 @@ function Login({ onLoginSuccess }) {
         </div>
 
         {/* Right Side: Image Grid Overlay */}
-        <div className="hidden md:flex w-1/2 relative bg-gradient-to-r from-[#76b900] via-[#ff8a00] to-[#76b900] bg-[length:200%_200%] animate-gradient items-center justify-center shadow-inner">
-          <div className={`grid grid-cols-3 gap-4 lg:gap-6 transform rotate-12 scale-125 w-[130%] max-w-4xl transition-opacity duration-1000 ease-out ${imagesPreloaded ? 'opacity-90' : 'opacity-0'}`}>
+        <div className="hidden md:flex w-1/2 relative bg-gradient-to-r from-[#76b900] via-[#ff8a00] to-[#76b900] bg-[length:200%_200%] animate-gradient items-center justify-start shadow-inner overflow-hidden pl-6 lg:pl-16">
+          <div className={`grid grid-cols-3 gap-4 lg:gap-6 transform rotate-12 scale-110 lg:scale-125 w-[750px] lg:w-[1000px] shrink-0 transition-opacity duration-1000 ease-out ${imagesPreloaded ? 'opacity-90' : 'opacity-0'}`}>
             {(settings.loginImageGrid.length > 0 ? settings.loginImageGrid : Array(9).fill("")).slice(0, 9).map((img, idx) => (
-              <div key={idx} className={`w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 shadow-xl ${idx % 2 === 0 ? 'border-[#ff8a00]' : 'border-[#76b900]'} ${idx % 3 === 1 ? 'translate-y-[20%]' : ''}`}>
+              <div key={idx} className={`relative transition-transform duration-500 hover:scale-105 hover:z-10 w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 shadow-xl ${idx % 2 === 0 ? 'border-[#ff8a00]' : 'border-[#76b900]'} ${idx % 3 === 1 ? 'translate-y-[20%]' : ''}`}>
                 {img && <img src={img} alt={`Login Grid Image ${idx + 1}`} className="w-full h-full object-cover" />}
               </div>
             ))}
