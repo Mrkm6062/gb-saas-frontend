@@ -588,6 +588,19 @@ const ManageStore = ({ token, stores, onLogout }) => {
               </label>
             </div>
             {logo && <img src={logo} alt="Logo Preview" className="mt-3 h-12 object-contain" />}
+            
+            {uploadingField === 'logo' && (
+              <div className="mt-4 bg-blue-50 p-4 rounded-xl border border-blue-100 animate-fadeIn">
+                <div className="flex justify-between items-center text-sm font-bold text-blue-800 mb-2">
+                  <span>Uploading Logo... {uploadProgress}%</span>
+                  <div className="flex items-center gap-3">
+                    <span>{uploadSpeed}</span>
+                    <button type="button" onClick={cancelUpload} className="px-2 py-1 bg-red-100 text-red-600 hover:bg-red-200 rounded text-xs font-bold transition-colors">Cancel</button>
+                  </div>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2.5 overflow-hidden"><div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }}></div></div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -605,6 +618,19 @@ const ManageStore = ({ token, stores, onLogout }) => {
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'favicon')} disabled={uploadingField !== null} />
               </label>
             </div>
+            
+            {uploadingField === 'favicon' && (
+              <div className="mt-4 bg-blue-50 p-4 rounded-xl border border-blue-100 animate-fadeIn">
+                <div className="flex justify-between items-center text-sm font-bold text-blue-800 mb-2">
+                  <span>Uploading Favicon... {uploadProgress}%</span>
+                  <div className="flex items-center gap-3">
+                    <span>{uploadSpeed}</span>
+                    <button type="button" onClick={cancelUpload} className="px-2 py-1 bg-red-100 text-red-600 hover:bg-red-200 rounded text-xs font-bold transition-colors">Cancel</button>
+                  </div>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2.5 overflow-hidden"><div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }}></div></div>
+              </div>
+            )}
           </div>
 
           <div>

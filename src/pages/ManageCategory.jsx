@@ -16,6 +16,9 @@ const ManageCategory = ({ token, stores, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadSpeed, setUploadSpeed] = useState('');
+  const [activeXhr, setActiveXhr] = useState(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -43,25 +46,78 @@ const ManageCategory = ({ token, stores, onLogout }) => {
 
     setUploadingImage(true);
     setStatus('Uploading image...');
+    setUploadProgress(0);
+    setUploadSpeed('Calculating...');
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/upload`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: uploadData
-      });
+    const startTime = Date.now();
+    let lastLoaded = 0;
+    let lastTime = startTime;
 
-      const data = await response.json();
-      if (response.ok && data.urls && data.urls.length > 0) {
-        setImage(data.urls[0]);
-        setStatus('Image uploaded successfully!');
+    const xhr = new XMLHttpRequest();
+    setActiveXhr(xhr);
+    xhr.open('POST', `${API_BASE_URL}/api/upload`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
+        setUploadProgress(percentComplete);
+
+        const currentTime = Date.now();
+        const timeDiff = (currentTime - lastTime) / 1000; // in seconds
+        
+        if (timeDiff > 0.5) { // update speed every 500ms
+          const bytesDiff = event.loaded - lastLoaded;
+          const speedBps = bytesDiff / timeDiff;
+          let speedText = '';
+          if (speedBps > 1024 * 1024) speedText = (speedBps / (1024 * 1024)).toFixed(2) + ' MB/s';
+          else if (speedBps > 1024) speedText = (speedBps / 1024).toFixed(2) + ' KB/s';
+          else speedText = Math.round(speedBps) + ' B/s';
+          
+          setUploadSpeed(speedText);
+          lastLoaded = event.loaded;
+          lastTime = currentTime;
+        }
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const data = JSON.parse(xhr.responseText);
+        if (data.urls && data.urls.length > 0) {
+          setImage(data.urls[0]);
+          setStatus('Image uploaded successfully!');
+        } else setStatus(`Upload Error: Failed to read returned URLs`);
       } else {
+        let data;
+        try { data = JSON.parse(xhr.responseText); } catch (e) { data = { message: 'Upload Failed' }; }
         setStatus(`Upload Error: ${data.message || 'Failed to upload'}`);
       }
-    } catch (err) {
-      setStatus(`Upload Error: ${err.message}`);
-    } finally {
       setUploadingImage(false);
+      setActiveXhr(null);
+      if (e.target) e.target.value = '';
+    };
+
+    xhr.onerror = () => {
+      setStatus('Upload Error: Network failure');
+      setUploadingImage(false);
+      setActiveXhr(null);
+      if (e.target) e.target.value = '';
+    };
+
+    xhr.onabort = () => {
+      setStatus('Upload canceled.');
+      setUploadingImage(false);
+      setActiveXhr(null);
+      if (e.target) e.target.value = '';
+    };
+
+    xhr.send(uploadData);
+  };
+
+  const cancelUpload = () => {
+    if (activeXhr) {
+      activeXhr.abort();
     }
   };
 
@@ -190,6 +246,18 @@ const ManageCategory = ({ token, stores, onLogout }) => {
                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
                   </label>
                 </div>
+                {uploadingImage && (
+                  <div className="mt-4 bg-blue-50 p-4 rounded-xl border border-blue-100 animate-fadeIn">
+                    <div className="flex justify-between items-center text-sm font-bold text-blue-800 mb-2">
+                      <span>Uploading Image... {uploadProgress}%</span>
+                      <div className="flex items-center gap-3">
+                        <span>{uploadSpeed}</span>
+                        <button type="button" onClick={cancelUpload} className="px-2 py-1 bg-red-100 text-red-600 hover:bg-red-200 rounded text-xs font-bold transition-colors">Cancel</button>
+                      </div>
+                    </div>
+                    <div className="w-full bg-blue-200 rounded-full h-2.5 overflow-hidden"><div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }}></div></div>
+                  </div>
+                )}
                 {image && <img src={image} alt="Preview" className="mt-3 h-16 w-16 object-cover rounded-xl border border-slate-200" />}
               </div>
               <div className="pt-2">

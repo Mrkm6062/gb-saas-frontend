@@ -19,6 +19,12 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [mediaImages, setMediaImages] = useState([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
   
+  // Progress Tracking States
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadSpeed, setUploadSpeed] = useState('');
+  const [activeXhr, setActiveXhr] = useState(null);
+  const [uploadingProductImage, setUploadingProductImage] = useState(false);
+
   // Default Product Import States
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importStoreType, setImportStoreType] = useState('kirana');
@@ -274,27 +280,80 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     uploadData.append('storeId', currentStore._id);
     files.forEach(file => uploadData.append('images', file));
 
-    setLoading(true);
+    setUploadingProductImage(true);
     setStatus('Uploading and converting images...');
+    setUploadProgress(0);
+    setUploadSpeed('Calculating...');
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/upload`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: uploadData
-      });
+    const startTime = Date.now();
+    let lastLoaded = 0;
+    let lastTime = startTime;
 
-      const data = await response.json();
-      if (response.ok) {
-        setFormData({ ...formData, images: [...formData.images, ...data.urls] });
-        setStatus('Images uploaded successfully!');
-      } else {
-        setStatus(`Upload Error: ${data.message}`);
+    const xhr = new XMLHttpRequest();
+    setActiveXhr(xhr);
+    xhr.open('POST', `${API_BASE_URL}/api/upload`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
+        setUploadProgress(percentComplete);
+
+        const currentTime = Date.now();
+        const timeDiff = (currentTime - lastTime) / 1000; // in seconds
+        
+        if (timeDiff > 0.5) { // update speed every 500ms
+          const bytesDiff = event.loaded - lastLoaded;
+          const speedBps = bytesDiff / timeDiff;
+          let speedText = '';
+          if (speedBps > 1024 * 1024) speedText = (speedBps / (1024 * 1024)).toFixed(2) + ' MB/s';
+          else if (speedBps > 1024) speedText = (speedBps / 1024).toFixed(2) + ' KB/s';
+          else speedText = Math.round(speedBps) + ' B/s';
+          
+          setUploadSpeed(speedText);
+          lastLoaded = event.loaded;
+          lastTime = currentTime;
+        }
       }
-    } catch (err) {
-      setStatus(`Upload Error: ${err.message}`);
-    } finally {
-      setLoading(false);
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const data = JSON.parse(xhr.responseText);
+        if (data.urls && data.urls.length > 0) {
+          setFormData(prev => ({ ...prev, images: [...prev.images, ...data.urls] }));
+          setStatus('Images uploaded successfully!');
+        } else setStatus(`Upload Error: Failed to read returned URLs`);
+      } else {
+        let data;
+        try { data = JSON.parse(xhr.responseText); } catch (e) { data = { message: 'Upload Failed' }; }
+        setStatus(`Upload Error: ${data.message || 'Failed to upload'}`);
+      }
+      setUploadingProductImage(false);
+      setActiveXhr(null);
+      if (e.target) e.target.value = '';
+    };
+
+    xhr.onerror = () => {
+      setStatus('Upload Error: Network failure');
+      setUploadingProductImage(false);
+      setActiveXhr(null);
+      if (e.target) e.target.value = '';
+    };
+
+    xhr.onabort = () => {
+      setStatus('Upload canceled.');
+      setUploadingProductImage(false);
+      setActiveXhr(null);
+      if (e.target) e.target.value = '';
+    };
+
+    xhr.send(uploadData);
+  };
+
+  const cancelUpload = () => {
+    if (activeXhr) {
+      activeXhr.abort();
     }
   };
 
@@ -608,12 +667,26 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                   <h4 className="font-bold text-lg text-slate-800">Product Images</h4>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => { setIsMediaLibraryOpen(true); fetchMedia(); }} className="text-sm font-bold text-slate-600 hover:text-slate-800 bg-slate-100 px-3 py-1.5 rounded-lg transition-colors">View Media Library</button>
-                    <label className="cursor-pointer text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
-                      + Upload Images
-                      <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} disabled={loading} />
+                    <label className={`cursor-pointer text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors ${uploadingProductImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      {uploadingProductImage ? 'Uploading...' : '+ Upload Images'}
+                      <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingProductImage} />
                     </label>
                   </div>
                 </div>
+                
+                {uploadingProductImage && (
+                  <div className="mt-4 bg-blue-50 p-4 rounded-xl border border-blue-100 animate-fadeIn">
+                    <div className="flex justify-between items-center text-sm font-bold text-blue-800 mb-2">
+                      <span>Uploading Images... {uploadProgress}%</span>
+                      <div className="flex items-center gap-3">
+                        <span>{uploadSpeed}</span>
+                        <button type="button" onClick={cancelUpload} className="px-2 py-1 bg-red-100 text-red-600 hover:bg-red-200 rounded text-xs font-bold transition-colors">Cancel</button>
+                      </div>
+                    </div>
+                    <div className="w-full bg-blue-200 rounded-full h-2.5 overflow-hidden"><div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }}></div></div>
+                  </div>
+                )}
+                
                 {formData.images.length === 0 && <p className="text-sm text-slate-500 italic">No images added. A placeholder will be shown.</p>}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                   {formData.images.map((img, idx) => (
