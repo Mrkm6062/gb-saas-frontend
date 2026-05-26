@@ -55,6 +55,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [logo, setLogo] = useState(currentStore.logo || '');
   const [favicon, setFavicon] = useState(currentStore.favicon || '');
   const [banner, setBanner] = useState(Array.isArray(currentStore.banner) ? currentStore.banner : (currentStore.banner ? [currentStore.banner] : []));
+  const [supportPhoneNumbers, setSupportPhoneNumbers] = useState(Array.isArray(currentStore.supportPhoneNumbers) ? currentStore.supportPhoneNumbers : []);
+  const [supportEmail, setSupportEmail] = useState(currentStore.supportEmail || '');
+  const [locationAddress, setLocationAddress] = useState(currentStore.locationAddress || '');
+  const [mapLocation, setMapLocation] = useState(currentStore.mapLocation || '');
   const [status, setStatus] = useState('');
   const [uploadingField, setUploadingField] = useState(null); // 'logo' or 'favicon'
   
@@ -82,8 +86,12 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setLogo(currentStore.logo || '');
     setFavicon(currentStore.favicon || '');
     setBanner(Array.isArray(currentStore.banner) ? currentStore.banner : (currentStore.banner ? [currentStore.banner] : []));
+    setSupportPhoneNumbers(Array.isArray(currentStore.supportPhoneNumbers) ? currentStore.supportPhoneNumbers : []);
+    setSupportEmail(currentStore.supportEmail || '');
+    setLocationAddress(currentStore.locationAddress || '');
+    setMapLocation(currentStore.mapLocation || '');
     setStatus('');
-  }, [storeId, currentStore.storeName, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner]);
+  }, [storeId, currentStore.storeName, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation]);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -134,7 +142,11 @@ const ManageStore = ({ token, stores, onLogout }) => {
           websiteTitle,
           logo,
           favicon,
-          banner
+          banner,
+          supportPhoneNumbers,
+          supportEmail,
+          locationAddress,
+          mapLocation
         })
       });
 
@@ -576,6 +588,65 @@ const ManageStore = ({ token, stores, onLogout }) => {
                   No banners added. Upload images to create a carousel.
                 </div>
               )}
+            </div>
+          </div>
+          
+          {/* Support & Location Section */}
+          <div className="pt-6 mt-6 border-t border-slate-200 space-y-5">
+            <h3 className="text-xl font-bold text-slate-800">Support & Location Details</h3>
+            
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Support Email</label>
+              <input 
+                type="email" 
+                value={supportEmail}
+                onChange={(e) => setSupportEmail(e.target.value)}
+                placeholder="support@example.com"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-semibold text-slate-700">Support Phone Numbers</label>
+                <button type="button" onClick={() => setSupportPhoneNumbers([...supportPhoneNumbers, ''])} className="px-3 py-1 bg-blue-50 text-blue-600 font-bold text-xs rounded-lg hover:bg-blue-100 transition">
+                  + Add Number
+                </button>
+              </div>
+              <div className="space-y-3">
+                {supportPhoneNumbers.map((phone, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input type="text" value={phone} onChange={(e) => {
+                        const newPhones = [...supportPhoneNumbers];
+                        newPhones[idx] = e.target.value;
+                        setSupportPhoneNumbers(newPhones);
+                      }} placeholder="+91 9876543210" className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition" />
+                    <button type="button" onClick={() => setSupportPhoneNumbers(prev => prev.filter((_, i) => i !== idx))} className="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-bold transition shrink-0">
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                {supportPhoneNumbers.length === 0 && <div className="text-sm text-slate-500 italic">No support numbers added.</div>}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Store Address</label>
+              <textarea value={locationAddress} onChange={(e) => setLocationAddress(e.target.value)} placeholder="123 Store Street, City, State..." rows="3" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition resize-none" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Google Maps Embed Link</label>
+              <input 
+                type="url" 
+                value={mapLocation}
+                onChange={(e) => setMapLocation(e.target.value)}
+                placeholder="https://www.google.com/maps/embed?pb=..."
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Go to Google Maps, find your location, click "Share", then "Embed a map", and copy the <code className="bg-slate-100 text-slate-700 px-1 py-0.5 rounded font-mono text-[10px]">src</code> URL from the iframe code.
+              </p>
             </div>
           </div>
 
