@@ -9,6 +9,7 @@ function Login({ onLoginSuccess }) {
   const [name, setName] = useState('');
   const [status, setStatus] = useState('');
   const [settings, setSettings] = useState({ mainLogoUrl: "https://storage.googleapis.com/galibrand/superadmin/products/galibrandfullname-logo.png", loginImageGrid: [] });
+  const [imagesPreloaded, setImagesPreloaded] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -17,9 +18,35 @@ function Login({ onLoginSuccess }) {
         const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
         if (res.ok) {
           const data = await res.json();
-          if (data.mainLogoUrl || data.loginImageGrid?.length > 0) setSettings(data);
+          if (data.mainLogoUrl || data.loginImageGrid?.length > 0) {
+            setSettings(data);
+            
+            // Preload images so they appear instantly without grey boxes
+            const gridImages = (data.loginImageGrid || []).filter(img => img !== "");
+            if (gridImages.length > 0) {
+              let loadedCount = 0;
+              gridImages.forEach(src => {
+                const img = new Image();
+                img.src = src;
+                img.onload = img.onerror = () => {
+                  loadedCount++;
+                  if (loadedCount === gridImages.length) {
+                    setImagesPreloaded(true);
+                  }
+                };
+              });
+            } else {
+              setImagesPreloaded(true);
+            }
+          } else {
+            setImagesPreloaded(true);
+          }
+        } else {
+          setImagesPreloaded(true);
         }
-      } catch (e) {}
+      } catch (e) {
+        setImagesPreloaded(true);
+      }
     };
     fetchSettings();
   }, []);
@@ -167,11 +194,11 @@ function Login({ onLoginSuccess }) {
         </div>
 
         {/* Right Side: Image Grid Overlay */}
-        <div className="hidden md:flex w-1/2 relative bg-gradient-to-r from-[#76b900] via-[#ff8a00] to-[#76b900] bg-[length:200%_200%] animate-gradient items-center justify-center shadow-inner overflow-hidden">
-          <div className="grid grid-cols-3 gap-4 lg:gap-6 transform rotate-12 scale-125 opacity-90 w-[130%] max-w-4xl">
+        <div className="hidden md:flex w-1/2 relative bg-gradient-to-r from-[#76b900] via-[#ff8a00] to-[#76b900] bg-[length:200%_200%] animate-gradient items-center justify-center shadow-inner">
+          <div className={`grid grid-cols-3 gap-4 lg:gap-6 transform rotate-12 scale-125 w-[130%] max-w-4xl transition-opacity duration-1000 ease-out ${imagesPreloaded ? 'opacity-90' : 'opacity-0'}`}>
             {(settings.loginImageGrid.length > 0 ? settings.loginImageGrid : Array(9).fill("")).slice(0, 9).map((img, idx) => (
               <div key={idx} className={`w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 shadow-xl ${idx % 2 === 0 ? 'border-[#ff8a00]' : 'border-[#76b900]'} ${idx % 3 === 1 ? 'translate-y-[20%]' : ''}`}>
-                <img src={img} alt={`Login Grid Image ${idx + 1}`} className="w-full h-full object-cover" />
+                {img && <img src={img} alt={`Login Grid Image ${idx + 1}`} className="w-full h-full object-cover" />}
               </div>
             ))}
           </div>
