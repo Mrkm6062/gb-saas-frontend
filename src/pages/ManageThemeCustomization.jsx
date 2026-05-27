@@ -551,7 +551,7 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
                               <label className="block text-xs font-semibold text-slate-700 mb-1">Icon URL (or image)</label>
                               <div className="flex gap-2">
                                 <input type="text" value={item.icon} onChange={e => handleWhyChooseItemChange(idx, 'icon', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900] text-sm" placeholder="https://..." />
-                                <label className={`cursor-pointer px-3 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap text-sm ${uploadingField === \`whyChooseUs-item-${idx}\` ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                <label className={`cursor-pointer px-3 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap text-sm ${uploadingField === `whyChooseUs-item-${idx}` ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                   {uploadingField === `whyChooseUs-item-${idx}` ? '...' : 'Upload'}
                                   <input type="file" accept="image/*" className="hidden" onChange={(e) => handleWhyChooseItemImageUpload(e, idx)} disabled={uploadingField !== null} />
                                 </label>
