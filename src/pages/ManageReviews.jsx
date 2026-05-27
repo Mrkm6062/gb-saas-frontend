@@ -166,8 +166,27 @@ const ManageReviews = ({ token, stores, onLogout }) => {
                   </div>
                 </div>
 
-                <div className="bg-slate-50 rounded-xl p-4 text-slate-700 text-sm italic mb-6 flex-1">
-                  "{review.review || 'No written feedback provided.'}"
+                <div className="bg-slate-50 rounded-xl p-4 text-slate-700 text-sm italic mb-6 flex-1 flex flex-col">
+                  <p className="flex-1">"{review.review || 'No written feedback provided.'}"</p>
+                  
+                  {review.reviewImages && review.reviewImages.length > 0 && (
+                    <div className="flex flex-wrap gap-3 mt-4 not-italic">
+                      {review.reviewImages.map((url, idx) => {
+                        const isVideo = url.match(/\.(mp4|webm|mov|ogg|mkv)(\?.*)?$/i);
+                        return (
+                          <div key={idx} className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border border-slate-200 bg-white shrink-0 group">
+                            {isVideo ? (
+                              <video src={url} className="w-full h-full object-cover" controls preload="metadata" />
+                            ) : (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                                <img src={url} alt="Review attachment" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
