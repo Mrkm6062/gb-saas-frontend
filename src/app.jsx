@@ -18,6 +18,7 @@ import ManageDelivery from './pages/ManageDelivery';
 import ManageCheckout from './pages/ManageCheckout';
 import ManageTheme from './pages/ManageTheme';
 import ManageThemeCustomization from './pages/ManageThemeCustomization';
+import ManageReviews from './pages/ManageReviews';
 
 
 function App() {
@@ -113,6 +114,10 @@ function App() {
         <Route 
           path="/store/:storeId/alerts" 
           element={token ? <ManageAlerts token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+      <Route 
+          path="/store/:storeId/reviews" 
+          element={token ? <ManageReviews token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
       <Route 
         path="/store/:storeId/delivery" 

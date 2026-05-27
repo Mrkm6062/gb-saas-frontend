@@ -20,7 +20,8 @@ import {
   Globe,
   Ticket,
   Bell,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare
 } from 'lucide-react';
 import PlatformFooter from './PlatformFooter';
 
@@ -125,6 +126,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       ]
     },
     { name: 'Analytics', icon: <BarChart3 size={20} />, path: '#' },
+    { name: 'Reviews', icon: <MessageSquare size={20} />, path: activeStoreId ? `/store/${activeStoreId}/reviews` : '#' },
     { 
       name: 'Settings', icon: <Settings size={20} />, 
       subItems: [
