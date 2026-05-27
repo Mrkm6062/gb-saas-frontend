@@ -34,7 +34,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
     order_delivered: {
       name: "Order Delivered Template",
       subject: "Your order has been delivered! - {{storeName}}",
-      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #10b981;">Order Delivered</h2>\n  <p>Hi {{customerName}},</p>\n  <p>Your order <strong>#{{orderId}}</strong> from <strong>{{storeName}}</strong> has been successfully delivered. We hope you enjoy your purchase!</p>\n  <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Order Details</h3>\n  {{orderItems}}\n  <p style="text-align: right; font-size: 16px;"><strong>Total Amount: ₹{{totalAmount}}</strong></p>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via Galibrand Cloud.</p>\n</div>`
+      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #10b981;">Order Delivered</h2>\n  <p>Hi {{customerName}},</p>\n  <p>Your order <strong>#{{orderId}}</strong> from <strong>{{storeName}}</strong> has been successfully delivered. We hope you enjoy your purchase!</p>\n  <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Order Details</h3>\n  {{orderItems}}\n  <p style="text-align: right; font-size: 16px;"><strong>Total Amount: ₹{{totalAmount}}</strong></p>\n  <div style="margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 12px; text-align: center;">\n    <h3 style="margin-top: 0; color: #333;">How did we do?</h3>\n    <p style="font-size: 14px; color: #555; margin-bottom: 20px;">We would love to hear your feedback on your purchased items:</p>\n    {{reviewLinks}}\n  </div>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via Galibrand Cloud.</p>\n</div>`
     },
     order_canceled: {
       name: "Order Canceled Template",
@@ -255,6 +255,11 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
       </tr>
     `;
 
+    const dummyReviewLinks = `
+      <div style="margin-bottom: 10px;"><a href="#" style="display: inline-block; background-color: #76b900; color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">Review Sample Product A</a></div>
+      <div style="margin-bottom: 10px;"><a href="#" style="display: inline-block; background-color: #76b900; color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">Review Sample Product B</a></div>
+    `;
+
     return htmlTemplate
       .replace(/{{storeName}}/g, currentStore.storeName || "My Awesome Store")
       .replace(/{{customerName}}/g, "John Doe")
@@ -268,7 +273,8 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
       .replace(/{{subTotal}}/g, "1500")
       .replace(/{{totalAmount}}/g, "1500")
       .replace(/{{discountAmount}}/g, "100")
-      .replace(/{{shippingCharge}}/g, "50");
+      .replace(/{{shippingCharge}}/g, "50")
+      .replace(/{{reviewLinks}}/g, dummyReviewLinks);
   };
 
   return (
