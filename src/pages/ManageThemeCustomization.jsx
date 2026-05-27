@@ -9,7 +9,8 @@ const initialForm = {
   banner: { bgColor: '#f5f5f5', textColor: '#111111', limit: 5 },
   category: { bgColor: '#ffffff' },
   productCard: { bgColor: '#ffffff', borderColor: '#e5e7eb' },
-  footer: { bgColor: '#111827', textColor: '#ffffff' }
+  footer: { bgColor: '#111827', textColor: '#ffffff' },
+  whyChooseUs: { enabled: true, title: 'Why Choose Us', subtitle: '', items: [] }
 };
 
 const ManageThemeCustomization = ({ token, stores, onLogout }) => {
@@ -23,6 +24,9 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
   const [uploadingField, setUploadingField] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadSpeed, setUploadSpeed] = useState('');
+  const [activeXhr, setActiveXhr] = useState(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -43,7 +47,8 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
               banner: { ...prev.banner, ...data.banner },
               category: { ...prev.category, ...data.category },
               productCard: { ...prev.productCard, ...data.productCard },
-              footer: { ...prev.footer, ...data.footer }
+              footer: { ...prev.footer, ...data.footer },
+              whyChooseUs: { ...prev.whyChooseUs, ...data.whyChooseUs }
             }));
           }
         }
@@ -79,6 +84,105 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
     }));
   };
 
+  const handleAddWhyChooseItem = () => {
+    setFormData((prev) => ({
+      ...prev,
+      whyChooseUs: {
+        ...prev.whyChooseUs,
+        items: [
+          ...prev.whyChooseUs.items,
+          { title: '', description: '', icon: '', image: '', isActive: true, sortOrder: 0 }
+        ]
+      }
+    }));
+  };
+
+  const handleWhyChooseItemChange = (index, field, value) => {
+    setFormData((prev) => {
+      const newItems = [...prev.whyChooseUs.items];
+      newItems[index][field] = value;
+      return {
+        ...prev,
+        whyChooseUs: {
+          ...prev.whyChooseUs,
+          items: newItems
+        }
+      };
+    });
+  };
+
+  const handleRemoveWhyChooseItem = (index) => {
+    setFormData((prev) => {
+      const newItems = prev.whyChooseUs.items.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        whyChooseUs: {
+          ...prev.whyChooseUs,
+          items: newItems
+        }
+      };
+    });
+  };
+
+  const handleWhyChooseItemImageUpload = async (e, index) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const uploadData = new FormData();
+    uploadData.append('storeId', currentStore._id);
+    uploadData.append('images', files[0]);
+
+    setUploadingField(`whyChooseUs-item-${index}`);
+    setUploadProgress(0);
+    setUploadSpeed('Calculating...');
+
+    const startTime = Date.now();
+    let lastLoaded = 0;
+    let lastTime = startTime;
+
+    const xhr = new XMLHttpRequest();
+    setActiveXhr(xhr);
+    xhr.open('POST', `${API_BASE_URL}/api/upload`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
+        setUploadProgress(percentComplete);
+        const currentTime = Date.now();
+        const timeDiff = (currentTime - lastTime) / 1000;
+        if (timeDiff > 0.5) {
+          const bytesDiff = event.loaded - lastLoaded;
+          const speedBps = bytesDiff / timeDiff;
+          let speedText = '';
+          if (speedBps > 1024 * 1024) speedText = (speedBps / (1024 * 1024)).toFixed(2) + ' MB/s';
+          else if (speedBps > 1024) speedText = (speedBps / 1024).toFixed(2) + ' KB/s';
+          else speedText = Math.round(speedBps) + ' B/s';
+          setUploadSpeed(speedText);
+          lastLoaded = event.loaded;
+          lastTime = currentTime;
+        }
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const data = JSON.parse(xhr.responseText);
+        if (data.urls && data.urls.length > 0) handleWhyChooseItemChange(index, 'icon', data.urls[0]);
+        else setStatus(`Upload Error: Failed to read returned URLs`);
+      } else {
+        let data;
+        try { data = JSON.parse(xhr.responseText); } catch (e) { data = { message: 'Upload Failed' }; }
+        setStatus(`Upload Error: ${data.message || 'Failed to upload'}`);
+      }
+      setUploadingField(null);
+      setActiveXhr(null);
+    };
+    xhr.onerror = () => { setStatus('Upload Error: Network failure'); setUploadingField(null); setActiveXhr(null); };
+    xhr.onabort = () => { setStatus('Upload canceled.'); setUploadingField(null); setActiveXhr(null); };
+    xhr.send(uploadData);
+  };
+
   const handleImageUpload = async (e, section, field) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -88,23 +192,58 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
     uploadData.append('images', files[0]);
 
     setUploadingField(`${section}-${field}`);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: uploadData,
-      });
-      const data = await response.json();
-      if (response.ok && data.urls && data.urls.length > 0) {
-        handleNestedChange(section, field, data.urls[0]);
+    setUploadProgress(0);
+    setUploadSpeed('Calculating...');
+
+    const startTime = Date.now();
+    let lastLoaded = 0;
+    let lastTime = startTime;
+
+    const xhr = new XMLHttpRequest();
+    setActiveXhr(xhr);
+    xhr.open('POST', `${API_BASE_URL}/api/upload`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
+        setUploadProgress(percentComplete);
+        const currentTime = Date.now();
+        const timeDiff = (currentTime - lastTime) / 1000;
+        if (timeDiff > 0.5) {
+          const bytesDiff = event.loaded - lastLoaded;
+          const speedBps = bytesDiff / timeDiff;
+          let speedText = '';
+          if (speedBps > 1024 * 1024) speedText = (speedBps / (1024 * 1024)).toFixed(2) + ' MB/s';
+          else if (speedBps > 1024) speedText = (speedBps / 1024).toFixed(2) + ' KB/s';
+          else speedText = Math.round(speedBps) + ' B/s';
+          setUploadSpeed(speedText);
+          lastLoaded = event.loaded;
+          lastTime = currentTime;
+        }
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const data = JSON.parse(xhr.responseText);
+        if (data.urls && data.urls.length > 0) handleNestedChange(section, field, data.urls[0]);
+        else setStatus(`Upload Error: Failed to read returned URLs`);
       } else {
+        let data;
+        try { data = JSON.parse(xhr.responseText); } catch (e) { data = { message: 'Upload Failed' }; }
         setStatus(`Upload Error: ${data.message || 'Failed to upload'}`);
       }
-    } catch (err) {
-      setStatus(`Upload Error: ${err.message}`);
-    } finally {
       setUploadingField(null);
-    }
+      setActiveXhr(null);
+    };
+    xhr.onerror = () => { setStatus('Upload Error: Network failure'); setUploadingField(null); setActiveXhr(null); };
+    xhr.onabort = () => { setStatus('Upload canceled.'); setUploadingField(null); setActiveXhr(null); };
+    xhr.send(uploadData);
+  };
+
+  const cancelUpload = () => {
+    if (activeXhr) activeXhr.abort();
   };
 
   const handleSave = async (e) => {
@@ -179,6 +318,18 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
             <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, section, field)} />
           </label>
         </div>
+        {isUploading && (
+          <div className="mt-3 bg-blue-50 p-3 rounded-xl border border-blue-100 animate-fadeIn">
+            <div className="flex justify-between items-center text-xs font-bold text-blue-800 mb-2">
+              <span>Uploading... {uploadProgress}%</span>
+              <div className="flex items-center gap-2">
+                <span>{uploadSpeed}</span>
+                <button type="button" onClick={cancelUpload} className="px-2 py-1 bg-red-100 text-red-600 hover:bg-red-200 rounded text-[10px] font-bold transition-colors">Cancel</button>
+              </div>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden"><div className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }}></div></div>
+          </div>
+        )}
         {currentValue && (
           <div className="mt-2 p-2 bg-slate-50 border border-slate-200 rounded-lg inline-block">
             <img src={currentValue} alt="Preview" className="h-10 object-contain" />
@@ -192,7 +343,7 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Customize Theme">
-      <div className="w-full px-6 py-10 max-w-6xl mx-auto">
+      <div className="w-full px-6 py-10 mx-auto">
         <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h2 className="text-3xl font-extrabold mb-2 text-slate-800 flex items-center gap-3">
@@ -215,13 +366,13 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
         <div className="flex flex-col md:flex-row gap-8">
           {/* Tabs Sidebar */}
           <div className="w-full md:w-64 shrink-0 flex md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0">
-            {['global', 'header', 'banner', 'category', 'productCard', 'footer'].map((tab) => (
+            {['global', 'header', 'banner', 'category', 'productCard', 'footer', 'whyChooseUs'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap text-left ${activeTab === tab ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1).replace(/([A-Z])/g, ' $1')} Settings
+                {tab === 'whyChooseUs' ? 'Why Choose Us' : tab.charAt(0).toUpperCase() + tab.slice(1).replace(/([A-Z])/g, ' $1')} Settings
               </button>
             ))}
           </div>
@@ -328,6 +479,111 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {renderColorInput('footer', 'bgColor', 'Footer Background Color')}
                   {renderColorInput('footer', 'textColor', 'Footer Text Color')}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'whyChooseUs' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h3 className="text-xl font-bold text-slate-800">Why Choose Us Section</h3>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={formData.whyChooseUs.enabled} 
+                      onChange={(e) => handleNestedChange('whyChooseUs', 'enabled', e.target.checked)} 
+                    />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#76b900]"></div>
+                  </label>
+                </div>
+
+                <div className={`space-y-6 transition-opacity ${!formData.whyChooseUs.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Section Title</label>
+                      <input 
+                        type="text" 
+                        value={formData.whyChooseUs.title} 
+                        onChange={(e) => handleNestedChange('whyChooseUs', 'title', e.target.value)} 
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900]" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Section Subtitle</label>
+                      <input 
+                        type="text" 
+                        value={formData.whyChooseUs.subtitle} 
+                        onChange={(e) => handleNestedChange('whyChooseUs', 'subtitle', e.target.value)} 
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900]" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="font-bold text-slate-800">Feature Items</h4>
+                      <button 
+                        type="button" 
+                        onClick={handleAddWhyChooseItem}
+                        className="px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition text-sm"
+                      >
+                        + Add Feature
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {formData.whyChooseUs.items.map((item, idx) => (
+                        <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-xl relative group">
+                          <button 
+                            type="button" 
+                            onClick={() => handleRemoveWhyChooseItem(idx)} 
+                            className="absolute top-4 right-4 text-red-400 hover:text-red-600 font-bold text-xl leading-none"
+                          >
+                            &times;
+                          </button>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-8">
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1">Feature Title <span className="text-red-500">*</span></label>
+                              <input type="text" value={item.title} onChange={e => handleWhyChooseItemChange(idx, 'title', e.target.value)} required className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900] text-sm" placeholder="e.g. Free Delivery" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1">Icon URL (or image)</label>
+                              <div className="flex gap-2">
+                                <input type="text" value={item.icon} onChange={e => handleWhyChooseItemChange(idx, 'icon', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900] text-sm" placeholder="https://..." />
+                                <label className={`cursor-pointer px-3 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap text-sm ${uploadingField === \`whyChooseUs-item-${idx}\` ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                  {uploadingField === `whyChooseUs-item-${idx}` ? '...' : 'Upload'}
+                                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleWhyChooseItemImageUpload(e, idx)} disabled={uploadingField !== null} />
+                                </label>
+                              </div>
+                              {uploadingField === `whyChooseUs-item-${idx}` && (
+                                <div className="mt-2 bg-blue-50 p-3 rounded-xl border border-blue-100 animate-fadeIn">
+                                  <div className="flex justify-between items-center text-xs font-bold text-blue-800 mb-2">
+                                    <span>Uploading... {uploadProgress}%</span>
+                                    <div className="flex items-center gap-2">
+                                      <span>{uploadSpeed}</span>
+                                      <button type="button" onClick={cancelUpload} className="px-2 py-1 bg-red-100 text-red-600 hover:bg-red-200 rounded text-[10px] font-bold transition-colors">Cancel</button>
+                                    </div>
+                                  </div>
+                                  <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden"><div className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out" style={{ width: `${uploadProgress}%` }}></div></div>
+                                </div>
+                              )}
+                              {item.icon && (
+                                <div className="mt-2"><img src={item.icon} alt="Icon Preview" className="h-8 object-contain" /></div>
+                              )}
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
+                              <textarea rows="2" value={item.description} onChange={e => handleWhyChooseItemChange(idx, 'description', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900] text-sm resize-none" placeholder="Provide details about this feature..." />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {formData.whyChooseUs.items.length === 0 && (
+                         <p className="text-sm text-slate-500 italic text-center py-6 border-2 border-dashed border-slate-200 rounded-xl">No feature items added. Click "+ Add Feature" to begin.</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
