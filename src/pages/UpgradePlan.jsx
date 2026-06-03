@@ -165,6 +165,7 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
               }
               
               const canRenew = isExpired || isExpiringSoon;
+              const hasPurchasedBefore = currentStore.subscriptionStatus === 'active' || currentStore.subscriptionStatus === 'expired' || currentStore.isTrialActive === false;
 
               return plans.map(plan => {
               const isCurrentPlan = currentStore.planId === plan._id || (!currentStore.planId && plan.name === 'Free');
@@ -203,7 +204,9 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
                     <div className="flex items-center gap-2">{plan.features.basicAnalytics ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.basicAnalytics ? 'text-slate-600' : 'text-slate-400'}`}>Basic Analytics</span></div>
                     <div className="flex items-center gap-2">{plan.features.advanceAnalytics ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.advanceAnalytics ? 'text-slate-600' : 'text-slate-400'}`}>Advance Analytics</span></div>
                     <div className="flex items-center gap-2">{plan.features.whatsappOrderButton ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.whatsappOrderButton ? 'text-slate-600' : 'text-slate-400'}`}>WhatsApp Order Button</span></div>
-                    <div className="flex items-center gap-2">{plan.features.sevenDaysTrial !== false ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.sevenDaysTrial !== false ? 'text-slate-600' : 'text-slate-400'}`}>7-Days Trial</span></div>
+                    {!hasPurchasedBefore && (
+                      <div className="flex items-center gap-2">{plan.features.sevenDaysTrial !== false ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.sevenDaysTrial !== false ? 'text-slate-600' : 'text-slate-400'}`}>7-Days Trial</span></div>
+                    )}
                     <div className="flex items-center gap-2">{plan.features.themes ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.themes ? 'text-slate-600' : 'text-slate-400'}`}>Premium Themes</span></div>
                     <div className="flex items-center gap-2">{plan.features.prioritySupport ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.prioritySupport ? 'text-slate-600' : 'text-slate-400'}`}>Priority Support</span></div>
                   </div>
