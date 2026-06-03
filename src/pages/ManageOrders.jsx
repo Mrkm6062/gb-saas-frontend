@@ -606,6 +606,107 @@ const ManageOrders = ({ token, stores, onLogout }) => {
           </div>
         </div>
       )}
+
+      {/* Tracking Details Modal */}
+      {trackingModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-xl font-bold text-slate-800">Tracking Information</h3>
+              <button onClick={() => { setTrackingModal({...trackingModal, isOpen: false}); setOrders([...orders]); }} className="text-slate-400 hover:text-red-500 transition-colors text-3xl leading-none">
+                &times;
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Shipping Method</label>
+                  <select 
+                    value={trackingModal.ShippingMethod} 
+                    onChange={e => setTrackingModal({...trackingModal, ShippingMethod: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white"
+                  >
+                    <option value="By Shipping Company">By Shipping Company</option>
+                    <option value="By Store Name">By Store Name (Own Delivery)</option>
+                  </select>
+                </div>
+                
+                {trackingModal.ShippingMethod === 'By Shipping Company' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Shipping Company</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g., FedEx, BlueDart"
+                        value={trackingModal.ShippingCompany}
+                        onChange={e => setTrackingModal({...trackingModal, ShippingCompany: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Tracking Number</label>
+                      <input 
+                        type="text" 
+                        placeholder="Enter tracking number"
+                        value={trackingModal.ShippingTrackingNumber}
+                        onChange={e => setTrackingModal({...trackingModal, ShippingTrackingNumber: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Delivery Person Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g., John Doe"
+                        value={trackingModal.DeliveryPersonName}
+                        onChange={e => setTrackingModal({...trackingModal, DeliveryPersonName: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Phone Number</label>
+                      <input 
+                        type="text" 
+                        placeholder="Enter phone number"
+                        value={trackingModal.DeliveryPersonPhone}
+                        onChange={e => setTrackingModal({...trackingModal, DeliveryPersonPhone: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm"
+                      />
+                    </div>
+                  </>
+                )}
+                
+                <div className="flex gap-3 pt-4 mt-2">
+                  <button 
+                    onClick={() => { setTrackingModal({...trackingModal, isOpen: false}); setOrders([...orders]); }}
+                    className="flex-1 px-4 py-2.5 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => {
+                      executeStatusChange(trackingModal.orderId, 'order', 'shipped', {
+                        ShippingMethod: trackingModal.ShippingMethod,
+                        ShippingCompany: trackingModal.ShippingCompany,
+                        ShippingTrackingNumber: trackingModal.ShippingTrackingNumber,
+                        DeliveryPersonName: trackingModal.DeliveryPersonName,
+                        DeliveryPersonPhone: trackingModal.DeliveryPersonPhone
+                      });
+                      setTrackingModal({...trackingModal, isOpen: false});
+                    }}
+                    className="flex-1 px-4 py-2.5 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors shadow-lg shadow-indigo-100"
+                  >
+                    Save & Ship
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };
