@@ -483,7 +483,7 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                       <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Tracking Information</h4>
                       {selectedOrder.ShippingMethod && <p className="text-sm text-slate-800 font-medium mb-3">Method: <span className="bg-slate-200 px-2 py-1 rounded text-xs ml-1">{selectedOrder.ShippingMethod}</span></p>}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-3 rounded-lg border border-slate-100">
-                        {selectedOrder.ShippingMethod === 'By Store Name' ? (
+                        {selectedOrder.ShippingMethod !== 'By Shipping Company' ? (
                           <>
                             <div>
                               <p className="text-xs text-slate-500 mb-1">Delivery Person</p>
@@ -688,8 +688,12 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                   </button>
                   <button 
                     onClick={() => {
+                      const finalShippingMethod = trackingModal.ShippingMethod === 'By Store Name' 
+                        ? `By ${currentStore.storeName || 'Store'}` 
+                        : trackingModal.ShippingMethod;
+
                       executeStatusChange(trackingModal.orderId, 'order', 'shipped', {
-                        ShippingMethod: trackingModal.ShippingMethod,
+                        ShippingMethod: finalShippingMethod,
                         ShippingCompany: trackingModal.ShippingCompany,
                         ShippingTrackingNumber: trackingModal.ShippingTrackingNumber,
                         DeliveryPersonName: trackingModal.DeliveryPersonName,
