@@ -82,14 +82,26 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     }
   }, [activeStoreId]);
 
-  // Calculate trial days remaining for the active store
+  // Calculate plan days remaining for the active store
   const currentStoreInfo = stores?.find(s => s.storeId === activeStoreId);
-  let trialDaysLeft = null;
-  if (currentStoreInfo && currentStoreInfo.isTrialActive && currentStoreInfo.planExpiryDate) {
+  let daysLeft = null;
+  let isExpired = false;
+  let isExpiringSoon = false;
+
+  if (currentStoreInfo && currentStoreInfo.planExpiryDate) {
     const diff = new Date(currentStoreInfo.planExpiryDate) - new Date();
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    trialDaysLeft = days > 0 ? days : 0;
+    daysLeft = days;
+    isExpired = days <= 0 || currentStoreInfo.subscriptionStatus === 'expired';
+    isExpiringSoon = days > 0 && days <= 3;
   }
+
+  // Redirect to plan page if expired and not already there
+  useEffect(() => {
+    if (isExpired && activeStoreId && !location.pathname.includes('/plan') && !location.pathname.includes('/login')) {
+      navigate(`/store/${activeStoreId}/plan`);
+    }
+  }, [isExpired, activeStoreId, location.pathname, navigate]);
 
   const toggleMenu = (menuName) => {
     if (isSidebarCollapsed) {
@@ -280,11 +292,16 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
             </button>
             <span className="text-xl font-bold text-slate-800">{headerTitle}</span>
 
-            {/* Trial Banner */}
-            {trialDaysLeft !== null && (
-              <div className={`ml-4 hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border ${trialDaysLeft > 0 ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
-                <span className="text-[10px] font-bold uppercase tracking-wider">{trialDaysLeft > 0 ? 'Free Trial' : 'Trial Expired'}</span>
-                {trialDaysLeft > 0 && <span className="text-sm font-extrabold">{trialDaysLeft} Days Left</span>}
+            {/* Subscription/Trial Banner */}
+            {daysLeft !== null && (currentStoreInfo?.isTrialActive || isExpiringSoon || isExpired) && (
+              <div className={`ml-4 hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border ${!isExpired ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                <span className="text-[10px] font-bold uppercase tracking-wider">
+                  {currentStoreInfo?.isTrialActive 
+                    ? (isExpired ? 'Trial Expired' : 'Free Trial') 
+                    : (isExpired ? 'Plan Expired' : 'Expiring Soon')}
+                </span>
+                {!isExpired && <span className="text-sm font-extrabold">{daysLeft} Days Left</span>}
+                {isExpired && <span className="text-sm font-extrabold">Kindly Purchase</span>}
               </div>
             )}
           </div>

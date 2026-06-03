@@ -153,10 +153,33 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
               const currentPlanObj = plans.find(p => p._id === currentStore.planId) || plans.find(p => p.price === 0) || { price: 0 };
               const currentPrice = currentPlanObj.price || 0;
               
+              let daysLeft = null;
+              let isExpired = false;
+              let isExpiringSoon = false;
+
+              if (currentStore.planExpiryDate) {
+                const diff = new Date(currentStore.planExpiryDate) - new Date();
+                daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                isExpired = daysLeft <= 0 || currentStore.subscriptionStatus === 'expired';
+                isExpiringSoon = daysLeft > 0 && daysLeft <= 3;
+              }
+              
+              const canRenew = isExpired || isExpiringSoon;
+
               return plans.map(plan => {
               const isCurrentPlan = currentStore.planId === plan._id || (!currentStore.planId && plan.name === 'Free');
               const isProPlan = plan.name === 'Pro'; // Identify the Pro plan
               const isDowngrade = !isCurrentPlan && plan.price < currentPrice;
+              const isFreePlan = plan.price === 0;
+              
+              const buttonDisabled = (isCurrentPlan && (!canRenew || isFreePlan)) || isDowngrade;
+              
+              let buttonText = 'Upgrade Plan';
+              if (isCurrentPlan) {
+                buttonText = (canRenew && !isFreePlan) ? 'Renew Plan' : 'Current Plan';
+              } else if (isDowngrade) {
+                buttonText = 'Cannot Downgrade';
+              }
               
               return (
                 <div key={plan._id} className={`bg-white rounded-2xl shadow-sm border-2 flex flex-col p-5 md:p-6 transition-all ${isCurrentPlan ? 'border-[#76b900] ring-4 ring-green-50' : isProPlan ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100 hover:border-slate-300'}`}>
@@ -184,10 +207,10 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
 
                   <button 
                     onClick={() => handleUpgrade(plan)}
-                    disabled={isCurrentPlan || isDowngrade}
-                    className={`w-full py-3.5 rounded-xl font-bold transition-all ${isCurrentPlan ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : isDowngrade ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : isProPlan ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
+                    disabled={buttonDisabled}
+                    className={`w-full py-3.5 rounded-xl font-bold transition-all ${buttonDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : isProPlan ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
                   >
-                    {isCurrentPlan ? 'Current Plan' : isDowngrade ? 'Cannot Downgrade' : 'Upgrade Plan'}
+                    {buttonText}
                   </button>
                 </div>
               );
