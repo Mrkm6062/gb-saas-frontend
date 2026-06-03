@@ -151,7 +151,8 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4 xl:gap-6">
             {(() => {
               const currentPlanId = typeof currentStore.planId === 'object' && currentStore.planId !== null ? currentStore.planId._id : currentStore.planId;
-              const currentPlanObj = plans.find(p => p._id === currentPlanId) || plans.find(p => Number(p.price) === 0) || { price: 0 };
+              const currentPlanIdStr = currentPlanId ? String(currentPlanId) : null;
+              const currentPlanObj = plans.find(p => String(p._id) === currentPlanIdStr) || plans.find(p => Number(p.price) === 0) || { price: 0 };
               const currentPrice = Number(currentPlanObj.price) || 0;
               
               let daysLeft = null;
@@ -167,14 +168,15 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
               
               const canRenew = isExpired || isExpiringSoon;
               const hasPurchasedBefore = currentStore.subscriptionStatus === 'active' || currentStore.subscriptionStatus === 'expired' || currentStore.isTrialActive === false;
+              const isCurrentPlanPremium = currentPlanObj.name === 'Premium';
 
               return plans.map(plan => {
               const planPrice = Number(plan.price) || 0;
-              const isCurrentPlan = currentPlanId === plan._id || (!currentPlanId && planPrice === 0);
+              const isCurrentPlan = currentPlanIdStr === String(plan._id) || (!currentPlanIdStr && planPrice === 0);
               const isProPlan = plan.name === 'Pro'; // Identify the Pro plan
               const isDowngrade = !isCurrentPlan && planPrice < currentPrice;
               const isFreePlan = planPrice === 0;
-              const preventDowngrade = isDowngrade && !isExpired;
+              const preventDowngrade = isDowngrade && !canRenew;
               
               const buttonDisabled = (isCurrentPlan && (!canRenew || isFreePlan)) || preventDowngrade;
               
@@ -183,18 +185,18 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
                 buttonText = (canRenew && !isFreePlan) ? 'Renew Plan' : 'Current Plan';
               } else if (preventDowngrade) {
                 buttonText = 'Cannot Downgrade';
-              } else if (isDowngrade && isExpired) {
+              } else if (isDowngrade && canRenew) {
                 buttonText = 'Downgrade Plan';
               }
               
               return (
-                <div key={plan._id} className={`relative bg-white rounded-2xl shadow-sm border-2 flex flex-col p-5 md:p-6 transition-all ${isCurrentPlan ? 'border-[#76b900] ring-4 ring-green-50' : isProPlan ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100 hover:border-slate-300'}`}>
+                <div key={plan._id} className={`relative rounded-2xl shadow-sm border-2 flex flex-col p-5 md:p-6 transition-all ${isCurrentPlan ? 'bg-white border-[#76b900] ring-4 ring-green-50' : (isProPlan && !isCurrentPlanPremium) ? 'bg-gradient-to-br from-blue-50 to-white border-blue-500 ring-4 ring-blue-50' : 'bg-white border-slate-100 hover:border-slate-300'}`}>
                   {isCurrentPlan && (
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#76b900] text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap z-10">
                       Current Plan
                     </div>
                   )}
-                  {isProPlan && !isCurrentPlan && (
+                  {isProPlan && !isCurrentPlan && !isCurrentPlanPremium && (
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
                       <span className="absolute w-full h-full rounded-full bg-blue-400 animate-ping opacity-75"></span>
                       <div className="relative bg-blue-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
@@ -229,7 +231,7 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
                   <button 
                     onClick={() => handleUpgrade(plan)}
                     disabled={buttonDisabled}
-                    className={`w-full py-3.5 rounded-xl font-bold transition-all ${buttonDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : isProPlan ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
+                    className={`w-full py-3.5 rounded-xl font-bold transition-all ${buttonDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : (isProPlan && !isCurrentPlanPremium) ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
                   >
                     {buttonText}
                   </button>
