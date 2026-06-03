@@ -29,7 +29,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
     order_shipped: {
       name: "Order Shipped Template",
       subject: "Your order has been shipped! - {{storeName}}",
-      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #3b82f6;">Order Shipped</h2>\n  <p>Hi {{customerName}},</p>\n  <p>Good news! Your order <strong>#{{orderId}}</strong> from <strong>{{storeName}}</strong> has been shipped and is on its way to you.</p>\n  <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Order Details</h3>\n  {{orderItems}}\n  <p style="text-align: right; font-size: 16px;"><strong>Total Amount: ₹{{totalAmount}}</strong></p>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via Galibrand Cloud.</p>\n</div>`
+      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #3b82f6;">Order Shipped</h2>\n  <p>Hi {{customerName}},</p>\n  <p>Good news! Your order <strong>#{{orderId}}</strong> from <strong>{{storeName}}</strong> has been shipped and is on its way to you.</p>\n  {{trackingDetails}}\n  <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Order Details</h3>\n  {{orderItems}}\n  <p style="text-align: right; font-size: 16px;"><strong>Total Amount: ₹{{totalAmount}}</strong></p>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via Galibrand Cloud.</p>\n</div>`
     },
     order_delivered: {
       name: "Order Delivered Template",
@@ -260,6 +260,15 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
       <div style="margin-bottom: 10px;"><a href="#" style="display: inline-block; background-color: #76b900; color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">Review Sample Product B</a></div>
     `;
 
+    const dummyTrackingDetails = `
+      <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 20px;">
+        <h4 style="margin-top: 0; color: #3b82f6;">Tracking Information</h4>
+        <p style="margin: 5px 0; font-size: 14px;"><strong>Shipping Method:</strong> By Shipping Company</p>
+        <p style="margin: 5px 0; font-size: 14px;"><strong>Shipping Company:</strong> FedEx</p>
+        <p style="margin: 5px 0; font-size: 14px;"><strong>Tracking Number:</strong> FDX123456789</p>
+      </div>
+    `;
+
     return htmlTemplate
       .replace(/{{storeName}}/g, currentStore.storeName || "My Awesome Store")
       .replace(/{{customerName}}/g, "John Doe")
@@ -274,7 +283,8 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
       .replace(/{{totalAmount}}/g, "1500")
       .replace(/{{discountAmount}}/g, "100")
       .replace(/{{shippingCharge}}/g, "50")
-      .replace(/{{reviewLinks}}/g, dummyReviewLinks);
+      .replace(/{{reviewLinks}}/g, dummyReviewLinks)
+      .replace(/{{trackingDetails}}/g, dummyTrackingDetails);
   };
 
   return (
@@ -449,7 +459,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
                        {isPreviewMode ? 'Edit Code' : 'Preview HTML'}
                      </button>
                    </div>
-                 <p className="text-xs text-slate-500 mb-2 font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">Variables: {'{{storeName}}'}, {'{{customerName}}'}, {'{{customerPhone}}'}, {'{{customerEmail}}'}, {'{{customerAddress}}'}, {'{{orderDate}}'}, {'{{orderId}}'}, {'{{orderItems}}'}, {'{{billItems}}'}, {'{{subTotal}}'}, {'{{totalAmount}}'}, {'{{discountAmount}}'}, {'{{shippingCharge}}'}</p>
+                 <p className="text-xs text-slate-500 mb-2 font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">Variables: {'{{storeName}}'}, {'{{customerName}}'}, {'{{customerPhone}}'}, {'{{customerEmail}}'}, {'{{customerAddress}}'}, {'{{orderDate}}'}, {'{{orderId}}'}, {'{{orderItems}}'}, {'{{billItems}}'}, {'{{subTotal}}'}, {'{{totalAmount}}'}, {'{{discountAmount}}'}, {'{{shippingCharge}}'}, {'{{trackingDetails}}'}, {'{{ShippingMethod}}'}, {'{{ShippingCompany}}'}, {'{{ShippingTrackingNumber}}'}, {'{{DeliveryPersonName}}'}, {'{{DeliveryPersonPhone}}'}</p>
                    {isPreviewMode ? (
                      <div className="w-full px-4 py-4 border border-slate-200 rounded-xl bg-white min-h-[200px] max-h-[400px] overflow-y-auto" dangerouslySetInnerHTML={{ __html: getPreviewHtml(templateForm.body) }}></div>
                    ) : (

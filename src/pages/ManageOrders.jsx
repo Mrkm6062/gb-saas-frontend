@@ -12,6 +12,7 @@ const ManageOrders = ({ token, stores, onLogout }) => {
   const [error, setError] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', type: '', pendingData: null });
+  const [trackingModal, setTrackingModal] = useState({ isOpen: false, orderId: null, ShippingMethod: 'By Shipping Company', ShippingCompany: '', ShippingTrackingNumber: '', DeliveryPersonName: '', DeliveryPersonPhone: '' });
   const [resendingOrderId, setResendingOrderId] = useState(null);
   const [printingOrderId, setPrintingOrderId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,6 +93,19 @@ const ManageOrders = ({ token, stores, onLogout }) => {
           confirmColor: 'bg-red-600 hover:bg-red-700 shadow-red-100 text-white',
           icon: <AlertCircle size={28} className="text-red-500" />,
           pendingData: { orderId, type, newValue, subType: 'cancel' }
+        });
+        return;
+      }
+
+      if (newValue === 'shipped') {
+        setTrackingModal({
+          isOpen: true,
+          orderId,
+          ShippingMethod: 'By Shipping Company',
+          ShippingCompany: '',
+          ShippingTrackingNumber: '',
+          DeliveryPersonName: '',
+          DeliveryPersonPhone: ''
         });
         return;
       }
@@ -350,7 +364,9 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                       <td className="p-4 font-extrabold text-green-600">₹{order.totalAmount}</td>
                       <td className="p-4">
                         <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                          {order.paymentMethod === 'whatsapp' ? 'WhatsApp' : order.paymentMethod === 'razorpay' ? 'Online' : 'COD'}
+                          {order.paymentMethod === 'whatsapp' || order.WhasAppOrder ? (
+                            <span className="text-[#76b900] bg-green-50 px-2 py-0.5 rounded border border-green-100">WhatsApp Order</span>
+                          ) : order.paymentMethod === 'razorpay' ? 'Online' : 'COD'}
                         </div>
                         <select value={order.paymentStatus} onChange={(e) => handleStatusChange(order._id, 'payment', e.target.value, order)} className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.paymentStatus === 'paid' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
                           <option value="pending">Pending</option>
@@ -462,6 +478,49 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                     <p className="text-sm text-slate-600 mt-1">{selectedOrder.address?.city}, {selectedOrder.address?.state} {selectedOrder.address?.pincode}</p>
                     {selectedOrder.address?.alternateNumber && <p className="text-xs text-slate-500 mt-2">Alt Phone: {selectedOrder.address?.alternateNumber}</p>}
                   </div>
+                  {(selectedOrder.ShippingMethod || selectedOrder.ShippingTrackingNumber || selectedOrder.DeliveryPersonName) && (
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 md:col-span-2">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Tracking Information</h4>
+                      {selectedOrder.ShippingMethod && <p className="text-sm text-slate-800 font-medium mb-3">Method: <span className="bg-slate-200 px-2 py-1 rounded text-xs ml-1">{selectedOrder.ShippingMethod}</span></p>}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-3 rounded-lg border border-slate-100">
+                        {selectedOrder.ShippingMethod === 'By Store Name' ? (
+                          <>
+                            <div>
+                              <p className="text-xs text-slate-500 mb-1">Delivery Person</p>
+                              <p className="text-sm font-bold text-slate-700">{selectedOrder.DeliveryPersonName || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-500 mb-1">Phone Number</p>
+                              <p className="text-sm font-bold text-slate-700">{selectedOrder.DeliveryPersonPhone || 'N/A'}</p>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div>
+                              <p className="text-xs text-slate-500 mb-1">Shipping Company</p>
+                              <p className="text-sm font-bold text-slate-700">{selectedOrder.ShippingCompany || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-500 mb-1">Tracking Number</p>
+                              {selectedOrder.ShippingTrackingNumber && selectedOrder.ShippingTrackingNumber !== 'N/A' ? (
+                                <a 
+                                  href={`https://www.google.com/search?q=${encodeURIComponent((selectedOrder.ShippingCompany || '') + ' tracking ' + selectedOrder.ShippingTrackingNumber)}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-sm font-bold text-blue-600 hover:text-blue-800 underline decoration-blue-300 underline-offset-2"
+                                  title="Track via Google Search"
+                                >
+                                  {selectedOrder.ShippingTrackingNumber}
+                                </a>
+                              ) : (
+                                <p className="text-sm font-bold text-slate-700">N/A</p>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Purchased Items</h4>
@@ -504,7 +563,7 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                       )}
                       <tr>
                         <td colSpan="3" className="p-3 text-right font-semibold text-slate-600">Payment Method:</td>
-                        <td className="p-3 text-right font-bold text-slate-800 uppercase">{selectedOrder.paymentMethod === 'whatsapp' ? 'WhatsApp' : selectedOrder.paymentMethod === 'razorpay' ? 'Online' : 'COD'}</td>
+                        <td className="p-3 text-right font-bold text-slate-800 uppercase">{(selectedOrder.paymentMethod === 'whatsapp' || selectedOrder.WhasAppOrder) ? 'WhatsApp' : selectedOrder.paymentMethod === 'razorpay' ? 'Online' : 'COD'}</td>
                       </tr>
                       <tr>
                         <td colSpan="3" className="p-3 text-right font-bold text-slate-800 text-base">Final Total:</td>
