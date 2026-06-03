@@ -150,8 +150,9 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
         ) : (
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4 xl:gap-6">
             {(() => {
-              const currentPlanObj = plans.find(p => p._id === currentStore.planId) || plans.find(p => p.price === 0) || { price: 0 };
-              const currentPrice = currentPlanObj.price || 0;
+              const currentPlanId = typeof currentStore.planId === 'object' && currentStore.planId !== null ? currentStore.planId._id : currentStore.planId;
+              const currentPlanObj = plans.find(p => p._id === currentPlanId) || plans.find(p => Number(p.price) === 0) || { price: 0 };
+              const currentPrice = Number(currentPlanObj.price) || 0;
               
               let daysLeft = null;
               let isExpired = false;
@@ -168,10 +169,11 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
               const hasPurchasedBefore = currentStore.subscriptionStatus === 'active' || currentStore.subscriptionStatus === 'expired' || currentStore.isTrialActive === false;
 
               return plans.map(plan => {
-              const isCurrentPlan = currentStore.planId === plan._id || (!currentStore.planId && plan.name === 'Free');
+              const planPrice = Number(plan.price) || 0;
+              const isCurrentPlan = currentPlanId === plan._id || (!currentPlanId && planPrice === 0);
               const isProPlan = plan.name === 'Pro'; // Identify the Pro plan
-              const isDowngrade = !isCurrentPlan && plan.price < currentPrice;
-              const isFreePlan = plan.price === 0;
+              const isDowngrade = !isCurrentPlan && planPrice < currentPrice;
+              const isFreePlan = planPrice === 0;
               const preventDowngrade = isDowngrade && !isExpired;
               
               const buttonDisabled = (isCurrentPlan && (!canRenew || isFreePlan)) || preventDowngrade;
@@ -186,7 +188,20 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
               }
               
               return (
-                <div key={plan._id} className={`bg-white rounded-2xl shadow-sm border-2 flex flex-col p-5 md:p-6 transition-all ${isCurrentPlan ? 'border-[#76b900] ring-4 ring-green-50' : isProPlan ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100 hover:border-slate-300'}`}>
+                <div key={plan._id} className={`relative bg-white rounded-2xl shadow-sm border-2 flex flex-col p-5 md:p-6 transition-all ${isCurrentPlan ? 'border-[#76b900] ring-4 ring-green-50' : isProPlan ? 'border-blue-500 ring-4 ring-blue-50' : 'border-slate-100 hover:border-slate-300'}`}>
+                  {isCurrentPlan && (
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#76b900] text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap z-10">
+                      Current Plan
+                    </div>
+                  )}
+                  {isProPlan && !isCurrentPlan && (
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                      <span className="absolute w-full h-full rounded-full bg-blue-400 animate-ping opacity-75"></span>
+                      <div className="relative bg-blue-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
+                        Recommended
+                      </div>
+                    </div>
+                  )}
                   <div className="mb-5">
                     <h3 className="text-xl font-bold text-slate-800 mb-1">{plan.name}</h3>
                     <div className="flex items-baseline gap-1">
