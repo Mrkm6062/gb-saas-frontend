@@ -171,14 +171,17 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
               const isProPlan = plan.name === 'Pro'; // Identify the Pro plan
               const isDowngrade = !isCurrentPlan && plan.price < currentPrice;
               const isFreePlan = plan.price === 0;
+              const preventDowngrade = isDowngrade && !isExpired;
               
-              const buttonDisabled = (isCurrentPlan && (!canRenew || isFreePlan)) || isDowngrade;
+              const buttonDisabled = (isCurrentPlan && (!canRenew || isFreePlan)) || preventDowngrade;
               
               let buttonText = 'Upgrade Plan';
               if (isCurrentPlan) {
                 buttonText = (canRenew && !isFreePlan) ? 'Renew Plan' : 'Current Plan';
-              } else if (isDowngrade) {
+              } else if (preventDowngrade) {
                 buttonText = 'Cannot Downgrade';
+              } else if (isDowngrade && isExpired) {
+                buttonText = 'Downgrade Plan';
               }
               
               return (
