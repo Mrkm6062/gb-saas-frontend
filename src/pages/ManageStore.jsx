@@ -453,6 +453,112 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setIsCreatingStore(true);
   };
 
+  const handlePrintQR = () => {
+    const isExpired = currentStore.planExpiryDate && new Date(currentStore.planExpiryDate) < new Date();
+    if (isExpired) {
+      showToast('Your subscription has expired. Renew to download QR.', 'error');
+      return;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Please allow popups to download the QR code.', 'error');
+      return;
+    }
+
+    const storeUrl = currentStore.customDomain ? `https://${currentStore.customDomain}` : `https://${currentStore.subdomain}`;
+    const mainQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(storeUrl)}`;
+
+    const socialQrs = socialLinks.map(link => `
+      <div style="text-align: center; margin: 10px;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link.url)}" style="width: 80px; height: 80px;" />
+        <p style="font-size: 10px; margin-top: 5px; font-weight: bold; text-transform: uppercase; color: #4b5563;">${link.platform}</p>
+      </div>
+    `).join('');
+
+    const mapQr = currentStore.mapLocation ? `
+      <div style="text-align: center; margin: 10px;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(currentStore.mapLocation)}" style="width: 80px; height: 80px;" />
+        <p style="font-size: 10px; margin-top: 5px; font-weight: bold; text-transform: uppercase; color: #4b5563;">Store Map</p>
+      </div>
+    ` : '';
+
+    const phones = (currentStore.supportPhoneNumbers || []).join(', ');
+    const contactInfo = (phones || currentStore.supportEmail) ? `
+      <div style="margin-top: 20px; font-size: 14px; color: #555; border-top: 2px dashed #e5e7eb; padding-top: 20px;">
+        <h3 style="font-size: 16px; color: #374151; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Contact Us</h3>
+        ${phones ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${phones}</p>` : ''}
+        ${currentStore.supportEmail ? `<p style="margin: 5px 0;"><strong>Email:</strong> ${currentStore.supportEmail}</p>` : ''}
+      </div>
+    ` : '';
+
+    const html = `
+      <html>
+        <head>
+          <title>${currentStore.storeName} - QR Code Poster</title>
+          <style>
+            @page { size: A4; margin: 0; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; }
+            .container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 20mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; }
+            .logo { max-width: 250px; max-height: 100px; margin-bottom: 20px; object-fit: contain; }
+            .store-name { font-size: 36px; font-weight: 800; color: #111827; margin: 0 0 10px 0; }
+            .qr-main-container { margin: 40px 0; padding: 20px; border: 4px solid #76b900; border-radius: 24px; background: #fff; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+            .qr-main { width: 350px; height: 350px; display: block; }
+            .scan-text { font-size: 24px; font-weight: bold; color: #76b900; margin-top: 15px; text-transform: uppercase; letter-spacing: 2px; }
+            .url-text { font-size: 18px; color: #4b5563; margin-top: 10px; font-weight: 600; }
+            .bottom-section { width: 100%; margin-top: 30px; }
+            .mini-qr-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 15px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div>
+              ${currentStore.logo ? `<img src="${currentStore.logo}" class="logo" />` : ''}
+              <h1 class="store-name">${currentStore.storeName}</h1>
+              <p style="color: #6b7280; font-size: 20px; margin: 0;">Scan to visit our digital storefront!</p>
+            </div>
+
+            <div class="qr-main-container">
+              <img src="${mainQrUrl}" class="qr-main" onload="window.mainQrLoaded = true;" onerror="window.mainQrLoaded = true;" />
+              <div class="scan-text">Scan Me</div>
+            </div>
+            
+            <div class="url-text">${storeUrl}</div>
+            
+            ${contactInfo}
+
+            ${(socialQrs || mapQr) ? `
+              <div class="bottom-section">
+                <h3 style="font-size: 16px; color: #374151; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Connect With Us</h3>
+                <div class="mini-qr-grid">
+                  ${socialQrs}
+                  ${mapQr}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+          <script>
+            let attempts = 0;
+            const checkReady = setInterval(() => {
+              attempts++;
+              if (window.mainQrLoaded || attempts > 20) {
+                clearInterval(checkReady);
+                setTimeout(() => {
+                  window.print();
+                  window.close();
+                }, 500);
+              }
+            }, 100);
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+  };
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Store">
     <div className="p-6 mx-auto mt-6">
@@ -798,6 +904,36 @@ const ManageStore = ({ token, stores, onLogout }) => {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* QR Code & Poster Card */}
+      {(!currentStore.planExpiryDate || new Date(currentStore.planExpiryDate) >= new Date()) && currentStore.status !== 'suspended' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col items-center text-center">
+          <h2 className="text-2xl font-bold mb-2 text-slate-800">Store QR Code</h2>
+          <p className="text-sm text-slate-500 mb-6">Scan or download this QR code to easily share your digital storefront with customers.</p>
+          
+          <div className="p-4 border-4 border-[#76b900] rounded-3xl bg-white mb-6 shadow-sm inline-block relative group transition-transform hover:scale-105">
+            <img 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentStore.customDomain ? `https://${currentStore.customDomain}` : `https://${currentStore.subdomain}`)}`} 
+              alt="Store QR Code" 
+              className="w-48 h-48 object-contain"
+            />
+          </div>
+          
+          <p className="font-bold text-slate-700 mb-6 truncate max-w-full px-4 text-sm bg-slate-50 py-2 rounded-lg border border-slate-100">
+            {currentStore.customDomain ? currentStore.customDomain : currentStore.subdomain}
+          </p>
+
+          <button 
+            onClick={handlePrintQR} 
+            className="mt-auto px-6 py-3 w-full bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition flex items-center justify-center gap-2 shadow-md"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Download A4 Poster
+          </button>
+        </div>
+      )}
+
       </div>
       </div>
     </div>
