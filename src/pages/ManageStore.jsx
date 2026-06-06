@@ -81,6 +81,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [createStatus, setCreateStatus] = useState('');
   const [toast, setToast] = useState(null);
+  const [activeTab, setActiveTab] = useState('settings');
 
   // Update form fields if the user switches to managing a different store
   useEffect(() => {
@@ -647,8 +648,36 @@ const ManageStore = ({ token, stores, onLogout }) => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-8">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+      {/* Navigation Tabs */}
+      <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
+        <button 
+          type="button"
+          onClick={() => setActiveTab('settings')} 
+          className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'settings' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+        >
+          Store Settings
+        </button>
+        <button 
+          type="button"
+          onClick={() => setActiveTab('social')} 
+          className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'social' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+        >
+          Social Media Links
+        </button>
+        <button 
+          type="button"
+          onClick={() => setActiveTab('qrcode')} 
+          className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'qrcode' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+        >
+          QR Code
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8">
+      
+      {/* Settings Card */}
+      {activeTab === 'settings' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn">
         <h2 className="text-2xl font-bold mb-6 text-slate-800">Settings for {currentStore.storeName}</h2>
         
         {status && (
@@ -855,9 +884,11 @@ const ManageStore = ({ token, stores, onLogout }) => {
           </button>
         </form>
       </div>
+      )}
 
       {/* Social Media Links Manager */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+      {activeTab === 'social' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn">
         <h2 className="text-2xl font-bold mb-6 text-slate-800">Social Media Links</h2>
         <p className="text-sm text-slate-500 mb-6">Add your social media profiles. They will automatically appear in your storefront footer.</p>
         
@@ -905,10 +936,11 @@ const ManageStore = ({ token, stores, onLogout }) => {
           ))}
         </div>
       </div>
+      )}
 
       {/* QR Code & Poster Card */}
-      {(!currentStore.planExpiryDate || new Date(currentStore.planExpiryDate) >= new Date()) && currentStore.status !== 'suspended' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col items-center text-center">
+      {activeTab === 'qrcode' && (!currentStore.planExpiryDate || new Date(currentStore.planExpiryDate) >= new Date()) && currentStore.status !== 'suspended' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col items-center text-center animate-fadeIn">
           <h2 className="text-2xl font-bold mb-2 text-slate-800">Store QR Code</h2>
           <p className="text-sm text-slate-500 mb-6">Scan or download this QR code to easily share your digital storefront with customers.</p>
           
