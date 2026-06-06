@@ -564,90 +564,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Store">
     <div className="p-6 mx-auto mt-6">
       
-      {/* Your Stores List */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-bold mb-6 text-slate-800">Your Stores</h2>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6">
-          {activeStores.map((s) => (
-            <div key={s._id} className={`bg-white rounded-2xl shadow-sm border-2 p-6 flex flex-col transition-all ${s.storeId === storeId ? 'border-[#76b900] ring-4 ring-green-50' : 'border-slate-100 hover:border-slate-300'}`}>
-              <div className="flex justify-between items-start mb-4">
-                {s.logo ? (
-                  <img src={s.logo} alt={s.storeName} className="h-12 w-12 rounded-xl object-contain bg-slate-50 border border-slate-100 p-1" />
-                ) : (
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-100 to-orange-50 text-[#ff8a00] flex items-center justify-center text-xl font-bold shadow-inner">
-                    {(s.storeName || 'S').charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide ${s.status === 'active' || !s.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {(s.status || 'active').charAt(0).toUpperCase() + (s.status || 'active').slice(1)}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-slate-800 mb-1 truncate" title={s.storeName}>{s.storeName}</h3>
-              
-              {s.planExpiryDate && (
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-bold tracking-wider ${s.isTrialActive ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                    {s.isTrialActive ? 'Trial' : 'Premium'}
-                  </span>
-                  <span className="text-xs font-medium text-slate-500">
-                    Expires: {new Date(s.planExpiryDate).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-
-              {(s.customDomain || s.subdomain) && (
-                <a href={`https://${s.customDomain || s.subdomain}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline mb-5 truncate block">
-                  {s.customDomain || s.subdomain}
-                </a>
-              )}
-              <button 
-                onClick={() => navigate(`/store/${s.storeId}`)} 
-                disabled={s.storeId === storeId}
-                className={`mt-auto w-full py-2.5 font-bold rounded-xl transition-all ${s.storeId === storeId ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-50 text-slate-700 hover:bg-[#76b900] hover:text-white'}`}
-              >
-                {s.storeId === storeId ? 'Currently Managing' : 'Manage Store'}
-              </button>
-            </div>
-          ))}
-          
-        </div>
-      </div>
-
-      {/* Recycle Bin (Deleted Stores) */}
-      {deletedStores.length > 0 && (
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6 text-slate-800">Recycle Bin</h2>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6">
-            {deletedStores.map((s) => {
-              const deletionDate = new Date(s.deletedAt);
-              const expiryDate = new Date(deletionDate);
-              expiryDate.setDate(expiryDate.getDate() + 30);
-              const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
-
-              return (
-                <div key={s._id} className="bg-white rounded-2xl shadow-sm border-2 border-red-100 p-6 flex flex-col transition-all opacity-80 hover:opacity-100">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="h-12 w-12 rounded-xl bg-red-50 text-red-400 flex items-center justify-center">
-                      <Trash2 size={24} />
-                    </div>
-                    <span className="px-3 py-1 rounded-full text-xs font-bold tracking-wide bg-red-100 text-red-700">
-                      Deleted
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-1 truncate line-through" title={s.storeName}>{s.storeName}</h3>
-                  <p className="text-sm font-medium text-red-500 mb-5">
-                    Permanently deleting in {daysLeft} day(s)
-                  </p>
-                  <button onClick={() => handleRestoreStore(s._id)} className="mt-auto w-full py-2.5 font-bold rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition-colors">
-                    Restore Store
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Navigation Tabs */}
       <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
         <button 
@@ -675,18 +591,29 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
       <div className="grid grid-cols-1 gap-8">
       
-      {/* Settings Card */}
+      {/* Settings Tab Layout */}
       {activeTab === 'settings' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn">
-        <h2 className="text-2xl font-bold mb-6 text-slate-800">Settings for {currentStore.storeName}</h2>
-        
-        {status && (
-          <div className={`p-4 mb-6 rounded-lg font-medium text-sm ${status.includes('Error') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-            {status}
-          </div>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start animate-fadeIn">
+          {/* Left Column: Form */}
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+            <div className="flex items-center gap-4 mb-6 border-b border-slate-100 pb-4">
+              <button 
+                type="submit"
+                form="storeSettingsForm" 
+                className="px-6 py-2.5 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition shadow-md shadow-green-100 whitespace-nowrap"
+              >
+                Save Settings
+              </button>
+              <h2 className="text-xl md:text-2xl font-bold text-slate-800 hidden sm:block">Settings for {currentStore.storeName}</h2>
+            </div>
+            
+            {status && (
+              <div className={`p-4 mb-6 rounded-lg font-medium text-sm ${status.includes('Error') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                {status}
+              </div>
+            )}
 
-        <form onSubmit={handleUpdateStore} className="space-y-5">
+            <form id="storeSettingsForm" onSubmit={handleUpdateStore} className="space-y-5">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Store Name</label>
             <input 
@@ -876,13 +803,99 @@ const ManageStore = ({ token, stores, onLogout }) => {
             </div>
           </div>
 
-          <button 
-            type="submit" 
-            className="px-6 py-3 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition w-full mt-4 shadow-lg shadow-green-100"
-          >
-            Save Settings
-          </button>
         </form>
+      </div>
+
+      {/* Right Column: Stores List & Recycle Bin */}
+      <div className="lg:col-span-1 flex flex-col gap-6">
+        {/* Your Stores List */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-slate-800">Your Stores</h2>
+            <button onClick={handleOpenCreateStore} className="p-2 bg-slate-100 text-slate-600 hover:text-[#76b900] rounded-lg transition" title="Add New Store">
+              <Plus size={18} />
+            </button>
+          </div>
+          <div className="flex flex-col gap-4">
+            {activeStores.map((s) => (
+              <div key={s._id} className={`rounded-xl border-2 p-4 flex flex-col transition-all ${s.storeId === storeId ? 'border-[#76b900] bg-green-50/30' : 'border-slate-100 hover:border-slate-200 bg-white'}`}>
+                <div className="flex justify-between items-start mb-3">
+                  {s.logo ? (
+                    <img src={s.logo} alt={s.storeName} className="h-10 w-10 rounded-lg object-contain bg-slate-50 border border-slate-100 p-1" />
+                  ) : (
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-100 to-orange-50 text-[#ff8a00] flex items-center justify-center text-lg font-bold shadow-inner">
+                      {(s.storeName || 'S').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide ${s.status === 'active' || !s.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {(s.status || 'active').charAt(0).toUpperCase() + (s.status || 'active').slice(1)}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-slate-800 mb-1 truncate" title={s.storeName}>{s.storeName}</h3>
+                
+                {s.planExpiryDate && (
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider ${s.isTrialActive ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {s.isTrialActive ? 'Trial' : 'Premium'}
+                    </span>
+                    <span className="text-[10px] font-medium text-slate-500">
+                      Exp: {new Date(s.planExpiryDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+
+                {(s.customDomain || s.subdomain) && (
+                  <a href={`https://${s.customDomain || s.subdomain}`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline mb-3 truncate block">
+                    {s.customDomain || s.subdomain}
+                  </a>
+                )}
+                <button 
+                  onClick={() => navigate(`/store/${s.storeId}`)} 
+                  disabled={s.storeId === storeId}
+                  className={`mt-auto w-full py-2 text-sm font-bold rounded-lg transition-all ${s.storeId === storeId ? 'bg-[#76b900] text-white cursor-not-allowed shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                >
+                  {s.storeId === storeId ? 'Managing' : 'Switch Store'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recycle Bin (Deleted Stores) */}
+        {deletedStores.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-xl font-bold mb-4 text-slate-800">Recycle Bin</h2>
+            <div className="flex flex-col gap-4">
+              {deletedStores.map((s) => {
+                const deletionDate = new Date(s.deletedAt);
+                const expiryDate = new Date(deletionDate);
+                expiryDate.setDate(expiryDate.getDate() + 30);
+                const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+
+                return (
+                  <div key={s._id} className="rounded-xl border-2 border-red-100 bg-red-50/30 p-4 flex flex-col transition-all">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="h-8 w-8 rounded-lg bg-red-100 text-red-500 flex items-center justify-center">
+                        <Trash2 size={16} />
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide bg-red-100 text-red-700">
+                        Deleted
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-bold text-slate-800 mb-1 truncate line-through" title={s.storeName}>{s.storeName}</h3>
+                    <p className="text-[10px] font-medium text-red-500 mb-3">
+                      Deletes in {daysLeft} day(s)
+                    </p>
+                    <button onClick={() => handleRestoreStore(s._id)} className="mt-auto w-full py-1.5 text-xs font-bold rounded-lg bg-slate-800 text-white hover:bg-slate-900 transition-colors">
+                      Restore
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
       </div>
       )}
 
