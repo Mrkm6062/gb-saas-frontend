@@ -595,23 +595,24 @@ const ManageStore = ({ token, stores, onLogout }) => {
       {activeTab === 'settings' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start animate-fadeIn">
           {/* Left Column: Form */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
-            <div className="flex items-center gap-4 mb-6 border-b border-slate-100 pb-4">
-              <button 
-                type="submit"
-                form="storeSettingsForm" 
-                className="px-6 py-2.5 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition shadow-md shadow-green-100 whitespace-nowrap"
-              >
-                Save Settings
-              </button>
-              <h2 className="text-xl md:text-2xl font-bold text-slate-800 hidden sm:block">Settings for {currentStore.storeName}</h2>
-            </div>
-            
-            {status && (
-              <div className={`p-4 mb-6 rounded-lg font-medium text-sm ${status.includes('Error') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-                {status}
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 relative">
+            <div className="sticky top-0 z-20 bg-white pt-2 pb-4 mb-6 border-b border-slate-100 shadow-[0_10px_10px_-10px_rgba(0,0,0,0.05)]">
+              {status && (
+                <div className={`p-4 mb-4 rounded-lg font-medium text-sm ${status.includes('Error') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                  {status}
+                </div>
+              )}
+              <div className="flex items-center gap-4">
+                <button 
+                  type="submit"
+                  form="storeSettingsForm" 
+                  className="px-6 py-2.5 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition shadow-md shadow-green-100 whitespace-nowrap"
+                >
+                  Save Settings
+                </button>
+                <h2 className="text-xl md:text-2xl font-bold text-slate-800 hidden sm:block">Settings for {currentStore.storeName}</h2>
               </div>
-            )}
+            </div>
 
             <form id="storeSettingsForm" onSubmit={handleUpdateStore} className="space-y-5">
           <div>
