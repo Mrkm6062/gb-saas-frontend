@@ -936,7 +936,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
       </div>
       </div>
-    </div>
     
     {/* Modal Overlay for Store Creation */}
     {isCreatingStore && (
