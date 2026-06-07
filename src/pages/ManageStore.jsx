@@ -74,7 +74,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   // Store Creation States
   const [isCreatingStore, setIsCreatingStore] = useState(false);
   const [newStoreName, setNewStoreName] = useState('');
-  const [newStoreCategory, setNewStoreCategory] = useState('Kirana Stores');
+  const [newStoreCategory, setNewStoreCategory] = useState('');
   const [newStoreMeta, setNewStoreMeta] = useState('');
   const [plans, setPlans] = useState([]);
   const [newStorePlan, setNewStorePlan] = useState('');
@@ -82,6 +82,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [createStatus, setCreateStatus] = useState('');
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('settings');
+  const [storeTypes, setStoreTypes] = useState([]);
 
   // Update form fields if the user switches to managing a different store
   useEffect(() => {
@@ -112,6 +113,23 @@ const ManageStore = ({ token, stores, onLogout }) => {
       }
     };
     fetchPlans();
+  }, []);
+
+  useEffect(() => {
+    const fetchStoreTypes = async () => {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        const res = await fetch(`${API_BASE_URL}/api/store-types/active`);
+        if (res.ok) {
+          const data = await res.json();
+          setStoreTypes(data);
+          if (data.length > 0 && !newStoreCategory) setNewStoreCategory(data[0].name);
+        }
+      } catch (err) {
+        console.error('Failed to fetch store types', err);
+      }
+    };
+    fetchStoreTypes();
   }, []);
 
   const fetchSocialLinks = async () => {
@@ -1036,9 +1054,13 @@ const ManageStore = ({ token, stores, onLogout }) => {
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Store Category <span className="text-red-500">*</span></label>
                     <select value={newStoreCategory} onChange={(e) => setNewStoreCategory(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900 bg-white" required>
-                      {["Vegetable Shop", "Bakery Shop", "Cafe Shop", "Kirana Stores", "Cake Shop", "Clothes Shop", "Multi-Ecommerce Shop", "Education Webapp", "Nasta Corner", "Appointment&Contact Webapp"].map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
+                      {storeTypes.length > 0 ? (
+                        storeTypes.map(cat => (
+                          <option key={cat._id} value={cat.name}>{cat.name}</option>
+                        ))
+                      ) : (
+                        <option value="Kirana Stores">Kirana Stores (Default)</option>
+                      )}
                     </select>
                   </div>
                   <div>

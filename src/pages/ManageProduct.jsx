@@ -27,7 +27,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
   // Default Product Import States
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [importStoreType, setImportStoreType] = useState('kirana');
+  const [importStoreType, setImportStoreType] = useState('');
   const [defaultProducts, setDefaultProducts] = useState([]);
   const [loadingDefaults, setLoadingDefaults] = useState(false);
   const [selectedDefaultProducts, setSelectedDefaultProducts] = useState([]);
@@ -36,6 +36,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [stockFilter, setStockFilter] = useState('all');
   const [stockThreshold, setStockThreshold] = useState(5);
   const [plans, setPlans] = useState([]);
+  const [storeTypesList, setStoreTypesList] = useState([]);
 
   const initialForm = {
     name: '', description: '', category: '', unitType: 'piece',
@@ -106,6 +107,24 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       }
     };
     fetchPlans();
+  }, [API_BASE_URL]);
+
+  useEffect(() => {
+    const fetchStoreTypes = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/store-types/active`);
+        if (response.ok) {
+          const data = await response.json();
+          setStoreTypesList(data);
+          if (data.length > 0 && (!importStoreType || importStoreType === 'kirana')) {
+            setImportStoreType(data[0].name);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load store types", err);
+      }
+    };
+    fetchStoreTypes();
   }, [API_BASE_URL]);
 
   // Fetch default products when modal opens or store type changes
@@ -784,11 +803,11 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               <div className="flex-1">
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Select Catalog to Preview:</label>
                 <select value={importStoreType} onChange={(e) => setImportStoreType(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] bg-white font-medium text-slate-700 shadow-sm">
-                  <option value="kirana">Kirana / Grocery</option>
-                  <option value="vegetable">Vegetables & Fruits</option>
-                  <option value="nasta">Nasta / Snacks Corner</option>
-                  <option value="restaurant">Restaurant / Cafe</option>
-                  <option value="clothes">Clothing & Apparel</option>
+                  {storeTypesList.length > 0 ? storeTypesList.map(st => (
+                    <option key={st._id} value={st.name}>{st.name}</option>
+                  )) : (
+                    <option value="kirana">Kirana / Grocery</option>
+                  )}
                 </select>
               </div>
               <div className="flex-1">
