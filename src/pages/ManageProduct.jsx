@@ -607,8 +607,13 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const maxProducts = activePlan?.features?.maxProducts || 0;
   const isLimitReached = maxProducts > 0 && products.length >= maxProducts;
 
-  const currentStoreTypeObj = storeTypesList.find(st => st.name === currentStore.category);
-  const canCustomize = currentStoreTypeObj?.features?.some(f => f.toLowerCase().includes('print') || f.toLowerCase().includes('custom') || f.toLowerCase().includes('gift'));
+  const storeTypeName = currentStore.storeType || currentStore.category || '';
+  const currentStoreTypeObj = storeTypesList.find(st => st.name === storeTypeName);
+  const canCustomize = 
+    storeTypeName.toLowerCase().includes('print') || 
+    storeTypeName.toLowerCase().includes('gift') || 
+    storeTypeName.toLowerCase().includes('custom') || 
+    currentStoreTypeObj?.features?.some(f => f.toLowerCase().includes('print') || f.toLowerCase().includes('custom') || f.toLowerCase().includes('gift'));
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
