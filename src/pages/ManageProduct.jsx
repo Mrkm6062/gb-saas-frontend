@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';                                                                                             
-import { DownloadCloud, UploadCloud, Lock } from 'lucide-react';
+import { DownloadCloud, UploadCloud, Lock, Edit3, Save } from 'lucide-react';
 
 const ManageProduct = ({ token, stores, onLogout }) => {
   const { storeId } = useParams(); 
@@ -33,10 +33,16 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [selectedDefaultProducts, setSelectedDefaultProducts] = useState([]);
   const [importing, setImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hideImported, setHideImported] = useState(true);
   const [stockFilter, setStockFilter] = useState('all');
   const [stockThreshold, setStockThreshold] = useState(5);
   const [plans, setPlans] = useState([]);
   const [storeTypesList, setStoreTypesList] = useState([]);
+  
+  // Bulk Edit States
+  const [isBulkEditing, setIsBulkEditing] = useState(false);
+  const [bulkEdits, setBulkEdits] = useState({});
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const initialForm = {
     name: '', description: '', category: '', unitType: 'piece',
@@ -139,7 +145,16 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           if (response.ok) {
             const data = await response.json();
             setDefaultProducts(data.data || []);
-            setSelectedDefaultProducts((data.data || []).map(p => p._id)); // Auto-select all by default
+            
+            const importedIds = products
+              .filter(p => p.source === 'default' && p.defaultProductId)
+              .map(p => p.defaultProductId);
+              
+            const unimportedIds = (data.data || [])
+              .filter(p => !importedIds.includes(p._id))
+              .map(p => p._id);
+              
+            setSelectedDefaultProducts(unimportedIds);
           }
         } catch (error) {
           console.error("Failed to fetch default products:", error);
@@ -150,7 +165,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       setSearchQuery('');
       fetchDefaultProducts();
     }
-  }, [isImportModalOpen, importStoreType, currentStore._id, API_BASE_URL, token]);
+  }, [isImportModalOpen, importStoreType, currentStore._id, API_BASE_URL, token, products]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -246,10 +261,22 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     );
   };
 
-  const filteredDefaultProducts = defaultProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const importedProductIds = products
+    .filter(p => p.source === 'default' && p.defaultProductId)
+    .map(p => p.defaultProductId);
+
+  const filteredDefaultProducts = defaultProducts.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const isImported = importedProductIds.includes(p._id);
+    if (hideImported && isImported) return false;
+    return matchesSearch;
+  });
 
   const toggleAllDefaultProducts = () => {
-    const filteredIds = filteredDefaultProducts.map(p => p._id);
+    const filteredIds = filteredDefaultProducts
+      .filter(p => !importedProductIds.includes(p._id))
+      .map(p => p._id);
+      
     const allFilteredSelected = filteredIds.length > 0 && filteredIds.every(id => selectedDefaultProducts.includes(id));
 
     if (allFilteredSelected) {
@@ -257,6 +284,49 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     } else {
       const newSelections = new Set([...selectedDefaultProducts, ...filteredIds]);
       setSelectedDefaultProducts(Array.from(newSelections));
+    }
+  };
+
+  const handleBulkEditChange = (id, field, value) => {
+    setBulkEdits(prev => {
+      const product = products.find(p => p._id === id);
+      return {
+        ...prev,
+        [id]: {
+          ...(prev[id] || { 
+            basePrice: product.basePrice || product.price || 0, 
+            totalStock: product.totalStock !== undefined ? product.totalStock : (product.stock || 0) 
+          }),
+          [field]: Number(value)
+        }
+      };
+    });
+  };
+
+  const handleSaveBulkEdits = async () => {
+    if (Object.keys(bulkEdits).length === 0) return setIsBulkEditing(false);
+    
+    setBulkSaving(true);
+    setStatus('Saving bulk updates...');
+    
+    try {
+      const updatePromises = Object.keys(bulkEdits).map(id => {
+        const originalProduct = products.find(p => p._id === id);
+        const updatedData = bulkEdits[id];
+        const payload = { ...originalProduct, basePrice: updatedData.basePrice, price: updatedData.basePrice, totalStock: updatedData.totalStock, stock: updatedData.totalStock };
+        return fetch(`${API_BASE_URL}/api/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+      });
+
+      await Promise.all(updatePromises);
+      setStatus('✅ Quick edits saved successfully!');
+      setBulkEdits({});
+      setIsBulkEditing(false);
+      fetchProducts();
+    } catch (err) {
+      setStatus('❌ Error saving bulk updates.');
+    } finally {
+      setBulkSaving(false);
+      setTimeout(() => setStatus(''), 4000);
     }
   };
 
@@ -584,6 +654,10 @@ const ManageProduct = ({ token, stores, onLogout }) => {
             <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} disabled={loading} />
           </label>
 
+          <button onClick={() => { setIsBulkEditing(!isBulkEditing); setBulkEdits({}); }} className={`px-4 py-2.5 bg-white border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm whitespace-nowrap ${isBulkEditing ? 'text-red-500 border-red-200 hover:bg-red-50' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}>
+            <Edit3 size={18} /> {isBulkEditing ? 'Cancel Quick Edit' : 'Quick Edit'}
+          </button>
+
           <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsImportModalOpen(true)} className={`px-4 py-2.5 border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm whitespace-nowrap ${isLimitReached ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-[#76b900] border-[#76b900] hover:bg-green-50'}`}>
             {isLimitReached ? <Lock size={18} /> : <DownloadCloud size={18} />} {isLimitReached ? 'Upgrade to Import' : 'Import Catalog'}
           </button>
@@ -602,8 +676,15 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
       {/* Product List */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="grid grid-cols-12 gap-4 p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-sm">
-          <div className="col-span-4">Product Name</div><div className="col-span-2">Category</div><div className="col-span-2">Price</div><div className="col-span-2">Stock</div><div className="col-span-2 text-right">Actions</div>
+        <div className="grid grid-cols-12 gap-4 p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-sm items-center">
+          <div className="col-span-4">Product Name</div><div className="col-span-2">Category</div><div className="col-span-2">Price</div><div className="col-span-2">Stock</div>
+          <div className="col-span-2 text-right flex justify-end">
+            {isBulkEditing ? (
+              <button onClick={handleSaveBulkEdits} disabled={bulkSaving || Object.keys(bulkEdits).length === 0} className="px-4 py-1.5 bg-[#76b900] text-white rounded-lg flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50 transition-opacity">
+                <Save size={16} /> {bulkSaving ? 'Saving...' : 'Save All'}
+              </button>
+            ) : 'Actions'}
+          </div>
         </div>
         {products.length === 0 ? (
           <div className="p-8 text-center text-slate-500 font-medium">No products found. Add your first product above!</div>
@@ -618,15 +699,43 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               <div className="col-span-2 text-slate-600 text-sm font-medium">
                 {categories.find(c => c._id === p.category)?.name || <span className="text-slate-400 italic">None</span>}
               </div>
-              <div className="col-span-2 text-green-600 font-bold">₹{p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}</div>
-              <div className="col-span-2 text-slate-600">{p.totalStock !== undefined ? p.totalStock : (p.stock || 0)} {p.unitType || 'units'}</div>
+              <div className="col-span-2 text-green-600 font-bold">
+                {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
+                  <div className="flex items-center gap-1">
+                    <span className="text-slate-500 text-xs">₹</span>
+                    <input 
+                      type="number" 
+                      min="0"
+                      className="w-full max-w-[80px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-[#76b900] text-sm text-slate-800 font-medium" 
+                      value={bulkEdits[p._id]?.basePrice ?? (p.basePrice || p.price || 0)} 
+                      onChange={e => handleBulkEditChange(p._id, 'basePrice', e.target.value)} 
+                    />
+                  </div>
+                ) : (
+                  `₹${p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}`
+                )}
+              </div>
+              <div className="col-span-2 text-slate-600">
+                {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
+                  <input 
+                    type="number" 
+                    min="0"
+                    className="w-full max-w-[80px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-[#76b900] text-sm text-slate-800 font-medium" 
+                    value={bulkEdits[p._id]?.totalStock ?? (p.totalStock !== undefined ? p.totalStock : (p.stock || 0))} 
+                    onChange={e => handleBulkEditChange(p._id, 'totalStock', e.target.value)} 
+                  />
+                ) : (
+                  `${p.totalStock !== undefined ? p.totalStock : (p.stock || 0)} ${p.unitType || 'units'}`
+                )}
+                {isBulkEditing && p.variants?.length > 0 && <span className="text-[10px] font-bold text-amber-500 block leading-tight mt-1 bg-amber-50 px-2 py-0.5 rounded w-fit">Has variants</span>}
+              </div>
               <div className="col-span-2 text-right flex justify-end gap-2">
-                <button onClick={() => handleEdit(p)} className="text-blue-500 hover:text-blue-700 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded-lg transition">
-                  Edit
-                </button>
-                <button onClick={() => handleDelete(p._id)} className="text-red-500 hover:text-red-700 text-sm font-bold bg-red-50 px-3 py-1.5 rounded-lg transition">
-                  Delete
-                </button>
+                {!isBulkEditing && (
+                  <>
+                    <button onClick={() => handleEdit(p)} className="text-blue-500 hover:text-blue-700 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded-lg transition">Edit</button>
+                    <button onClick={() => handleDelete(p._id)} className="text-red-500 hover:text-red-700 text-sm font-bold bg-red-50 px-3 py-1.5 rounded-lg transition">Delete</button>
+                  </>
+                )}
               </div>
             </div>
           ))
@@ -835,6 +944,13 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               </div>
             </div>
 
+            <div className="flex items-center justify-end mb-4">
+              <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors">
+                <input type="checkbox" checked={hideImported} onChange={(e) => setHideImported(e.target.checked)} className="w-4 h-4 text-[#76b900] rounded focus:ring-[#76b900] cursor-pointer" />
+                Hide already imported products
+              </label>
+            </div>
+
             {loadingDefaults ? (
               <div className="py-20 text-center text-slate-500 font-bold animate-pulse">Loading preview catalog...</div>
             ) : defaultProducts.length === 0 ? (
@@ -851,15 +967,19 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {filteredDefaultProducts.map(p => {
+                    const isImported = importedProductIds.includes(p._id);
                     const isSelected = selectedDefaultProducts.includes(p._id);
                     return (
-                    <div key={p._id} onClick={() => toggleDefaultProductSelection(p._id)} className={`bg-white p-4 rounded-xl border relative cursor-pointer shadow-sm flex flex-col gap-2 transition-all ${isSelected ? 'border-[#76b900] ring-2 ring-green-100' : 'border-slate-200 hover:border-[#76b900] opacity-75 hover:opacity-100'}`}>
-                      <div className="absolute top-2 right-2 z-10"><input type="checkbox" checked={isSelected} readOnly className="w-5 h-5 rounded text-[#76b900] cursor-pointer" /></div>
+                    <div key={p._id} onClick={() => !isImported && toggleDefaultProductSelection(p._id)} className={`bg-white p-4 rounded-xl border relative cursor-pointer shadow-sm flex flex-col gap-2 transition-all ${isSelected ? 'border-[#76b900] ring-2 ring-green-100' : isImported ? 'border-slate-200 opacity-50 cursor-not-allowed' : 'border-slate-200 hover:border-[#76b900] opacity-75 hover:opacity-100'}`}>
+                      <div className="absolute top-2 right-2 z-10"><input type="checkbox" disabled={isImported} checked={isSelected} readOnly className="w-5 h-5 rounded text-[#76b900] cursor-pointer disabled:opacity-50" /></div>
                       <div className={`h-24 w-full rounded-lg flex items-center justify-center overflow-hidden transition-opacity ${isSelected ? 'opacity-100' : 'opacity-70 bg-slate-100'}`}>
                         {p.images && p.images[0] ? <img src={p.images[0]} alt={p.name} className={`w-full h-full object-cover ${isSelected ? '' : 'grayscale'}`} /> : <span className="text-slate-400 text-xs">No Image</span>}
                       </div>
                       <div className={`font-bold text-sm truncate transition-colors ${isSelected ? 'text-slate-800' : 'text-slate-500'}`} title={p.name}>{p.name}</div>
-                      <div className={`font-bold text-sm transition-colors ${isSelected ? 'text-[#76b900]' : 'text-slate-400'}`}>₹{p.basePrice}/{p.unitType}</div>
+                      <div className="flex justify-between items-center">
+                        <div className={`font-bold text-sm transition-colors ${isSelected ? 'text-[#76b900]' : 'text-slate-400'}`}>₹{p.basePrice}/{p.unitType}</div>
+                        {isImported && <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded">Imported</span>}
+                      </div>
                     </div>
                   )})}
                 </div>
