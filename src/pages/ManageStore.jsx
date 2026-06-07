@@ -75,6 +75,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [isCreatingStore, setIsCreatingStore] = useState(false);
   const [newStoreName, setNewStoreName] = useState('');
   const [newStoreCategory, setNewStoreCategory] = useState('');
+  const [newStoreEmpId, setNewStoreEmpId] = useState('');
   const [newStoreMeta, setNewStoreMeta] = useState('');
   const [plans, setPlans] = useState([]);
   const [newStorePlan, setNewStorePlan] = useState('');
@@ -83,6 +84,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('settings');
   const [storeTypes, setStoreTypes] = useState([]);
+  const [empName, setEmpName] = useState('');
+  const [verifyingEmp, setVerifyingEmp] = useState(false);
 
   // Update form fields if the user switches to managing a different store
   useEffect(() => {
@@ -311,6 +314,33 @@ const ManageStore = ({ token, stores, onLogout }) => {
     }
   };
 
+  const handleVerifyEmpId = async () => {
+    if (!newStoreEmpId) return;
+    setVerifyingEmp(true);
+    setEmpName('');
+    
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const res = await fetch(`${API_BASE_URL}/api/store/verify-employee`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ empId: newStoreEmpId })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        setEmpName(data.name);
+      } else {
+        setEmpName('Invalid Employee ID');
+        showToast(data.message || 'Invalid Employee ID', 'error');
+      }
+    } catch (err) {
+      setEmpName('Verification Error');
+    } finally {
+      setVerifyingEmp(false);
+    }
+  };
+
   const renderSocialIcon = (platform) => {
     let colorClass = "text-slate-600";
     switch(platform.toLowerCase()) {
@@ -353,6 +383,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
         body: JSON.stringify({ 
           name: newStoreName,
           category: newStoreCategory,
+          storeType: newStoreCategory,
+          empId: newStoreEmpId,
           metaDescription: newStoreMeta,
           planId: newStorePlan
         })
@@ -1062,6 +1094,20 @@ const ManageStore = ({ token, stores, onLogout }) => {
                         <option value="Kirana Stores">Kirana Stores (Default)</option>
                       )}
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Assisted By (Employee ID) <span className="text-slate-400 font-normal">(Optional)</span></label>
+                    <div className="flex gap-2">
+                      <input type="text" value={newStoreEmpId} onChange={(e) => { setNewStoreEmpId(e.target.value); setEmpName(''); }} placeholder="e.g. GBE0001" className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900" />
+                      <button type="button" onClick={handleVerifyEmpId} disabled={verifyingEmp || !newStoreEmpId} className="px-4 py-3 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition disabled:opacity-50 whitespace-nowrap">
+                        {verifyingEmp ? 'Verifying...' : 'Verify'}
+                      </button>
+                    </div>
+                    {empName && (
+                      <p className={`text-xs font-bold mt-2 ${empName.includes('Invalid') || empName.includes('Error') ? 'text-red-500' : 'text-green-600'}`}>
+                        {empName.includes('Invalid') || empName.includes('Error') ? empName : `Verified: ${empName}`}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Meta Description</label>

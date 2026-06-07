@@ -35,6 +35,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [toast, setToast] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [resendingOrderId, setResendingOrderId] = useState(null);
+  const [empName, setEmpName] = useState('');
+  const [verifyingEmp, setVerifyingEmp] = useState(false);
   const navigate = useNavigate();
 
   const activeStores = stores.filter(s => !s.isDeleted);
@@ -185,6 +187,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 setNewStoreName('');
                 setNewStoreCategory('Kirana Stores');
                 setNewStoreMeta('');
+          setNewStoreEmpId('');
                 setCurrentStep(1);
                 showToast('Payment canceled. Store creation aborted.', 'error');
               }
@@ -209,6 +212,33 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     setIsCreatingStore(false);
     setStatus('');
     setCurrentStep(1);
+  };
+
+  const handleVerifyEmpId = async () => {
+    if (!newStoreEmpId) return;
+    setVerifyingEmp(true);
+    setEmpName('');
+    
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const res = await fetch(`${API_BASE_URL}/api/store/verify-employee`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ empId: newStoreEmpId })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        setEmpName(data.name);
+      } else {
+        setEmpName('Invalid Employee ID');
+        showToast(data.message || 'Invalid Employee ID', 'error');
+      }
+    } catch (err) {
+      setEmpName('Verification Error');
+    } finally {
+      setVerifyingEmp(false);
+    }
   };
 
   const handleResendEmail = async (order) => {

@@ -537,7 +537,17 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                     <tbody className="divide-y divide-slate-100">
                       {selectedOrder.orderItems?.map((item, idx) => (
                         <tr key={idx} className="hover:bg-slate-50">
-                          <td className="p-3 text-slate-800 font-bold">{item.name}</td>
+                          <td className="p-3 text-slate-800 font-bold">
+                            {item.name}
+                            {item.customImage && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded">CUSTOM IMAGE</span>
+                                <a href={item.customImage} target="_blank" rel="noopener noreferrer" className="shrink-0" title="Click to view full size">
+                                  <img src={item.customImage} alt="Custom print" className="h-10 w-10 object-cover rounded border border-slate-200 shadow-sm hover:scale-150 origin-left transition-transform z-10 relative cursor-pointer" />
+                                </a>
+                              </div>
+                            )}
+                          </td>
                           <td className="p-3 text-slate-600 text-center">{item.qty}</td>
                           <td className="p-3 text-slate-600 text-right">₹{item.price}</td>
                           <td className="p-3 text-slate-800 font-bold text-right">₹{item.price * item.qty}</td>

@@ -40,7 +40,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
   const initialForm = {
     name: '', description: '', category: '', unitType: 'piece',
-    basePrice: '', totalStock: '', images: [], variants: []
+    basePrice: '', totalStock: '', images: [], variants: [], isCustomizable: false
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -173,6 +173,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           totalStock: formData.totalStock !== '' ? Number(formData.totalStock) : 0,
           price: formData.basePrice !== '' ? Number(formData.basePrice) : 0,
           stock: formData.totalStock !== '' ? Number(formData.totalStock) : 0,
+          isCustomizable: formData.isCustomizable || false,
           storeId: currentStore._id // Explicitly bind product to this store
         })
       });
@@ -204,7 +205,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       basePrice: product.basePrice || product.price || '',
       totalStock: product.totalStock !== undefined ? product.totalStock : (product.stock || ''),
       images: product.images || [],
-      variants: product.variants || []
+      variants: product.variants || [],
+      isCustomizable: product.isCustomizable || false
     });
     setEditingId(product._id);
     setIsFormOpen(true);
@@ -535,6 +537,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const maxProducts = activePlan?.features?.maxProducts || 0;
   const isLimitReached = maxProducts > 0 && products.length >= maxProducts;
 
+  const currentStoreTypeObj = storeTypesList.find(st => st.name === currentStore.category);
+  const canCustomize = currentStoreTypeObj?.features?.some(f => f.toLowerCase().includes('print') || f.toLowerCase().includes('custom') || f.toLowerCase().includes('gift'));
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
     <div className="w-full px-6 py-10">
@@ -657,6 +662,14 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                       ))}
                     </select>
                   </div>
+              {canCustomize && (
+                <div className="md:col-span-2 pt-2 border-t border-slate-100 mt-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                    <input type="checkbox" checked={formData.isCustomizable} onChange={e => setFormData({...formData, isCustomizable: e.target.checked})} className="w-5 h-5 text-[#76b900] rounded focus:ring-[#76b900]" />
+                    Enable Custom Image Upload for Customers (Printing/Gift items)
+                  </label>
+                </div>
+              )}
                   <div className="md:col-span-2"><label className="block text-sm font-semibold mb-1 text-slate-700">Description</label><textarea rows="3" value={formData.description} onChange={e=>setFormData({...formData, description: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow resize-none" placeholder="Provide product details..." /></div>
                 </div>
               </div>
