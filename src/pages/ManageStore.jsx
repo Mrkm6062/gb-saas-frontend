@@ -51,6 +51,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
   // Form states
   const [storeName, setStoreName] = useState(currentStore.storeName || '');
+  const [storeCategory, setStoreCategory] = useState(currentStore.category || '');
   const [websiteTitle, setWebsiteTitle] = useState(currentStore.websiteTitle || '');
   const [logo, setLogo] = useState(currentStore.logo || '');
   const [favicon, setFavicon] = useState(currentStore.favicon || '');
@@ -90,6 +91,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   // Update form fields if the user switches to managing a different store
   useEffect(() => {
     setStoreName(currentStore.storeName || '');
+    setStoreCategory(currentStore.category || '');
     setWebsiteTitle(currentStore.websiteTitle || '');
     setLogo(currentStore.logo || '');
     setFavicon(currentStore.favicon || '');
@@ -99,7 +101,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setLocationAddress(currentStore.locationAddress || '');
     setMapLocation(currentStore.mapLocation || '');
     setStatus('');
-  }, [storeId, currentStore.storeName, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation]);
+  }, [storeId, currentStore.storeName, currentStore.category, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation]);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -164,6 +166,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
         },
         body: JSON.stringify({
           storeName,
+          category: storeCategory,
+          storeType: storeCategory,
           websiteTitle,
           logo,
           favicon,
@@ -673,6 +677,23 @@ const ManageStore = ({ token, stores, onLogout }) => {
               onChange={(e) => setStoreName(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Store Type / Category</label>
+            <select 
+              value={storeCategory}
+              onChange={(e) => setStoreCategory(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition bg-white"
+            >
+              {storeTypes.length > 0 ? (
+                storeTypes.map(cat => (
+                  <option key={cat._id} value={cat.name}>{cat.name}</option>
+                ))
+              ) : (
+                <option value="Kirana Stores">Kirana Stores (Default)</option>
+              )}
+            </select>
           </div>
 
           <div>
