@@ -25,7 +25,7 @@ const loadRazorpay = () => {
 const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [isCreatingStore, setIsCreatingStore] = useState(false);
   const [newStoreName, setNewStoreName] = useState('');
-  const [newStoreCategory, setNewStoreCategory] = useState('Kirana Stores');
+  const [newStoreType, setNewStoreType] = useState('Kirana Stores');
   const [newStoreMeta, setNewStoreMeta] = useState('');
   const [plans, setPlans] = useState([]);
   const [newStorePlan, setNewStorePlan] = useState('');
@@ -110,7 +110,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
         },
         body: JSON.stringify({ 
           name: newStoreName,
-          category: newStoreCategory,
+          storeType: newStoreType,
           metaDescription: newStoreMeta,
           planId: newStorePlan
         })
@@ -119,13 +119,13 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
       const data = await response.json();
 
       if (response.ok) {
-        const createdStore = data.store || { storeId: 'GBS-NEW', storeName: newStoreName, status: 'active', category: newStoreCategory };
+        const createdStore = data.store || { storeId: 'GBS-NEW', storeName: newStoreName, status: 'active', storeType: newStoreType };
 
         if (planPrice === 0) {
           setStatus('');
           setIsCreatingStore(false);
           setNewStoreName('');
-          setNewStoreCategory('Kirana Stores');
+          setNewStoreType('Kirana Stores');
           setNewStoreMeta('');
           setCurrentStep(1);
           setStores([...stores, createdStore]);
@@ -162,7 +162,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 setStatus('');
                 setIsCreatingStore(false);
                 setNewStoreName('');
-                setNewStoreCategory('Kirana Stores');
+                setNewStoreType('Kirana Stores');
                 setNewStoreMeta('');
                 setCurrentStep(1);
                 setStores([...stores, createdStore]);
@@ -185,7 +185,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 setStatus('');
                 setIsCreatingStore(false);
                 setNewStoreName('');
-                setNewStoreCategory('Kirana Stores');
+                setNewStoreType('Kirana Stores');
                 setNewStoreMeta('');
           setNewStoreEmpId('');
                 setCurrentStep(1);
@@ -580,8 +580,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                       <input type="text" value={newStoreName} onChange={(e) => setNewStoreName(e.target.value)} placeholder="e.g. Fresh Veggies Mart" className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900" required autoFocus />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">Store Category <span className="text-red-500">*</span></label>
-                      <select value={newStoreCategory} onChange={(e) => setNewStoreCategory(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900 bg-white" required>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Store Type <span className="text-red-500">*</span></label>
+                      <select value={newStoreType} onChange={(e) => setNewStoreType(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900 bg-white" required>
                         {["Vegetable Shop", "Bakery Shop", "Cafe Shop", "Kirana Stores", "Cake Shop", "Clothes Shop", "Multi-Ecommerce Shop", "Education Webapp", "Nasta Corner", "Appointment&Contact Webapp"].map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}

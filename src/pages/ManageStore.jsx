@@ -51,7 +51,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
   // Form states
   const [storeName, setStoreName] = useState(currentStore.storeName || '');
-  const [storeCategory, setStoreCategory] = useState(currentStore.category || '');
+  const [storeType, setStoreType] = useState(currentStore.storeType || '');
   const [websiteTitle, setWebsiteTitle] = useState(currentStore.websiteTitle || '');
   const [logo, setLogo] = useState(currentStore.logo || '');
   const [favicon, setFavicon] = useState(currentStore.favicon || '');
@@ -75,7 +75,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   // Store Creation States
   const [isCreatingStore, setIsCreatingStore] = useState(false);
   const [newStoreName, setNewStoreName] = useState('');
-  const [newStoreCategory, setNewStoreCategory] = useState('');
+  const [newStoreType, setNewStoreType] = useState('');
   const [newStoreEmpId, setNewStoreEmpId] = useState('');
   const [newStoreMeta, setNewStoreMeta] = useState('');
   const [plans, setPlans] = useState([]);
@@ -91,7 +91,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   // Update form fields if the user switches to managing a different store
   useEffect(() => {
     setStoreName(currentStore.storeName || '');
-    setStoreCategory(currentStore.category || '');
+    setStoreType(currentStore.storeType || '');
     setWebsiteTitle(currentStore.websiteTitle || '');
     setLogo(currentStore.logo || '');
     setFavicon(currentStore.favicon || '');
@@ -101,7 +101,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setLocationAddress(currentStore.locationAddress || '');
     setMapLocation(currentStore.mapLocation || '');
     setStatus('');
-  }, [storeId, currentStore.storeName, currentStore.category, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation]);
+  }, [storeId, currentStore.storeName, currentStore.storeType, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation]);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -128,7 +128,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
         if (res.ok) {
           const data = await res.json();
           setStoreTypes(data);
-          if (data.length > 0 && !newStoreCategory) setNewStoreCategory(data[0].name);
+          if (data.length > 0 && !newStoreType) setNewStoreType(data[0].name);
         }
       } catch (err) {
         console.error('Failed to fetch store types', err);
@@ -166,8 +166,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
         },
         body: JSON.stringify({
           storeName,
-          category: storeCategory,
-          storeType: storeCategory,
+          storeType: storeType,
           websiteTitle,
           logo,
           favicon,
@@ -386,8 +385,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
         },
         body: JSON.stringify({ 
           name: newStoreName,
-          category: newStoreCategory,
-          storeType: newStoreCategory,
+          storeType: newStoreType,
           empId: newStoreEmpId,
           metaDescription: newStoreMeta,
           planId: newStorePlan
@@ -680,10 +678,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Store Type / Category</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Store Type</label>
             <select 
-              value={storeCategory}
-              onChange={(e) => setStoreCategory(e.target.value)}
+              value={storeType}
+              onChange={(e) => setStoreType(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition bg-white"
             >
               {storeTypes.length > 0 ? (
@@ -1105,8 +1103,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
                     <input type="text" value={newStoreName} onChange={(e) => setNewStoreName(e.target.value)} placeholder="e.g. Fresh Veggies Mart" className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900" required autoFocus />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Store Category <span className="text-red-500">*</span></label>
-                    <select value={newStoreCategory} onChange={(e) => setNewStoreCategory(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900 bg-white" required>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Store Type <span className="text-red-500">*</span></label>
+                    <select value={newStoreType} onChange={(e) => setNewStoreType(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900 bg-white" required>
                       {storeTypes.length > 0 ? (
                         storeTypes.map(cat => (
                           <option key={cat._id} value={cat.name}>{cat.name}</option>
