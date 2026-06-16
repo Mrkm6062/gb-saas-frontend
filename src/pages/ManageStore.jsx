@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { Link as LinkIcon, Trash2, Plus, CreditCard } from 'lucide-react';
+import { Link as LinkIcon, Trash2, Plus, CreditCard, Download } from 'lucide-react';
 
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
@@ -87,6 +87,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [storeTypes, setStoreTypes] = useState([]);
   const [empName, setEmpName] = useState('');
   const [verifyingEmp, setVerifyingEmp] = useState(false);
+  const [platformSettings, setPlatformSettings] = useState(null);
 
   // Update form fields if the user switches to managing a different store
   useEffect(() => {
@@ -135,6 +136,21 @@ const ManageStore = ({ token, stores, onLogout }) => {
       }
     };
     fetchStoreTypes();
+  }, []);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
+        if (res.ok) {
+          setPlatformSettings(await res.json());
+        }
+      } catch (err) {
+        console.error('Failed to fetch platform settings', err);
+      }
+    };
+    fetchSettings();
   }, []);
 
   const fetchSocialLinks = async () => {
@@ -342,6 +358,41 @@ const ManageStore = ({ token, stores, onLogout }) => {
     } finally {
       setVerifyingEmp(false);
     }
+  };
+
+  const handleDownloadInvoice = (invoice) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Please allow popups to download invoices.', 'error');
+      return;
+    }
+    
+    let template = platformSettings?.subscriptionInvoiceTemplate || `<div style="font-family: sans-serif; padding: 20px;"><h2>Invoice {{invoiceId}}</h2><p>Plan: {{planName}}</p><p>Amount: ₹{{amount}}</p></div>`;
+    
+    const gstHtml = platformSettings?.isGstEnabled && platformSettings?.gstNumber ? `<p style="margin: 2px 0; font-size: 12px; color: #666;">GSTIN: ${platformSettings.gstNumber}</p>` : '';
+    const cinHtml = platformSettings?.isCinEnabled && platformSettings?.cinNumber ? `<p style="margin: 2px 0; font-size: 12px; color: #666;">CIN: ${platformSettings.cinNumber}</p>` : '';
+
+    const html = template
+      .replace(/{{storeName}}/g, currentStore.storeName || "Store")
+      .replace(/{{ownerName}}/g, "Store Owner")
+      .replace(/{{ownerEmail}}/g, currentStore.supportEmail || "N/A")
+      .replace(/{{invoiceId}}/g, invoice.invoiceId)
+      .replace(/{{purchaseDate}}/g, new Date(invoice.date).toLocaleDateString())
+      .replace(/{{planName}}/g, invoice.planName)
+      .replace(/{{amount}}/g, invoice.amount)
+      .replace(/{{mainLogoUrl}}/g, platformSettings?.mainLogoUrl || '')
+      .replace(/{{companyAddress}}/g, platformSettings?.companyAddress || "")
+      .replace(/{{companyPhone}}/g, platformSettings?.companyPhone || "")
+      .replace(/{{gstHtml}}/g, gstHtml)
+      .replace(/{{cinHtml}}/g, cinHtml);
+
+    printWindow.document.write(`<html><head><title>Invoice - ${invoice.invoiceId}</title><style>@media print { body { -webkit-print-color-adjust: exact; } }</style></head><body>${html}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   const renderSocialIcon = (platform) => {
@@ -638,6 +689,13 @@ const ManageStore = ({ token, stores, onLogout }) => {
           className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'qrcode' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
         >
           QR Code
+        </button>
+        <button 
+          type="button"
+          onClick={() => setActiveTab('billing')} 
+          className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'billing' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+        >
+          Billing History
         </button>
       </div>
 
@@ -1046,6 +1104,49 @@ const ManageStore = ({ token, stores, onLogout }) => {
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Download A4 Poster
           </button>
+        </div>
+      )}
+
+      {/* Billing History */}
+      {activeTab === 'billing' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn">
+          <h2 className="text-2xl font-bold mb-6 text-slate-800">Billing History</h2>
+          <p className="text-sm text-slate-500 mb-6">View and download your past subscription invoices.</p>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                  <th className="p-4 font-bold">Date</th>
+                  <th className="p-4 font-bold">Invoice #</th>
+                  <th className="p-4 font-bold">Plan</th>
+                  <th className="p-4 font-bold">Amount</th>
+                  <th className="p-4 font-bold">Status</th>
+                  <th className="p-4 font-bold text-right">Download</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!currentStore.billingHistory || currentStore.billingHistory.length === 0) ? (
+                  <tr><td colSpan="6" className="p-8 text-center text-slate-500 font-medium border-b border-slate-100">No billing history found.</td></tr>
+                ) : (
+                  [...currentStore.billingHistory].reverse().map((invoice, idx) => (
+                    <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="p-4 text-sm font-medium text-slate-700">{new Date(invoice.date).toLocaleDateString()}</td>
+                      <td className="p-4 text-sm font-mono text-slate-500">{invoice.invoiceId}</td>
+                      <td className="p-4 font-bold text-slate-800">{invoice.planName}</td>
+                      <td className="p-4 font-bold text-green-600">₹{invoice.amount}</td>
+                      <td className="p-4"><span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-full">Paid</span></td>
+                      <td className="p-4 text-right">
+                        <button onClick={() => handleDownloadInvoice(invoice)} className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold rounded-lg text-sm transition-colors">
+                          <Download size={16} /> PDF
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
