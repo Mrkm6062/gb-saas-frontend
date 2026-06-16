@@ -35,8 +35,10 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [toast, setToast] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [resendingOrderId, setResendingOrderId] = useState(null);
+  const [newStoreEmpId, setNewStoreEmpId] = useState('');
   const [empName, setEmpName] = useState('');
   const [verifyingEmp, setVerifyingEmp] = useState(false);
+  const [storeTypes, setStoreTypes] = useState([]);
   const navigate = useNavigate();
 
   const activeStores = stores.filter(s => !s.isDeleted);
@@ -81,6 +83,23 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     fetchOrders();
   }, [activeStoreObjId, token]);
 
+  useEffect(() => {
+    const fetchStoreTypes = async () => {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        const res = await fetch(`${API_BASE_URL}/api/store-types/active`);
+        if (res.ok) {
+          const data = await res.json();
+          setStoreTypes(data);
+          if (data.length > 0 && newStoreType === 'Kirana Stores') setNewStoreType(data[0].name);
+        }
+      } catch (err) {
+        console.error('Failed to fetch store types', err);
+      }
+    };
+    fetchStoreTypes();
+  }, []);
+
   const handleCreateStore = async (e) => {
     e.preventDefault();
     setStatus('Creating store...');
@@ -111,6 +130,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
         body: JSON.stringify({ 
           name: newStoreName,
           storeType: newStoreType,
+          empId: newStoreEmpId,
           metaDescription: newStoreMeta,
           planId: newStorePlan
         })
@@ -127,6 +147,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
           setNewStoreName('');
           setNewStoreType('Kirana Stores');
           setNewStoreMeta('');
+          setNewStoreEmpId('');
           setCurrentStep(1);
           setStores([...stores, createdStore]);
           showToast('Store created successfully!', 'success');
@@ -164,6 +185,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 setNewStoreName('');
                 setNewStoreType('Kirana Stores');
                 setNewStoreMeta('');
+                setNewStoreEmpId('');
                 setCurrentStep(1);
                 setStores([...stores, createdStore]);
                 showToast('Store created & payment successful!', 'success');
@@ -582,11 +604,29 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-2">Store Type <span className="text-red-500">*</span></label>
                       <select value={newStoreType} onChange={(e) => setNewStoreType(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900 bg-white" required>
-                        {["Vegetable Shop", "Bakery Shop", "Cafe Shop", "Kirana Stores", "Cake Shop", "Clothes Shop", "Multi-Ecommerce Shop", "Education Webapp", "Nasta Corner", "Appointment&Contact Webapp"].map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
+                        {storeTypes.length > 0 ? (
+                          storeTypes.map(cat => (
+                            <option key={cat._id} value={cat.name}>{cat.name}</option>
+                          ))
+                        ) : (
+                          <option value="Kirana Stores">Kirana Stores (Default)</option>
+                        )}
                       </select>
                     </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Assisted By (EmpID) <span className="text-slate-400 font-normal">(Optional)</span></label>
+                    <div className="flex gap-2">
+                      <input type="text" value={newStoreEmpId} onChange={(e) => { setNewStoreEmpId(e.target.value); setEmpName(''); }} placeholder="e.g. GBE0001" className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900" />
+                      <button type="button" onClick={handleVerifyEmpId} disabled={verifyingEmp || !newStoreEmpId} className="px-4 py-3 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition disabled:opacity-50 whitespace-nowrap">
+                        {verifyingEmp ? 'Verifying...' : 'Verify'}
+                      </button>
+                    </div>
+                    {empName && (
+                      <p className={`text-xs font-bold mt-2 ${empName.includes('Invalid') || empName.includes('Error') ? 'text-red-500' : 'text-green-600'}`}>
+                        {empName.includes('Invalid') || empName.includes('Error') ? empName : `Verified: ${empName}`}
+                      </p>
+                    )}
+                  </div>
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-2">Meta Description</label>
                       <textarea value={newStoreMeta} onChange={(e) => setNewStoreMeta(e.target.value)} placeholder="Brief description for SEO..." className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900 resize-none h-24" />
