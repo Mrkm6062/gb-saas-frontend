@@ -27,6 +27,7 @@ const ManageTheme = ({ token, stores, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState([]);
   const [themes, setThemes] = useState([]);
+  const [showAllThemes, setShowAllThemes] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
   const [purchaseModal, setPurchaseModal] = useState({ isOpen: false, theme: null });
@@ -164,12 +165,29 @@ const ManageTheme = ({ token, stores, onLogout }) => {
   const activePlan = plans.find(p => p._id === currentStore.planId) || plans.find(p => p.price === 0) || {};
   const isPremiumAllowed = activePlan?.features?.themes || false;
 
+  const filteredThemes = showAllThemes
+    ? themes
+    : themes.filter(theme => 
+        !theme.category || 
+        theme.category.length === 0 || 
+        theme.category.includes('general') || 
+        theme.category.includes(currentStore.storeType)
+      );
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Themes">
       <div className="w-full px-6 py-10 mx-auto">
-        <div className="mb-8">
-          <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Storefront Themes</h2>
-          <p className="text-slate-500">Choose the perfect design for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Storefront Themes</h2>
+            <p className="text-slate-500">Choose the perfect design for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
+          </div>
+          <button 
+            onClick={() => setShowAllThemes(prev => !prev)}
+            className="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-bold rounded-lg hover:bg-slate-50 transition text-sm shadow-sm"
+          >
+            {showAllThemes ? 'Show Recommended Themes' : 'Show All Themes'}
+          </button>
         </div>
 
         {status && (
@@ -179,9 +197,11 @@ const ManageTheme = ({ token, stores, onLogout }) => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {themes.length === 0 ? (
+          {loading ? (
             <div className="col-span-full py-10 text-center text-slate-500 font-medium">No themes available.</div>
-          ) : themes.map((theme) => {
+          ) : filteredThemes.length === 0 ? (
+            <div className="col-span-full py-10 text-center text-slate-500 font-medium">No specific themes found for your store type. Try showing all themes.</div>
+          ) : filteredThemes.map((theme) => {
             const isActive = activeTheme === theme.themeId;
             const isPremiumTheme = theme.type === 'premium';
             const isPaidTheme = theme.type === 'paid';
