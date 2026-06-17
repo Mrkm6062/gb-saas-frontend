@@ -575,7 +575,7 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                                 </button>
                               </div>
                             )}
-d                            {item.customText && (
+                            {item.customText && (
                               <div className="mt-2 flex items-center gap-3">
                                 <div className="text-sm text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
                                   <span className="font-semibold text-slate-500">Text:</span>
