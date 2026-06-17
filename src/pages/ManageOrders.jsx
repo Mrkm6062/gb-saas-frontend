@@ -547,6 +547,11 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                                 </a>
                               </div>
                             )}
+d                            {item.customText && (
+                              <div className="mt-1 text-xs text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100 w-fit">
+                                <span className="font-semibold text-slate-500">Text:</span> {item.customText}
+                              </div>
+                            )}
                           </td>
                           <td className="p-3 text-slate-600 text-center">{item.qty}</td>
                           <td className="p-3 text-slate-600 text-right">₹{item.price}</td>

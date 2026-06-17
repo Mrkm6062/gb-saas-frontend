@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';                                                                                             
-import { DownloadCloud, UploadCloud, Lock, Edit3, Save } from 'lucide-react';
+import { DownloadCloud, UploadCloud, Lock, Edit3, Save, Move, Expand } from 'lucide-react';
 
 const ManageProduct = ({ token, stores, onLogout }) => {
   const { storeId } = useParams(); 
@@ -43,10 +43,15 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [isBulkEditing, setIsBulkEditing] = useState(false);
   const [bulkEdits, setBulkEdits] = useState({});
   const [bulkSaving, setBulkSaving] = useState(false);
+  
+  // Customizable Area Editor States
+  const areaContainerRef = useRef(null);
+  const [interaction, setInteraction] = useState({ type: null, startX: 0, startY: 0, initialRect: null });
 
   const initialForm = {
     name: '', description: '', category: '', unitType: 'piece',
-    basePrice: '', totalStock: '', images: [], variants: [], isCustomizable: false
+    basePrice: '', totalStock: '', images: [], variants: [], isCustomizable: false, allowCustomText: false,
+    customizableArea: { x: 25, y: 30, width: 50, height: 40 }
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -60,6 +65,73 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const handleRemoveVariant = (index) => setFormData({ ...formData, variants: formData.variants.filter((_, i) => i !== index) });
 
   const handleRemoveImage = (index) => setFormData({ ...formData, images: formData.images.filter((_, i) => i !== index) });
+
+  // --- Customizable Area Handlers ---
+  const handleInteractionStart = (e, type) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!areaContainerRef.current) return;
+
+    const containerRect = areaContainerRef.current.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    setInteraction({
+        type,
+        startX: clientX,
+        startY: clientY,
+        initialRect: { ...formData.customizableArea },
+        containerRect,
+    });
+  };
+
+  const handleInteractionMove = (e) => {
+      if (!interaction.type) return;
+      
+      const { type, startX, startY, initialRect, containerRect } = interaction;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+
+      const dxPercent = (dx / containerRect.width) * 100;
+      const dyPercent = (dy / containerRect.height) * 100;
+
+      let newArea = { ...formData.customizableArea };
+
+      if (type === 'drag') {
+          newArea.x = Math.max(0, Math.min(100 - initialRect.width, initialRect.x + dxPercent));
+          newArea.y = Math.max(0, Math.min(100 - initialRect.height, initialRect.y + dyPercent));
+      } else if (type === 'resize') {
+          newArea.width = Math.max(10, Math.min(100 - initialRect.x, initialRect.width + dxPercent));
+          newArea.height = Math.max(10, Math.min(100 - initialRect.y, initialRect.height + dyPercent));
+      }
+
+      setFormData(prev => ({ ...prev, customizableArea: newArea }));
+  };
+
+  const handleInteractionEnd = () => {
+      setInteraction({ type: null, startX: 0, startY: 0, initialRect: null });
+  };
+
+  useEffect(() => {
+      const moveHandler = (e) => handleInteractionMove(e);
+      const endHandler = () => handleInteractionEnd();
+
+      if (interaction.type) {
+          window.addEventListener('mousemove', moveHandler);
+          window.addEventListener('mouseup', endHandler);
+          window.addEventListener('touchmove', moveHandler);
+          window.addEventListener('touchend', endHandler);
+      }
+
+      return () => {
+          window.removeEventListener('mousemove', moveHandler);
+          window.removeEventListener('mouseup', endHandler);
+          window.removeEventListener('touchmove', moveHandler);
+          window.removeEventListener('touchend', endHandler);
+      };
+  }, [interaction]);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -188,7 +260,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           totalStock: formData.totalStock !== '' ? Number(formData.totalStock) : 0,
           price: formData.basePrice !== '' ? Number(formData.basePrice) : 0,
           stock: formData.totalStock !== '' ? Number(formData.totalStock) : 0,
+          customizableArea: formData.customizableArea,
           isCustomizable: formData.isCustomizable || false,
+          allowCustomText: formData.allowCustomText || false,
           storeId: currentStore._id // Explicitly bind product to this store
         })
       });
@@ -777,14 +851,59 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                     </select>
                   </div>
               {canCustomize && (
-                <div className="md:col-span-2 pt-2 border-t border-slate-100 mt-2">
+                <div className="md:col-span-2 pt-2 border-t border-slate-100 mt-2 space-y-3">
                   <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
                     <input type="checkbox" checked={formData.isCustomizable} onChange={e => setFormData({...formData, isCustomizable: e.target.checked})} className="w-5 h-5 text-[#76b900] rounded focus:ring-[#76b900]" />
                     Enable Custom Image Upload for Customers (Printing/Gift items)
                   </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                    <input type="checkbox" checked={formData.allowCustomText} onChange={e => setFormData({...formData, allowCustomText: e.target.checked})} className="w-5 h-5 text-[#76b900] rounded focus:ring-[#76b900]" />
+                    Enable Custom Text Input for Customers (e.g. Names, Quotes, Messages)
+                  </label>
                 </div>
               )}
                   <div className="md:col-span-2"><label className="block text-sm font-semibold mb-1 text-slate-700">Description</label><textarea rows="3" value={formData.description} onChange={e=>setFormData({...formData, description: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow resize-none" placeholder="Provide product details..." /></div>
+                </div>
+              </div>
+
+              {/* Customizable Area Editor */}
+              {formData.isCustomizable && (
+                <div className="space-y-4 pt-6 border-t border-slate-100">
+                    <h4 className="font-bold text-lg text-slate-800">Customizable Area Setup</h4>
+                    <p className="text-sm text-slate-500">Click and drag the box below to define the area on your product where the customer's image will be printed. The first product image is used as the preview.</p>
+                    
+                    <div ref={areaContainerRef} className="relative w-full max-w-lg mx-auto bg-slate-100 rounded-xl border-2 border-dashed border-slate-300 aspect-square overflow-hidden">
+                        {formData.images.length > 0 ? (
+                            <img src={formData.images[0]} alt="Product Preview" className="w-full h-full object-contain" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-400 p-4 text-center">Upload a product image first to define the customizable area.</div>
+                        )}
+
+                        {formData.images.length > 0 && (
+                            <div 
+                                className="absolute border-2 border-dashed border-blue-500 bg-blue-500/20 cursor-move group"
+                                style={{
+                                    left: `${formData.customizableArea.x}%`,
+                                    top: `${formData.customizableArea.y}%`,
+                                    width: `${formData.customizableArea.width}%`,
+                                    height: `${formData.customizableArea.height}%`,
+                                }}
+                                onMouseDown={(e) => handleInteractionStart(e, 'drag')}
+                                onTouchStart={(e) => handleInteractionStart(e, 'drag')}
+                            >
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Move className="text-white drop-shadow-md" />
+                                </div>
+                                <div 
+                                    className="absolute -right-2 -bottom-2 w-5 h-5 bg-blue-600 rounded-full cursor-se-resize border-2 border-white shadow-md flex items-center justify-center" 
+                                    onMouseDown={(e) => handleInteractionStart(e, 'resize')}
+                                    onTouchStart={(e) => handleInteractionStart(e, 'resize')}
+                                >
+                                    <Expand size={10} className="text-white" />
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
               </div>
 
