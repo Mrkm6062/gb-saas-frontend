@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { AlertCircle, HelpCircle, Mail, Search, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
+import { AlertCircle, HelpCircle, Mail, Search, ChevronLeft, ChevronRight, Printer, Copy, Download, X } from 'lucide-react';
 
 const ManageOrders = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
@@ -20,6 +20,7 @@ const ManageOrders = ({ token, stores, onLogout }) => {
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -168,6 +169,31 @@ const ManageOrders = ({ token, stores, onLogout }) => {
     } finally {
       setResendingOrderId(null);
     }
+  };
+
+  const handleCopyText = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Custom text copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+        alert('Failed to copy text.');
+    });
+  };
+
+  const handleDownloadImage = async (url) => {
+      try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          const filename = url.substring(url.lastIndexOf('/') + 1) || 'custom-image.jpg';
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+      } catch (error) {
+          alert('Failed to download image. You can try right-clicking the preview to save it.');
+      }
   };
 
   const handlePrintBill = async (order) => {
@@ -540,16 +566,24 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                           <td className="p-3 text-slate-800 font-bold">
                             {item.name}
                             {item.customImage && (
-                              <div className="mt-2 flex items-center gap-2">
-                                <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded">CUSTOM IMAGE</span>
-                                <a href={item.customImage} target="_blank" rel="noopener noreferrer" className="shrink-0" title="Click to view full size">
-                                  <img src={item.customImage} alt="Custom print" className="h-10 w-10 object-cover rounded border border-slate-200 shadow-sm hover:scale-150 origin-left transition-transform z-10 relative cursor-pointer" />
-                                </a>
+                              <div className="mt-2 flex items-center gap-3">
+                                <button onClick={() => setImagePreviewUrl(item.customImage)} className="shrink-0 group" title="Click to preview image">
+                                  <img src={item.customImage} alt="Custom print" className="h-12 w-12 object-cover rounded-lg border border-slate-200 shadow-sm group-hover:scale-110 transition-transform cursor-pointer" />
+                                </button>
+                                <button onClick={() => handleDownloadImage(item.customImage)} className="p-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg transition" title="Download Image">
+                                  <Download size={16} />
+                                </button>
                               </div>
                             )}
 d                            {item.customText && (
-                              <div className="mt-1 text-xs text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100 w-fit">
-                                <span className="font-semibold text-slate-500">Text:</span> {item.customText}
+                              <div className="mt-2 flex items-center gap-3">
+                                <div className="text-sm text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                  <span className="font-semibold text-slate-500">Text:</span>
+                                  <span className="ml-2 font-mono bg-white px-1 rounded">{item.customText}</span>
+                                </div>
+                                <button onClick={() => handleCopyText(item.customText)} className="p-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg transition" title="Copy Text">
+                                  <Copy size={16} />
+                                </button>
                               </div>
                             )}
                           </td>
