@@ -295,7 +295,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       totalStock: product.totalStock !== undefined ? product.totalStock : (product.stock || ''),
       images: product.images || [],
       variants: product.variants || [],
-      isCustomizable: product.isCustomizable || false
+      isCustomizable: product.isCustomizable || false,
+      allowCustomText: product.allowCustomText || false,
+      customizableArea: product.customizableArea || { x: 25, y: 30, width: 50, height: 40 }
     });
     setEditingId(product._id);
     setIsFormOpen(true);
