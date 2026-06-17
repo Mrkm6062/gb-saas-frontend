@@ -905,7 +905,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                         )}
                     </div>
                 </div>
-              </div>
+              )}
 
               {/* Pricing & Inventory */}
               <div className="space-y-4">
