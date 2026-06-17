@@ -211,7 +211,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       const fetchDefaultProducts = async () => {
         setLoadingDefaults(true);
         try {
-          const response = await fetch(`${API_BASE_URL}/api/default-products?storeType=${importStoreType}&limit=100`, {
+          const response = await fetch(`${API_BASE_URL}/api/default-products?storeType=${importStoreType}&limit=10000`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
