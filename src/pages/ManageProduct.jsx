@@ -869,7 +869,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               </div>
 
               {/* Customizable Area Editor */}
-              {formData.isCustomizable && (
+              {(formData.isCustomizable || formData.allowCustomText) && (
                 <div className="space-y-4 pt-6 border-t border-slate-100">
                     <h4 className="font-bold text-lg text-slate-800">Customizable Area Setup</h4>
                     <p className="text-sm text-slate-500">Click and drag the box below to define the area on your product where the customer's image will be printed. The first product image is used as the preview.</p>
