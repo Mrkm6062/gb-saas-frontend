@@ -874,11 +874,11 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                     <h4 className="font-bold text-lg text-slate-800">Customizable Area Setup</h4>
                     <p className="text-sm text-slate-500">Click and drag the box below to define the area on your product where the customer's image will be printed. The first product image is used as the preview.</p>
                     
-                    <div ref={areaContainerRef} className="relative w-full max-w-lg mx-auto bg-slate-100 rounded-xl border-2 border-dashed border-slate-300 aspect-square overflow-hidden">
+                    <div ref={areaContainerRef} className="relative w-fit max-w-lg mx-auto bg-slate-100 rounded-xl border-2 border-dashed border-slate-300 overflow-hidden">
                         {formData.images.length > 0 ? (
-                            <img src={formData.images[0]} alt="Product Preview" className="w-full h-full object-contain" />
+                            <img src={formData.images[0]} alt="Product Preview" className="max-w-full h-auto block" />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-400 p-4 text-center">Upload a product image first to define the customizable area.</div>
+                            <div className="w-full min-w-[280px] aspect-square flex items-center justify-center text-slate-400 p-4 text-center">Upload a product image first to define the customizable area.</div>
                         )}
 
                         {formData.images.length > 0 && (
