@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { Trash2, HardDrive, Image as ImageIcon, UploadCloud, Copy, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const compressImage = (file, maxSizeMB = 5) => {
+const compressImage = (file, maxSizeMB = 1) => {
   return new Promise((resolve) => {
     if (!file.type.startsWith('image/')) return resolve(file);
     if (file.size <= maxSizeMB * 1024 * 1024) return resolve(file);
@@ -155,7 +155,7 @@ const ManageStorage = ({ token, stores, onLogout }) => {
     setUploadProgress(0);
 
     try {
-      const compressedFiles = await Promise.all(files.map(f => compressImage(f, 5)));
+      const compressedFiles = await Promise.all(files.map(f => compressImage(f, 1)));
 
       const uploadData = new FormData();
       uploadData.append('storeId', currentStore._id);
