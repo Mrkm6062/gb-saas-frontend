@@ -50,6 +50,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
   const initialForm = {
     name: '', description: '', category: '', foodtype: '', unitType: 'piece',
+    brand: '', subCategory: '', discount: '', isActive: true,
     basePrice: '', totalStock: '', images: [], variants: [], isCustomizable: false, allowCustomText: false,
     customizableArea: { x: 25, y: 30, width: 50, height: 40 }
   };
@@ -260,6 +261,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           totalStock: formData.totalStock !== '' ? Number(formData.totalStock) : 0,
           price: formData.basePrice !== '' ? Number(formData.basePrice) : 0,
           stock: formData.totalStock !== '' ? Number(formData.totalStock) : 0,
+          discount: formData.discount !== '' ? Number(formData.discount) : 0,
+          isActive: formData.isActive !== undefined ? formData.isActive : true,
           customizableArea: formData.customizableArea,
           isCustomizable: formData.isCustomizable || false,
           allowCustomText: formData.allowCustomText || false,
@@ -292,6 +295,10 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       category: product.category || '',
       foodtype: product.foodtype || '',
       unitType: product.unitType || 'piece',
+      brand: product.Brand || product.brand || '',
+      subCategory: product.subCategory || '',
+      discount: product.discount !== undefined ? product.discount : '',
+      isActive: product.isActive !== false,
       basePrice: product.basePrice || product.price || '',
       totalStock: product.totalStock !== undefined ? product.totalStock : (product.stock || ''),
       images: product.images || [],
@@ -331,6 +338,32 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       setStatus(`Error: ${err.message}`);
     }
   };
+
+  const handleToggleActive = async (product) => {
+    try {
+      const newStatus = product.isActive === false ? true : false;
+      const response = await fetch(`${API_BASE_URL}/api/products/${product._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ isActive: newStatus })
+      });
+
+      if (response.ok) {
+        setStatus(`Product status updated to ${newStatus ? 'Active' : 'Inactive'}`);
+        fetchProducts();
+        setTimeout(() => setStatus(''), 3000);
+      } else {
+        const data = await response.json();
+        setStatus(`Error updating status: ${data.message || 'Failed'}`);
+      }
+    } catch (err) {
+      setStatus(`Error updating status: ${err.message}`);
+    }
+  };
+
 
   const toggleDefaultProductSelection = (id) => {
     setSelectedDefaultProducts(prev => 
@@ -761,7 +794,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       {/* Product List */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="grid grid-cols-12 gap-4 p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-sm items-center">
-          <div className="col-span-4">Product Name</div><div className="col-span-2">Category</div><div className="col-span-2">Price</div><div className="col-span-2">Stock</div>
+          <div className="col-span-3">Product Name</div><div className="col-span-2">Category</div><div className="col-span-2">Price</div><div className="col-span-2">Stock</div><div className="col-span-1 text-center">Status</div>
           <div className="col-span-2 text-right flex justify-end">
             {isBulkEditing ? (
               <button onClick={handleSaveBulkEdits} disabled={bulkSaving || Object.keys(bulkEdits).length === 0} className="px-4 py-1.5 bg-[#76b900] text-white rounded-lg flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50 transition-opacity">
@@ -777,8 +810,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
         ) : (
           displayedProducts.map(p => (
             <div key={p._id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 items-center hover:bg-slate-50 transition">
-              <div className="col-span-4">
+              <div className="col-span-3">
                 <div className="font-semibold text-slate-800">{p.name}</div>
+                {p.Brand && <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block">{p.Brand}</span>}
               </div>
               <div className="col-span-2 text-slate-600 text-sm font-medium">
                 {categories.find(c => c._id === p.category)?.name || <span className="text-slate-400 italic">None</span>}
@@ -796,7 +830,17 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                     />
                   </div>
                 ) : (
-                  `₹${p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}`
+                  <div>
+                    {p.discount > 0 ? (
+                      <div>
+                        <span className="line-through text-slate-400 text-xs mr-1">₹{p.basePrice}</span>
+                        <span>₹{p.price}</span>
+                        <span className="text-red-500 text-[10px] font-bold ml-1">(-{p.discount}%)</span>
+                      </div>
+                    ) : (
+                      `₹${p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}`
+                    )}
+                  </div>
                 )}
               </div>
               <div className="col-span-2 text-slate-600">
@@ -812,6 +856,16 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                   `${p.totalStock !== undefined ? p.totalStock : (p.stock || 0)} ${p.unitType || 'units'}`
                 )}
                 {isBulkEditing && p.variants?.length > 0 && <span className="text-[10px] font-bold text-amber-500 block leading-tight mt-1 bg-amber-50 px-2 py-0.5 rounded w-fit">Has variants</span>}
+              </div>
+              <div className="col-span-1 text-center">
+                <button 
+                  type="button"
+                  onClick={() => handleToggleActive(p)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${p.isActive !== false ? 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100' : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'}`}
+                  title="Click to toggle status"
+                >
+                  {p.isActive !== false ? 'Active' : 'Inactive'}
+                </button>
               </div>
               <div className="col-span-2 text-right flex justify-end gap-2">
                 {!isBulkEditing && (
@@ -858,18 +912,26 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                       ))}
                     </select>
                   </div>
-              {canCustomize && (
-                <div className="md:col-span-2 pt-2 border-t border-slate-100 mt-2 space-y-3">
-                  <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
-                    <input type="checkbox" checked={formData.isCustomizable} onChange={e => setFormData({...formData, isCustomizable: e.target.checked})} className="w-5 h-5 text-[#76b900] rounded focus:ring-[#76b900]" />
-                    Enable Custom Image Upload for Customers (Printing/Gift items)
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
-                    <input type="checkbox" checked={formData.allowCustomText} onChange={e => setFormData({...formData, allowCustomText: e.target.checked})} className="w-5 h-5 text-[#76b900] rounded focus:ring-[#76b900]" />
-                    Enable Custom Text Input for Customers (e.g. Names, Quotes, Messages)
-                  </label>
-                </div>
-              )}
+                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Brand</label><input value={formData.brand} onChange={e=>setFormData({...formData, brand: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Nestlé, Apple" /></div>
+                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Sub Category</label><input value={formData.subCategory} onChange={e=>setFormData({...formData, subCategory: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Dairy, Smartphones" /></div>
+              <div className="md:col-span-2 pt-2 border-t border-slate-100 mt-2 space-y-3">
+                {canCustomize && (
+                  <>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                      <input type="checkbox" checked={formData.isCustomizable} onChange={e => setFormData({...formData, isCustomizable: e.target.checked})} className="w-5 h-5 text-[#76b900] rounded focus:ring-[#76b900]" />
+                      Enable Custom Image Upload for Customers (Printing/Gift items)
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                      <input type="checkbox" checked={formData.allowCustomText} onChange={e => setFormData({...formData, allowCustomText: e.target.checked})} className="w-5 h-5 text-[#76b900] rounded focus:ring-[#76b900]" />
+                      Enable Custom Text Input for Customers (e.g. Names, Quotes, Messages)
+                    </label>
+                  </>
+                )}
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                  <input type="checkbox" checked={formData.isActive} onChange={e => setFormData({...formData, isActive: e.target.checked})} className="w-5 h-5 text-[#76b900] rounded focus:ring-[#76b900]" />
+                  Product is Active (Visible to Customers)
+                </label>
+              </div>
                   <div className="md:col-span-2"><label className="block text-sm font-semibold mb-1 text-slate-700">Description</label><textarea rows="3" value={formData.description} onChange={e=>setFormData({...formData, description: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow resize-none" placeholder="Provide product details..." /></div>
                 </div>
               </div>
@@ -918,8 +980,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               {/* Pricing & Inventory */}
               <div className="space-y-4">
                 <h4 className="font-bold text-lg border-b border-slate-100 pb-2 text-slate-800">Pricing & Default Inventory</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                   <div><label className="block text-sm font-semibold mb-1 text-slate-700">Base Price (₹) <span className="text-red-500">*</span></label><input type="number" required={formData.variants.length === 0} value={formData.basePrice} onChange={e=>setFormData({...formData, basePrice: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="0.00" /></div>
+                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Discount (%)</label><input type="number" min="0" max="100" value={formData.discount} onChange={e=>setFormData({...formData, discount: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="0" /></div>
                   <div><label className="block text-sm font-semibold mb-1 text-slate-700">Total Stock</label><input type="number" value={formData.totalStock} onChange={e=>setFormData({...formData, totalStock: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow disabled:bg-slate-50" disabled={formData.variants.length > 0} placeholder={formData.variants.length > 0 ? "Calculated from variants" : "0"} /></div>
                   <div><label className="block text-sm font-semibold mb-1 text-slate-700">Selling Unit Type</label>
                     <select value={formData.unitType} onChange={e=>setFormData({...formData, unitType: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow bg-white">
@@ -928,7 +991,11 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                       <option value="gram">Gram</option>
                       <option value="plate">Plate</option>
                       <option value="pack">Pack</option>
-                      <option value="size">Size</option>
+                      <option value="bottle">Bottle</option>
+                      <option value="box">Box</option>
+                      <option value="liter">Liter</option>
+                      <option value="packet">Packet</option>
+                      <option value="dozen">Dozen</option>
                     </select>
                   </div>
                 </div>
