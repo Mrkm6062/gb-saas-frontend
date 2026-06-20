@@ -3,6 +3,23 @@ import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { Palette, Save } from 'lucide-react';
 
+const AVAILABLE_FONTS = [
+  { name: 'Poppins', value: 'Poppins, sans-serif' },
+  { name: 'Inter', value: 'Inter, sans-serif' },
+  { name: 'Roboto', value: 'Roboto, sans-serif' },
+  { name: 'Montserrat', value: 'Montserrat, sans-serif' },
+  { name: 'Playfair Display', value: '"Playfair Display", serif' },
+  { name: 'Lato', value: 'Lato, sans-serif' },
+  { name: 'Open Sans', value: '"Open Sans", sans-serif' },
+  { name: 'Nunito', value: 'Nunito, sans-serif' },
+  { name: 'Outfit', value: 'Outfit, sans-serif' },
+  { name: 'Raleway', value: 'Raleway, sans-serif' },
+  { name: 'Merriweather', value: 'Merriweather, serif' },
+  { name: 'Georgia', value: 'Georgia, serif' },
+  { name: 'System Sans', value: 'system-ui, sans-serif' }
+];
+
+
 const initialForm = {
   global: { primaryColor: '#22c55e', secondaryColor: '#f97316', fontFamily: 'Poppins', borderRadius: '12px', officialfaviconimage: '', metaTitle: '', metaDescription: '' },
   header: { bgColor: '#ffffff', textColor: '#000000', officialdesktopLogo: '', officialmobileLogo: '', offerBanner: { Enabled: true, text: 'Free delivery on orders above ₹500!', bgColor: '#22c55e', textColor: '#ffffff' } },
@@ -67,6 +84,19 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
     };
     fetchCustomization();
   }, [currentStore._id, activeTheme, token, API_BASE_URL]);
+
+  useEffect(() => {
+    // Load Google Fonts preview styles in dropdown
+    const linkId = 'google-fonts-preview-styles';
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=Montserrat:wght@400;700&family=Nunito:wght@400;700&family=Open+Sans:wght@400;700&family=Outfit:wght@400;700&family=Playfair+Display:wght@400;700&family=Poppins:wght@400;700&family=Raleway:wght@400;700&family=Roboto:wght@400;700&display=swap';
+      document.head.appendChild(link);
+    }
+  }, []);
+
 
   const handleNestedChange = (section, field, value) => {
     setFormData((prev) => ({
@@ -395,7 +425,21 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
                   {renderColorInput('global', 'secondaryColor', 'Secondary Accent Color')}
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Font Family</label>
-                    <input type="text" value={formData.global.fontFamily} onChange={(e) => handleNestedChange('global', 'fontFamily', e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none" placeholder="e.g. Poppins, sans-serif" />
+                    <select
+                      value={formData.global.fontFamily}
+                      onChange={(e) => handleNestedChange('global', 'fontFamily', e.target.value)}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none bg-white font-medium"
+                    >
+                      {AVAILABLE_FONTS.map(font => (
+                        <option 
+                          key={font.name} 
+                          value={font.value} 
+                          style={{ fontFamily: font.value }}
+                        >
+                          {font.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Border Radius</label>
