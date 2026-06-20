@@ -692,6 +692,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     storeTypeName.toLowerCase().includes('custom') || 
     currentStoreTypeObj?.features?.some(f => f.toLowerCase().includes('print') || f.toLowerCase().includes('custom') || f.toLowerCase().includes('gift'));
 
+  const isNastaCorner = storeTypeName.toLowerCase() === 'nasta corner';
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
     <div className="w-full px-6 py-10">
@@ -845,7 +847,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                 <h4 className="font-bold text-lg border-b border-slate-100 pb-2 text-slate-800">Basic Info</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div><label className="block text-sm font-semibold mb-1 text-slate-700">Product Name <span className="text-red-500">*</span></label><input required value={formData.name} onChange={e=>setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Fresh Tomatoes" /></div>
-                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Food Type <span className="text-red-500">*</span></label><input required value={formData.foodtype} onChange={e=>setFormData({...formData, foodtype: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Veg, Non-Veg, Vegan" /></div>
+                  {isNastaCorner && (
+                    <div><label className="block text-sm font-semibold mb-1 text-slate-700">Food Type <span className="text-red-500">*</span></label><input required value={formData.foodtype} onChange={e=>setFormData({...formData, foodtype: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Veg, Non-Veg, Vegan" /></div>
+                  )}
                   <div><label className="block text-sm font-semibold mb-1 text-slate-700">Category</label>
                     <select value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow bg-white">
                       <option value="">Select Category</option>
