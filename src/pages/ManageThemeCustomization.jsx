@@ -9,7 +9,7 @@ const initialForm = {
   banner: { bgColor: '#f5f5f5', textColor: '#111111', limit: 5 },
   category: { bgColor: '#ffffff' },
   productCard: { bgColor: '#ffffff', borderColor: '#e5e7eb' },
-  footer: { bgColor: '#111827', textColor: '#ffffff' },
+  footer: { bgColor: '#111827', textColor: '#ffffff', officialdesktopLogo: '', officialmobileLogo: '', description: '© 2024 Your Store. All rights reserved.', newsletter: { enabled: false, placeholder: 'Enter your email', buttonText: 'Subscribe' } },
   whyChooseUs: { enabled: true, title: 'Why Choose Us', subtitle: '', items: [] }
 };
 
@@ -47,7 +47,14 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
               banner: { ...prev.banner, ...data.banner },
               category: { ...prev.category, ...data.category },
               productCard: { ...prev.productCard, ...data.productCard },
-              footer: { ...prev.footer, ...data.footer },
+              footer: { 
+                ...prev.footer, 
+                ...data.footer,
+                newsletter: {
+                  ...prev.footer.newsletter,
+                  ...(data.footer?.newsletter || {})
+                }
+              },
               whyChooseUs: { ...prev.whyChooseUs, ...data.whyChooseUs }
             }));
           }
@@ -479,6 +486,91 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {renderColorInput('footer', 'bgColor', 'Footer Background Color')}
                   {renderColorInput('footer', 'textColor', 'Footer Text Color')}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                  {renderImageUpload('footer', 'officialdesktopLogo', 'Desktop Logo')}
+                  {renderImageUpload('footer', 'officialmobileLogo', 'Mobile Logo')}
+                </div>
+                <div className="pt-4 border-t border-slate-100">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Footer Description / Copyright Text</label>
+                  <textarea 
+                    rows="3" 
+                    value={formData.footer.description || ''} 
+                    onChange={(e) => handleNestedChange('footer', 'description', e.target.value)} 
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none resize-none text-sm"
+                    placeholder="e.g. © 2024 Your Store. All rights reserved."
+                  />
+                </div>
+                <div className="pt-4 border-t border-slate-100 bg-slate-50 p-5 rounded-xl border">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-bold text-slate-800 text-sm">Newsletter Subscription Form</h4>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={formData.footer.newsletter?.enabled || false} 
+                        onChange={(e) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            footer: {
+                              ...prev.footer,
+                              newsletter: {
+                                ...(prev.footer.newsletter || {}),
+                                enabled: e.target.checked
+                              }
+                            }
+                          }));
+                        }} 
+                      />
+                      <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#76b900] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#76b900]"></div>
+                    </label>
+                  </div>
+                  <div className={`space-y-4 transition-opacity ${!formData.footer.newsletter?.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">Input Placeholder</label>
+                        <input 
+                          type="text" 
+                          value={formData.footer.newsletter?.placeholder || ''} 
+                          onChange={(e) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              footer: {
+                                ...prev.footer,
+                                newsletter: {
+                                  ...(prev.footer.newsletter || {}),
+                                  placeholder: e.target.value
+                                }
+                              }
+                            }));
+                          }} 
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900] text-sm" 
+                          placeholder="e.g. Enter your email"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">Button Text</label>
+                        <input 
+                          type="text" 
+                          value={formData.footer.newsletter?.buttonText || ''} 
+                          onChange={(e) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              footer: {
+                                ...prev.footer,
+                                newsletter: {
+                                  ...(prev.footer.newsletter || {}),
+                                  buttonText: e.target.value
+                                }
+                              }
+                            }));
+                          }} 
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900] text-sm" 
+                          placeholder="e.g. Subscribe"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
