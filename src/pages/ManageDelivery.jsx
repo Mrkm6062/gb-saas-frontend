@@ -276,15 +276,10 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
 
           {/* Delivery Area Tab */}
           {activeTab === 'areas' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn">
-              <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
-                <MapPin size={22} className="text-[#76b900]" /> 
-                Serviceable Delivery Areas
-              </h3>
-              
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn">              
               <div className="mb-8 max-w-md">
-                <label className="block text-sm font-bold text-slate-700 mb-2">Select Delivery Mode</label>
-                <p className="text-xs text-slate-500 mb-3">Choose how you want to restrict delivery areas.</p>
+                <h3 className="block text-sm font-bold text-slate-700 mb-2"><MapPin size={22} className="text-[#76b900]" /> Select Delivery Mode</h3>
+                <p className="text-sm text-slate-500 mb-3">Choose how you want to restrict delivery areas.</p>
                 <select
                   value={formData.deliveryMode}
                   onChange={e => setFormData({...formData, deliveryMode: e.target.value})}
