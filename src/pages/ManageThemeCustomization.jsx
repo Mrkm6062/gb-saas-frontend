@@ -44,6 +44,10 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSpeed, setUploadSpeed] = useState('');
   const [activeXhr, setActiveXhr] = useState(null);
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
+  const [mediaImages, setMediaImages] = useState([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
+  const [activeMediaTarget, setActiveMediaTarget] = useState(null); // { type: 'nested', section, field } or { type: 'whyChooseUs', index }
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -283,6 +287,35 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
     if (activeXhr) activeXhr.abort();
   };
 
+  const fetchMedia = async () => {
+    setLoadingMedia(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upload?storeId=${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) setMediaImages(data.images || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMedia(false);
+    }
+  };
+
+  const handleDeleteMedia = async (filename) => {
+    if (!window.confirm("Delete this image permanently from cloud storage?")) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename })
+      });
+      if (response.ok) fetchMedia();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -339,7 +372,10 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
     const currentValue = formData[section][field];
     return (
       <div className="mb-4">
-        <label className="block text-sm font-semibold text-slate-700 mb-1">{label}</label>
+        <div className="flex justify-between items-center mb-1">
+          <label className="block text-sm font-semibold text-slate-700">{label}</label>
+          <button type="button" onClick={() => { setIsMediaLibraryOpen(true); setActiveMediaTarget({ type: 'nested', section, field }); fetchMedia(); }} className="text-[11px] font-bold text-slate-600 hover:text-slate-800 bg-slate-100 px-2 py-0.5 rounded transition-colors">View Media Library</button>
+        </div>
         <div className="flex gap-2 items-center">
           <input
             type="text"
@@ -684,7 +720,10 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
                               <input type="text" value={item.title} onChange={e => handleWhyChooseItemChange(idx, 'title', e.target.value)} required className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900] text-sm" placeholder="e.g. Free Delivery" />
                             </div>
                             <div>
-                              <label className="block text-xs font-semibold text-slate-700 mb-1">Icon URL (or image)</label>
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="block text-xs font-semibold text-slate-700">Icon URL (or image)</label>
+                                <button type="button" onClick={() => { setIsMediaLibraryOpen(true); setActiveMediaTarget({ type: 'whyChooseUs', index: idx }); fetchMedia(); }} className="text-[10px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded transition-colors">Media Library</button>
+                              </div>
                               <div className="flex gap-2">
                                 <input type="text" value={item.icon} onChange={e => handleWhyChooseItemChange(idx, 'icon', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900] text-sm" placeholder="https://..." />
                                 <label className={`cursor-pointer px-3 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap text-sm ${uploadingField === `whyChooseUs-item-${idx}` ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -727,6 +766,47 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
           </div>
         </div>
       </div>
+    {/* Media Library Modal */}
+    {isMediaLibraryOpen && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-[85vh]">
+          <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
+            <h3 className="text-2xl font-extrabold text-slate-800">Store Media Library</h3>
+            <button onClick={() => setIsMediaLibraryOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors text-3xl leading-none">&times;</button>
+          </div>
+          <div className="p-8 overflow-y-auto flex-1">
+            {loadingMedia ? (
+              <div className="flex justify-center py-10"><span className="text-slate-500 font-medium">Loading media...</span></div>
+            ) : mediaImages.length === 0 ? (
+              <div className="text-center py-20 text-slate-500 font-medium">No media found. Upload images to populate.</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {mediaImages.map((img) => (
+                  <div key={img.name} className="relative group rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 aspect-square shadow-sm hover:shadow-md transition-shadow">
+                    <img src={img.url} alt="media" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
+                      <button onClick={() => {
+                        if (activeMediaTarget.type === 'nested') {
+                          handleNestedChange(activeMediaTarget.section, activeMediaTarget.field, img.url);
+                        } else if (activeMediaTarget.type === 'whyChooseUs') {
+                          handleWhyChooseItemChange(activeMediaTarget.index, 'icon', img.url);
+                        }
+                        setIsMediaLibraryOpen(false);
+                      }} className="bg-white text-slate-900 px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-100 shadow-sm w-3/4">
+                        Select
+                      </button>
+                      <button onClick={() => handleDeleteMedia(img.name)} className="bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 shadow-sm w-3/4">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
     </AdminLayout>
   );
 };

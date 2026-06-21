@@ -19,6 +19,9 @@ const ManageCategory = ({ token, stores, onLogout }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSpeed, setUploadSpeed] = useState('');
   const [activeXhr, setActiveXhr] = useState(null);
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
+  const [mediaImages, setMediaImages] = useState([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -118,6 +121,35 @@ const ManageCategory = ({ token, stores, onLogout }) => {
   const cancelUpload = () => {
     if (activeXhr) {
       activeXhr.abort();
+    }
+  };
+
+  const fetchMedia = async () => {
+    setLoadingMedia(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upload?storeId=${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) setMediaImages(data.images || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMedia(false);
+    }
+  };
+
+  const handleDeleteMedia = async (filename) => {
+    if (!window.confirm("Delete this image permanently from cloud storage?")) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename })
+      });
+      if (response.ok) fetchMedia();
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -238,7 +270,10 @@ const ManageCategory = ({ token, stores, onLogout }) => {
               </div>
               <div><label className="block text-sm font-semibold mb-1 text-slate-700">Description</label><textarea value={description} onChange={e=>setDescription(e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] resize-none" rows="3" placeholder="Optional details..." /></div>
               <div>
-                <label className="block text-sm font-semibold mb-1 text-slate-700">Category Image</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-semibold text-slate-700">Category Image</label>
+                  <button type="button" onClick={() => { setIsMediaLibraryOpen(true); fetchMedia(); }} className="text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 px-2 py-1 rounded transition-colors">View Media Library</button>
+                </div>
                 <div className="flex gap-2">
                   <input type="text" value={image} onChange={e=>setImage(e.target.value)} placeholder="https://..." className="flex-1 w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900]" />
                   <label className={`cursor-pointer px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap ${uploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -278,6 +313,40 @@ const ManageCategory = ({ token, stores, onLogout }) => {
           </div>
         </div>
       </div>
+      {/* Media Library Modal */}
+      {isMediaLibraryOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-[85vh]">
+            <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
+              <h3 className="text-2xl font-extrabold text-slate-800">Store Media Library</h3>
+              <button onClick={() => setIsMediaLibraryOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors text-3xl leading-none">&times;</button>
+            </div>
+            <div className="p-8 overflow-y-auto flex-1">
+              {loadingMedia ? (
+                <div className="flex justify-center py-10"><span className="text-slate-500 font-medium">Loading media...</span></div>
+              ) : mediaImages.length === 0 ? (
+                <div className="text-center py-20 text-slate-500 font-medium">No media found. Upload images to populate.</div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  {mediaImages.map((img) => (
+                    <div key={img.name} className="relative group rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 aspect-square shadow-sm hover:shadow-md transition-shadow">
+                      <img src={img.url} alt="media" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
+                        <button onClick={() => { setImage(img.url); setIsMediaLibraryOpen(false); }} className="bg-white text-slate-900 px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-100 shadow-sm w-3/4">
+                          Select
+                        </button>
+                        <button onClick={() => handleDeleteMedia(img.name)} className="bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 shadow-sm w-3/4">
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };
