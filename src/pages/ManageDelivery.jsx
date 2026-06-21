@@ -277,18 +277,27 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
           {/* Delivery Area Tab */}
           {activeTab === 'areas' && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn">              
-              <div className="mb-8 max-w-md">
-                <h3 className="block text-sm font-bold text-slate-700 mb-2"><MapPin size={22} className="text-[#76b900]" /> Select Delivery Mode</h3>
-                <p className="text-sm text-slate-500 mb-3">Choose how you want to restrict delivery areas.</p>
-                <select
-                  value={formData.deliveryMode}
-                  onChange={e => setFormData({...formData, deliveryMode: e.target.value})}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-slate-800 font-bold"
-                >
-                  <option value="all">All over India</option>
-                  <option value="state">State wise</option>
-                  <option value="pincode">Pincode wise</option>
-                </select>
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-5 bg-slate-50 rounded-xl border border-slate-200 mb-8 animate-fadeIn">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="p-3 bg-green-50 rounded-lg text-[#76b900] shrink-0">
+                    <MapPin size={24} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-base">Select Delivery Mode</h4>
+                    <p className="text-xs text-slate-500">Choose how you want to restrict delivery areas.</p>
+                  </div>
+                </div>
+                <div className="w-full lg:w-72 shrink-0">
+                  <select
+                    value={formData.deliveryMode}
+                    onChange={e => setFormData({...formData, deliveryMode: e.target.value})}
+                    className="w-full px-4 py-3 border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-[#76b900] text-slate-800 font-bold shadow-sm"
+                  >
+                    <option value="all">All over India</option>
+                    <option value="state">State wise</option>
+                    <option value="pincode">Pincode wise</option>
+                  </select>
+                </div>
               </div>
 
               {/* Mode Specific Contents */}
@@ -359,34 +368,38 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
 
               {formData.deliveryMode === 'pincode' && (
                 <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 animate-fadeIn">
-                  <p className="text-sm font-bold text-slate-700 mb-4">Manage Allowed Pincodes ({formData.allowedPincodes.length} selected)</p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setSelectedDistrict(''); setSelectedOffice(''); }} className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#76b900] text-sm">
-                      <option value="">Select State</option>
-                      {locationMap.map(loc => (
-                        <option key={loc.stateName} value={loc.stateName}>{loc.stateName}</option>
-                      ))}
-                    </select>
+                  <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6 border-b border-slate-200 pb-6">
+                    <div className="shrink-0">
+                      <p className="text-sm font-bold text-slate-700">Manage Pincodes ({formData.allowedPincodes.length} selected)</p>
+                    </div>
                     
-                    <select value={selectedDistrict} onChange={e => { setSelectedDistrict(e.target.value); setSelectedOffice(''); }} disabled={!selectedState} className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#76b900] text-sm disabled:opacity-50">
-                      <option value="">Select District</option>
-                      {locationMap.find(loc => loc.stateName === selectedState)?.districts.map(dist => (
-                        <option key={dist} value={dist}>{dist}</option>
-                      ))}
-                    </select>
+                    <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto flex-1 xl:justify-center">
+                      <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setSelectedDistrict(''); setSelectedOffice(''); }} className="w-full sm:w-40 px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#76b900] text-xs font-semibold bg-white">
+                        <option value="">Select State</option>
+                        {locationMap.map(loc => (
+                          <option key={loc.stateName} value={loc.stateName}>{loc.stateName}</option>
+                        ))}
+                      </select>
+                      
+                      <select value={selectedDistrict} onChange={e => { setSelectedDistrict(e.target.value); setSelectedOffice(''); }} disabled={!selectedState} className="w-full sm:w-40 px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#76b900] text-xs font-semibold bg-white disabled:opacity-50">
+                        <option value="">Select District</option>
+                        {locationMap.find(loc => loc.stateName === selectedState)?.districts.map(dist => (
+                          <option key={dist} value={dist}>{dist}</option>
+                        ))}
+                      </select>
 
-                    <select value={selectedOffice} onChange={e => setSelectedOffice(e.target.value)} disabled={!selectedDistrict || offices.length === 0} className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#76b900] text-sm disabled:opacity-50">
-                      <option value="">Select Office / Pincode</option>
-                      {offices.map(off => (
-                        <option key={off._id} value={off.pincode}>{off.officeName} ({off.pincode})</option>
-                      ))}
-                    </select>
-                  </div>
+                      <select value={selectedOffice} onChange={e => setSelectedOffice(e.target.value)} disabled={!selectedDistrict || offices.length === 0} className="w-full sm:w-56 px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#76b900] text-xs font-semibold bg-white disabled:opacity-50">
+                        <option value="">Select Office / Pincode</option>
+                        {offices.map(off => (
+                          <option key={off._id} value={off.pincode}>{off.officeName} ({off.pincode})</option>
+                        ))}
+                      </select>
+                    </div>
 
-                  <div className="flex flex-wrap justify-end gap-3 mb-6 border-b border-slate-200 pb-6">
-                    <button type="button" onClick={handleAddEntireDistrict} disabled={!selectedDistrict || offices.length === 0} className="px-6 py-2 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition disabled:opacity-50 whitespace-nowrap">Add Entire District</button>
-                    <button type="button" onClick={handleAddPincode} disabled={!selectedOffice} className="px-6 py-2 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition disabled:opacity-50 whitespace-nowrap">Add Pincode</button>
+                    <div className="flex gap-2 w-full sm:w-auto shrink-0 justify-end">
+                      <button type="button" onClick={handleAddEntireDistrict} disabled={!selectedDistrict || offices.length === 0} className="px-4 py-2 bg-[#76b900] text-white text-xs font-bold rounded-xl hover:bg-[#659e00] transition disabled:opacity-50 whitespace-nowrap">Add District</button>
+                      <button type="button" onClick={handleAddPincode} disabled={!selectedOffice} className="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl hover:bg-slate-900 transition disabled:opacity-50 whitespace-nowrap">Add Pincode</button>
+                    </div>
                   </div>
 
                   {/* Pincode Allowed List & Search */}
