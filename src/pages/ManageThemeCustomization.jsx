@@ -171,6 +171,7 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
 
     const uploadData = new FormData();
     uploadData.append('storeId', currentStore._id);
+    uploadData.append('type', 'icon');
     uploadData.append('images', files[0]);
 
     setUploadingField(`whyChooseUs-item-${index}`);
@@ -230,6 +231,13 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
 
     const uploadData = new FormData();
     uploadData.append('storeId', currentStore._id);
+    
+    let type = 'product';
+    if (field === 'officialfaviconimage') type = 'favicon';
+    else if (field.toLowerCase().includes('logo')) type = 'logo';
+    else if (section === 'banner' || field.toLowerCase().includes('banner')) type = 'banner';
+    
+    uploadData.append('type', type);
     uploadData.append('images', files[0]);
 
     setUploadingField(`${section}-${field}`);

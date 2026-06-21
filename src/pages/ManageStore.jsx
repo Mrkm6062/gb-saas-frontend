@@ -219,8 +219,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
     uploadData.append('storeId', currentStore._id);
     
     if (field === 'banner') {
+      uploadData.append('type', 'banner');
       files.forEach(file => uploadData.append('images', file));
     } else {
+      uploadData.append('type', field); // 'logo' or 'favicon'
       uploadData.append('images', files[0]); // Just one file for logo/favicon
     }
 

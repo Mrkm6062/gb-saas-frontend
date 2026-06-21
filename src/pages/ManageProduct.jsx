@@ -479,6 +479,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
     const uploadData = new FormData();
     uploadData.append('storeId', currentStore._id);
+    uploadData.append('type', 'product');
     files.forEach(file => uploadData.append('images', file));
 
     setUploadingProductImage(true);
