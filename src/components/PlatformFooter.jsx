@@ -45,11 +45,13 @@ const PlatformFooter = () => {
   return (
     <footer className="bg-white border-t border-slate-200 px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 z-10 shrink-0">
       <div className="flex items-center gap-6 flex-wrap justify-center text-sm font-bold text-slate-500">
-        {policies.map(policy => (
-          <Link key={policy._id} to={`/policies/${policy.type}`} className="hover:text-[#76b900] transition-colors">
-            {policy.title}
-          </Link>
-        ))}
+        {policies
+          .filter(policy => !policy.type.toLowerCase().startsWith('salary') && !policy.type.toLowerCase().startsWith('commission'))
+          .map(policy => (
+            <Link key={policy._id} to={`/policies/${policy.type}`} className="hover:text-[#76b900] transition-colors">
+              {policy.title}
+            </Link>
+          ))}
       </div>
       <div className="flex items-center gap-5 text-slate-400">
         {socialLinks.length > 0 ? socialLinks.map(link => (
