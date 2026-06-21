@@ -20,6 +20,7 @@ import ManageCheckout from './pages/ManageCheckout';
 import ManageTheme from './pages/ManageTheme';
 import ManageThemeCustomization from './pages/ManageThemeCustomization';
 import ManageReviews from './pages/ManageReviews';
+import SeoSetting from './pages/SeoSetting';
 
 
 function App() {
@@ -143,6 +144,10 @@ function App() {
         <Route 
           path="/store/:storeId/policies" 
           element={token ? <ManagePolicy token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/store/:storeId/seo" 
+          element={token ? <SeoSetting token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="*" 

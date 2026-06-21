@@ -46,7 +46,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       Overview: location.pathname === '/' || location.pathname === `/store/${activeStoreId}`,
       Inventory: location.pathname.includes('/products') || location.pathname.includes('/categories'),
       Orders: location.pathname.includes('/orders') || location.pathname.includes('/live-orders'),
-      Settings: location.pathname.includes('/alerts') || location.pathname.includes('/delivery') || location.pathname.includes('/checkout') || location.pathname.includes('/policies'),
+      Settings: location.pathname.includes('/alerts') || location.pathname.includes('/delivery') || location.pathname.includes('/checkout') || location.pathname.includes('/policies') || location.pathname.includes('/seo'),
       Themes: location.pathname.includes('/themes') || location.pathname.includes('/theme-customization')
     };
   });
@@ -152,7 +152,8 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
         { name: 'Alerts & Emails', path: activeStoreId ? `/store/${activeStoreId}/alerts` : '#' },
         { name: 'Delivery', path: activeStoreId ? `/store/${activeStoreId}/delivery` : '#' },
         { name: 'Checkout & Payment', path: activeStoreId ? `/store/${activeStoreId}/checkout` : '#' },
-        { name: 'Store Policy', path: activeStoreId ? `/store/${activeStoreId}/policies` : '#' }
+        { name: 'Store Policy', path: activeStoreId ? `/store/${activeStoreId}/policies` : '#' },
+        { name: 'SEO & AI Settings', path: activeStoreId ? `/store/${activeStoreId}/seo` : '#' }
       ]
     },
     { name: 'Plan & Billing', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' },
