@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { 
@@ -29,6 +29,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
   const [activeTab, setActiveTab] = useState('placed'); // 'placed' | 'shipped'
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [printingOrderId, setPrintingOrderId] = useState(null);
+  const fullscreenRef = useRef(null);
 
   // Modals state
   const [confirmDeliveredModal, setConfirmDeliveredModal] = useState({ isOpen: false, order: null });
@@ -69,9 +70,11 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
   // Fullscreen toggle handler
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen()
-        .then(() => setIsFullscreen(true))
-        .catch(err => console.error("Fullscreen error:", err));
+      if (fullscreenRef.current) {
+        fullscreenRef.current.requestFullscreen()
+          .then(() => setIsFullscreen(true))
+          .catch(err => console.error("Fullscreen error:", err));
+      }
     } else {
       document.exitFullscreen()
         .then(() => setIsFullscreen(false));
@@ -259,13 +262,16 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Live Orders Monitor">
-      <div className={`w-full px-6 py-8 ${isFullscreen ? 'bg-slate-900 min-h-screen text-white' : ''}`}>
+      <div 
+        ref={fullscreenRef}
+        className="w-full px-6 py-8 bg-slate-50 text-slate-900 overflow-y-auto h-full min-h-screen"
+      >
         
         {/* Top Header Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h2 className={`text-2xl font-black ${isFullscreen ? 'text-white' : 'text-slate-800'}`}>Live Order Dashboard</h2>
-            <p className={`text-sm ${isFullscreen ? 'text-slate-400' : 'text-slate-500'} mt-1`}>
+            <h2 className="text-2xl font-black text-slate-800">Live Order Dashboard</h2>
+            <p className="text-sm text-slate-500 mt-1">
               Monitoring incoming sales for <span className="font-bold">{currentStore.storeName}</span>
             </p>
           </div>
@@ -311,7 +317,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
         {loading ? (
           <div className="text-center py-20 text-slate-500 font-bold">Connecting to live order feed...</div>
         ) : filteredOrders.length === 0 ? (
-          <div className={`text-center py-20 border-2 border-dashed ${isFullscreen ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-white'} rounded-2xl`}>
+          <div className="text-center py-20 border-2 border-dashed border-slate-200 bg-white rounded-2xl">
             <ClipboardList size={40} className="mx-auto text-slate-400 mb-4" />
             <h4 className="font-bold text-lg">No Orders in this queue</h4>
             <p className="text-sm text-slate-400 mt-1">New incoming orders will appear here automatically.</p>
@@ -326,14 +332,10 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
               return (
                 <div 
                   key={order._id}
-                  className={`flex flex-col h-full rounded-2xl border transition-all ${
-                    isFullscreen 
-                      ? 'bg-slate-800 border-slate-700 shadow-md shadow-black/10' 
-                      : 'bg-white border-slate-200 shadow-sm'
-                  } ${!order.orderConfirmed && activeTab === 'placed' ? 'ring-2 ring-amber-500/55' : ''} overflow-hidden`}
+                  className={`flex flex-col h-full rounded-2xl border border-slate-200 bg-white shadow-sm transition-all ${!order.orderConfirmed && activeTab === 'placed' ? 'ring-2 ring-amber-500/55' : ''} overflow-hidden`}
                 >
                   {/* Card Header */}
-                  <div className={`p-4 border-b flex justify-between items-center ${isFullscreen ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50/50'}`}>
+                  <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                     <div>
                       <span className="text-xs text-slate-400 font-bold font-mono">ID:</span>
                       <span className="text-sm font-bold font-mono text-blue-600 ml-1">#{order._id.slice(-6).toUpperCase()}</span>
@@ -384,7 +386,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                   </div>
 
                   {/* Actions & Status Grid */}
-                  <div className={`p-4 border-t ${isFullscreen ? 'border-slate-700 bg-slate-800/30' : 'border-slate-100 bg-slate-50/20'} space-y-3`}>
+                  <div className="p-4 border-t border-slate-100 bg-slate-50/20 space-y-3">
                     
                     {/* Order Confirmation button */}
                     {!order.orderConfirmed ? (
