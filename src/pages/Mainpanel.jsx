@@ -306,20 +306,20 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
 
   // Analytics Calculations
   const deliveredOrders = orders.filter(o => o.orderStatus === 'delivered');
-  const totalSales = deliveredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const totalSales = Number(deliveredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0).toFixed(2));
   const placedOrders = orders.filter(o => o.orderStatus === 'placed').length;
   
   const today = new Date();
-  const todaysSales = orders.filter(o => {
+  const todaysSales = Number(orders.filter(o => {
     const orderDate = new Date(o.createdAt);
     return orderDate.getDate() === today.getDate() &&
            orderDate.getMonth() === today.getMonth() &&
            orderDate.getFullYear() === today.getFullYear();
-  }).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }).reduce((sum, o) => sum + (o.totalAmount || 0), 0).toFixed(2));
 
   const uniqueCustomers = new Set(orders.map(o => o.customerEmail || o.customerPhone).filter(Boolean));
   const totalCustomers = uniqueCustomers.size;
-  const averageLifetimeSpend = totalCustomers > 0 ? Math.round(totalSales / totalCustomers) : 0;
+  const averageLifetimeSpend = totalCustomers > 0 ? Number((totalSales / totalCustomers).toFixed(2)) : 0;
 
   // Sales Trends (Last 7 Days)
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
@@ -335,7 +335,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
              orderDate.getMonth() === date.getMonth() &&
              orderDate.getFullYear() === date.getFullYear();
     }).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-    return { day: date.toLocaleDateString('en-US', { weekday: 'short' }), sales: daySales };
+    return { day: date.toLocaleDateString('en-US', { weekday: 'short' }), sales: Number(daySales.toFixed(2)) };
   });
   const maxSales = Math.max(...salesData.map(d => d.sales), 1); // Avoid division by zero
 
@@ -352,7 +352,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     });
   });
   const topProducts = Object.entries(productSales)
-    .map(([name, stats]) => ({ name, ...stats }))
+    .map(([name, stats]) => ({ name, qty: stats.qty, revenue: Number(stats.revenue.toFixed(2)) }))
     .sort((a, b) => b.qty - a.qty)
     .slice(0, 5);
   const maxProductQty = Math.max(...topProducts.map(p => p.qty), 1); // Avoid division by zero
