@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { AlertCircle, HelpCircle, Mail, Search, ChevronLeft, ChevronRight, Printer, Copy, Download, X } from 'lucide-react';
+import { AlertCircle, HelpCircle, Mail, Search, ChevronLeft, ChevronRight, Printer, Copy, Download, X, Truck } from 'lucide-react';
 
 const ManageOrders = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
@@ -21,6 +21,39 @@ const ManageOrders = ({ token, stores, onLogout }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
+  const orderIdsRef = useRef(new Set());
+
+  const playNotificationSound = () => {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      const audioCtx = new AudioContextClass();
+      
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); 
+      gain1.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+      osc1.start(audioCtx.currentTime);
+      osc1.stop(audioCtx.currentTime + 0.2);
+
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); 
+      gain2.gain.setValueAtTime(0.15, audioCtx.currentTime + 0.15);
+      gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
+      osc2.start(audioCtx.currentTime + 0.15);
+      osc2.stop(audioCtx.currentTime + 0.45);
+    } catch (err) {
+      console.warn('Audio play warning:', err);
+    }
+  };
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
@@ -32,6 +65,16 @@ const ManageOrders = ({ token, stores, onLogout }) => {
       });
       if (response.ok) {
         const data = await response.json();
+        
+        // Play notification sound on new order
+        if (orderIdsRef.current.size > 0) {
+          const hasNewOrder = data.some(order => !orderIdsRef.current.has(order._id));
+          if (hasNewOrder) {
+            playNotificationSound();
+          }
+        }
+        orderIdsRef.current = new Set(data.map(order => order._id));
+
         setOrders(data);
       } else {
         setError('Failed to load orders.');
@@ -75,7 +118,11 @@ const ManageOrders = ({ token, stores, onLogout }) => {
       });
 
       if (response.ok) {
+        const updatedOrder = await response.json();
         fetchOrders(); // Refresh the list
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder(updatedOrder);
+        }
       } else {
         alert('Failed to update status');
       }
@@ -400,13 +447,35 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                         </select>
                       </td>
                       <td className="p-4">
-                      <select value={order.orderStatus} onChange={(e) => handleStatusChange(order._id, 'order', e.target.value, order)} className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.orderStatus === 'delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' : order.orderStatus === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : order.orderStatus === 'canceled' ? 'bg-red-50 text-red-700 border-red-200' : order.orderStatus === 'returned' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                          <option value="placed">Placed</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                        <option value="canceled">Canceled</option>
-                        <option value="returned">Returned</option>
-                        </select>
+                        <div className="flex items-center gap-2">
+                          <select value={order.orderStatus} onChange={(e) => handleStatusChange(order._id, 'order', e.target.value, order)} className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.orderStatus === 'delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' : order.orderStatus === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : order.orderStatus === 'canceled' ? 'bg-red-50 text-red-700 border-red-200' : order.orderStatus === 'returned' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                            <option value="placed" disabled={order.orderStatus !== 'placed'}>Placed</option>
+                            <option value="shipped" disabled={order.orderStatus !== 'placed'}>Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="canceled">Canceled</option>
+                            <option value="returned">Returned</option>
+                          </select>
+                          {order.orderStatus === 'shipped' && (
+                            <button 
+                              onClick={() => {
+                                const isOwn = order.ShippingMethod && !order.ShippingMethod.startsWith('By Shipping Company');
+                                setTrackingModal({
+                                  isOpen: true,
+                                  orderId: order._id,
+                                  ShippingMethod: isOwn ? 'By Store Name' : 'By Shipping Company',
+                                  ShippingCompany: order.ShippingCompany || '',
+                                  ShippingTrackingNumber: order.ShippingTrackingNumber || '',
+                                  DeliveryPersonName: order.DeliveryPersonName || '',
+                                  DeliveryPersonPhone: order.DeliveryPersonPhone || ''
+                                });
+                              }}
+                              className="p-1.5 text-indigo-600 hover:text-indigo-800 transition bg-indigo-50 hover:bg-indigo-100 rounded-lg flex items-center justify-center shrink-0"
+                              title="Edit Tracking Details"
+                            >
+                              <Truck size={14} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -504,12 +573,34 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                     <p className="text-sm text-slate-600 mt-1">{selectedOrder.address?.city}, {selectedOrder.address?.state} {selectedOrder.address?.pincode}</p>
                     {selectedOrder.address?.alternateNumber && <p className="text-xs text-slate-500 mt-2">Alt Phone: {selectedOrder.address?.alternateNumber}</p>}
                   </div>
-                  {(selectedOrder.ShippingMethod || selectedOrder.ShippingTrackingNumber || selectedOrder.DeliveryPersonName) && (
+                  {(selectedOrder.orderStatus === 'shipped' || selectedOrder.ShippingMethod || selectedOrder.ShippingTrackingNumber || selectedOrder.DeliveryPersonName) && (
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 md:col-span-2">
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Tracking Information</h4>
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tracking Information</h4>
+                        {selectedOrder.orderStatus === 'shipped' && (
+                          <button 
+                            onClick={() => {
+                              const isOwn = selectedOrder.ShippingMethod && !selectedOrder.ShippingMethod.startsWith('By Shipping Company');
+                              setTrackingModal({
+                                isOpen: true,
+                                orderId: selectedOrder._id,
+                                ShippingMethod: isOwn ? 'By Store Name' : 'By Shipping Company',
+                                ShippingCompany: selectedOrder.ShippingCompany || '',
+                                ShippingTrackingNumber: selectedOrder.ShippingTrackingNumber || '',
+                                DeliveryPersonName: selectedOrder.DeliveryPersonName || '',
+                                DeliveryPersonPhone: selectedOrder.DeliveryPersonPhone || ''
+                              });
+                            }}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-lg border border-indigo-100"
+                            title="Edit Tracking Details"
+                          >
+                            <Truck size={12} /> Edit Tracking
+                          </button>
+                        )}
+                      </div>
                       {selectedOrder.ShippingMethod && <p className="text-sm text-slate-800 font-medium mb-3">Method: <span className="bg-slate-200 px-2 py-1 rounded text-xs ml-1">{selectedOrder.ShippingMethod}</span></p>}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-3 rounded-lg border border-slate-100">
-                        {selectedOrder.ShippingMethod !== 'By Shipping Company' ? (
+                        {selectedOrder.ShippingMethod && !selectedOrder.ShippingMethod.startsWith('By Shipping Company') ? (
                           <>
                             <div>
                               <p className="text-xs text-slate-500 mb-1">Delivery Person</p>
