@@ -394,7 +394,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Sales</p>
-                  <p className="text-2xl font-extrabold text-slate-800">₹{totalSales}</p>
+                  <p className="text-2xl font-extrabold text-slate-800">₹{Number(totalSales).toFixed(2)}</p>
                 </div>
               </div>
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
@@ -403,7 +403,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Today's Sales</p>
-                  <p className="text-2xl font-extrabold text-slate-800">₹{todaysSales}</p>
+                  <p className="text-2xl font-extrabold text-slate-800">₹{Number(todaysSales).toFixed(2)}</p>
                 </div>
               </div>
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
@@ -430,7 +430,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Avg Lifetime Spend</p>
-                  <p className="text-2xl font-extrabold text-slate-800">₹{averageLifetimeSpend}</p>
+                  <p className="text-2xl font-extrabold text-slate-800">₹{Number(averageLifetimeSpend).toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -463,7 +463,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                     const bottomPos = `${20 + (d.sales / maxSales) * 60}%`;
                     return (
                       <div key={i} className="absolute flex flex-col items-center transform -translate-x-1/2" style={{ left: leftPos, bottom: bottomPos }}>
-                        <span className="text-[10px] md:text-xs font-bold text-slate-600 bg-white/80 px-1.5 py-0.5 rounded-md mb-2 shadow-sm border border-slate-100 whitespace-nowrap">₹{d.sales}</span>
+                        <span className="text-[10px] md:text-xs font-bold text-slate-600 bg-white/80 px-1.5 py-0.5 rounded-md mb-2 shadow-sm border border-slate-100 whitespace-nowrap">₹{Number(d.sales).toFixed(2)}</span>
                         <div className="w-3 h-3 bg-white border-[3px] border-[#76b900] rounded-full shadow-sm z-10 transform translate-y-1.5"></div>
                       </div>
                     );
@@ -499,7 +499,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                       <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                         <div className="bg-[#ff8a00] h-full rounded-full transition-all duration-500" style={{ width: `${(prod.qty / maxProductQty) * 100}%` }}></div>
                       </div>
-                      <p className="text-xs text-slate-400 mt-1.5 font-medium">Revenue: ₹{prod.revenue}</p>
+                      <p className="text-xs text-slate-400 mt-1.5 font-medium">Revenue: ₹{Number(prod.revenue).toFixed(2)}</p>
                     </div>
                   ))}
                 </div>
@@ -541,7 +541,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                           </td>
                           <td className="p-4 font-semibold text-slate-800">{order.customerName}</td>
                           <td className="p-4 text-center text-slate-600 font-medium">{order.orderItems?.length || 0}</td>
-                          <td className="p-4 text-right font-extrabold text-green-600">₹{order.totalAmount}</td>
+                          <td className="p-4 text-right font-extrabold text-green-600">₹{Number(order.totalAmount).toFixed(2)}</td>
                           <td className="p-4 text-center">
                             <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-bold ${order.orderStatus === 'delivered' ? 'bg-blue-100 text-blue-700' : order.orderStatus === 'shipped' ? 'bg-indigo-100 text-indigo-700' : order.orderStatus === 'canceled' ? 'bg-red-100 text-red-700' : order.orderStatus === 'returned' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-700'}`}>{order.orderStatus}</span>
                           </td>
@@ -781,23 +781,23 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                   <tfoot className="bg-slate-50/80 border-t border-slate-200">
                     <tr>
                       <td colSpan="3" className="p-3 text-right font-semibold text-slate-600">Subtotal:</td>
-                      <td className="p-3 text-right font-bold text-slate-800">₹{selectedOrder.totalAmount + (selectedOrder.discountAmount || 0)}</td>
+                      <td className="p-3 text-right font-bold text-slate-800">₹{Number(selectedOrder.totalAmount + (selectedOrder.discountAmount || 0)).toFixed(2)}</td>
                     </tr>
                     {selectedOrder.couponCode && (
                       <tr>
                         <td colSpan="3" className="p-3 text-right font-semibold text-green-600">Discount ({selectedOrder.couponCode}):</td>
-                        <td className="p-3 text-right font-bold text-green-600">-₹{selectedOrder.discountAmount}</td>
+                        <td className="p-3 text-right font-bold text-green-600">-₹{Number(selectedOrder.discountAmount).toFixed(2)}</td>
                       </tr>
                     )}
                     {selectedOrder.shippingCharge > 0 && (
                       <tr>
                         <td colSpan="3" className="p-3 text-right font-semibold text-slate-600">Shipping Charge:</td>
-                        <td className="p-3 text-right font-bold text-slate-800">₹{selectedOrder.shippingCharge}</td>
+                        <td className="p-3 text-right font-bold text-slate-800">₹{Number(selectedOrder.shippingCharge).toFixed(2)}</td>
                       </tr>
                     )}
                     <tr>
                       <td colSpan="3" className="p-3 text-right font-bold text-slate-800 text-base">Final Total:</td>
-                      <td className="p-3 text-right font-extrabold text-slate-900 text-base">₹{selectedOrder.totalAmount}</td>
+                      <td className="p-3 text-right font-extrabold text-slate-900 text-base">₹{Number(selectedOrder.totalAmount).toFixed(2)}</td>
                     </tr>
                   </tfoot>
                 </table>
