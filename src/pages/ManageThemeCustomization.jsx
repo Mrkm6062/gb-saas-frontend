@@ -27,7 +27,7 @@ const initialForm = {
   category: { bgColor: '#ffffff' },
   productCard: { bgColor: '#ffffff', borderColor: '#e5e7eb' },
   footer: { bgColor: '#111827', textColor: '#ffffff', officialdesktopLogo: '', officialmobileLogo: '', description: '© 2024 Your Store. All rights reserved.', newsletter: { enabled: false, placeholder: 'Enter your email', buttonText: 'Subscribe' } },
-  whyChooseUs: { enabled: true, title: 'Why Choose Us', subtitle: '', items: [] }
+  whyChooseUs: { enabled: true, title: 'Why Choose Us', subtitle: '', bgColor: '#f9fafb', textColor: '#111111', itemTextColor: '#111111', itemTitleColor: '#111111', items: [] }
 };
 
 const ManageThemeCustomization = ({ token, stores, onLogout }) => {
@@ -698,6 +698,13 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
                         className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#76b900]" 
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                    {renderColorInput('whyChooseUs', 'bgColor', 'Section Background Color')}
+                    {renderColorInput('whyChooseUs', 'textColor', 'Section Text Color (Title & Subtitle)')}
+                    {renderColorInput('whyChooseUs', 'itemTitleColor', 'Feature Title Color')}
+                    {renderColorInput('whyChooseUs', 'itemTextColor', 'Feature Description Color')}
                   </div>
 
                   <div className="pt-4 border-t border-slate-100">
