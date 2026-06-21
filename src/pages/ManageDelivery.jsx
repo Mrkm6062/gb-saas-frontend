@@ -162,7 +162,7 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Delivery">
-      <div className="w-full px-6 py-10">
+      <div className="w-full px-6 pb-10 pt-4">
 
         {status && (
           <div className={`p-4 mb-6 rounded-xl font-bold text-sm border ${status.includes('Error') ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
@@ -170,35 +170,45 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
           </div>
         )}
 
-        {/* Tab Navigation Buttons */}
-        <div className="flex flex-wrap gap-4 mb-8 border-b border-slate-200 pb-4">
-          <button
-            type="button"
-            onClick={() => setActiveTab('charges')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
-              activeTab === 'charges'
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-            }`}
-          >
-            <IndianRupee size={18} />
-            Shipping Charges Setting & Rule
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('areas')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
-              activeTab === 'areas'
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-            }`}
-          >
-            <MapPin size={18} />
-            Delivery Area Setting
-          </button>
-        </div>
-
         <form onSubmit={handleSave} className="space-y-8">
+          {/* Sticky Header Bar with Tabs and Save Button */}
+          <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm py-4 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab('charges')}
+                className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+                  activeTab === 'charges'
+                    ? 'bg-slate-900 text-white shadow-md'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <IndianRupee size={16} />
+                Shipping Charges Setting & Rule
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('areas')}
+                className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+                  activeTab === 'areas'
+                    ? 'bg-slate-900 text-white shadow-md'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <MapPin size={16} />
+                Delivery Area Setting
+              </button>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="px-6 py-2.5 bg-[#76b900] text-white font-bold text-sm rounded-xl hover:bg-[#659e00] transition shadow-md shadow-green-100 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+            >
+              <ShieldCheck size={18} />
+              {loading ? 'Saving...' : 'Save Delivery Settings'}
+            </button>
+          </div>
           {/* Shipping Charges Tab */}
           {activeTab === 'charges' && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn">
@@ -435,13 +445,6 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-4">
-            <button type="submit" disabled={loading} className="px-8 py-3 bg-[#76b900] text-white font-bold text-lg rounded-xl hover:bg-[#659e00] transition shadow-lg shadow-green-100 disabled:opacity-50 flex items-center gap-2">
-              <ShieldCheck size={20} />
-              {loading ? 'Saving...' : 'Save Delivery Settings'}
-            </button>
-          </div>
         </form>
       </div>
     </AdminLayout>
