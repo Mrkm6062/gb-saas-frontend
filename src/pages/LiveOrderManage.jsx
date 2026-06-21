@@ -30,6 +30,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [printingOrderId, setPrintingOrderId] = useState(null);
   const fullscreenRef = useRef(null);
+  const [soundTheme, setSoundTheme] = useState(localStorage.getItem('live_order_sound_theme') || 'chime');
   const orderIdsRef = useRef(new Set());
 
   // Modals state
@@ -44,36 +45,63 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
     DeliveryPersonPhone: ''
   });
 
-  const playNotificationSound = () => {
+  const playNotificationSound = (themeName = soundTheme) => {
     try {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) return;
       const audioCtx = new AudioContextClass();
       
-      const osc1 = audioCtx.createOscillator();
-      const gain1 = audioCtx.createGain();
-      osc1.connect(gain1);
-      gain1.connect(audioCtx.destination);
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); 
-      gain1.gain.setValueAtTime(0.15, audioCtx.currentTime);
-      gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
-      osc1.start(audioCtx.currentTime);
-      osc1.stop(audioCtx.currentTime + 0.2);
+      const playTone = (freq, duration, type = 'sine', delay = 0) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + duration);
+      };
 
-      const osc2 = audioCtx.createOscillator();
-      const gain2 = audioCtx.createGain();
-      osc2.connect(gain2);
-      gain2.connect(audioCtx.destination);
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); 
-      gain2.gain.setValueAtTime(0.15, audioCtx.currentTime + 0.15);
-      gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
-      osc2.start(audioCtx.currentTime + 0.15);
-      osc2.stop(audioCtx.currentTime + 0.45);
+      switch (themeName) {
+        case 'chime':
+          playTone(587.33, 0.2, 'sine', 0); // D5
+          playTone(880, 0.3, 'sine', 0.15); // A5
+          break;
+        case 'beep':
+          playTone(987.77, 0.25, 'triangle', 0); // B5
+          break;
+        case 'doorbell':
+          playTone(659.25, 0.35, 'sine', 0); // E5
+          playTone(523.25, 0.5, 'sine', 0.22); // C5
+          break;
+        case 'arcade':
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.35);
+          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+          osc.start(audioCtx.currentTime);
+          osc.stop(audioCtx.currentTime + 0.35);
+          break;
+        case 'mute':
+        default:
+          break;
+      }
     } catch (err) {
       console.warn('Audio play warning:', err);
     }
+  };
+
+  const handleSoundThemeChange = (newTheme) => {
+    setSoundTheme(newTheme);
+    localStorage.setItem('live_order_sound_theme', newTheme);
+    playNotificationSound(newTheme);
   };
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
@@ -347,16 +375,34 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
             </p>
           </div>
           
-          <button 
-            onClick={handleToggleFullscreen}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-950 font-bold rounded-xl transition shadow-sm text-sm"
-          >
-            {isFullscreen ? (
-              <><Minimize2 size={16} /> Exit Fullscreen</>
-            ) : (
-              <><Maximize2 size={16} /> Enter Fullscreen</>
-            )}
-          </button>
+          <div className="flex gap-3 items-center flex-wrap">
+            {/* Sound Selector */}
+            <div className="flex items-center gap-2 bg-white px-3 py-2 border border-slate-200 rounded-xl shadow-sm text-sm">
+              <span className="text-xs text-slate-500 font-bold">🔊 Sound Alert:</span>
+              <select 
+                value={soundTheme} 
+                onChange={e => handleSoundThemeChange(e.target.value)}
+                className="text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent"
+              >
+                <option value="chime">Sweet Chime</option>
+                <option value="doorbell">Ding Dong</option>
+                <option value="beep">Alert Beep</option>
+                <option value="arcade">Retro Arcade</option>
+                <option value="mute">Muted</option>
+              </select>
+            </div>
+
+            <button 
+              onClick={handleToggleFullscreen}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-950 font-bold rounded-xl transition shadow-sm text-sm"
+            >
+              {isFullscreen ? (
+                <><Minimize2 size={16} /> Exit Fullscreen</>
+              ) : (
+                <><Maximize2 size={16} /> Enter Fullscreen</>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Tab Buttons accordingly Status */}
