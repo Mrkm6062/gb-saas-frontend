@@ -6,6 +6,7 @@ import ManageStore from './pages/ManageStore';
 import ManageProduct from './pages/ManageProduct';
 import UpgradePlan from './pages/UpgradePlan';
 import ManageOrders from './pages/ManageOrders';
+import LiveOrderManage from './pages/LiveOrderManage';
 import ManagePolicy from './pages/ManagePolicy';
 import ManageCustomer from './pages/ManageCustomer';
 import ManageCategory from './pages/ManageCategory';
@@ -134,6 +135,10 @@ function App() {
         <Route 
           path="/store/:storeId/orders" 
           element={token ? <ManageOrders token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/store/:storeId/live-orders" 
+          element={token ? <LiveOrderManage token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/store/:storeId/policies" 

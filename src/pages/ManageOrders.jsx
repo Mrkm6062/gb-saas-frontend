@@ -46,6 +46,8 @@ const ManageOrders = ({ token, stores, onLogout }) => {
   useEffect(() => {
     if (currentStore._id) {
       fetchOrders();
+      const interval = setInterval(fetchOrders, 5000); // Poll orders every 5 seconds for live updates
+      return () => clearInterval(interval);
     }
   }, [currentStore._id]);
 
@@ -180,14 +182,12 @@ const ManageOrders = ({ token, stores, onLogout }) => {
     });
   };
 
-  const handleDownloadImage = async (url) => {
+  const handleDownloadImage = (url) => {
       try {
-          const response = await fetch(url);
-          const blob = await response.blob();
+          const downloadUrl = `${API_BASE_URL}/api/upload/download?url=${encodeURIComponent(url)}`;
           const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          const filename = url.substring(url.lastIndexOf('/') + 1) || 'custom-image.jpg';
-          link.download = filename;
+          link.href = downloadUrl;
+          link.target = '_blank';
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);

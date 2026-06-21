@@ -45,6 +45,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     return {
       Overview: location.pathname === '/' || location.pathname === `/store/${activeStoreId}`,
       Inventory: location.pathname.includes('/products') || location.pathname.includes('/categories'),
+      Orders: location.pathname.includes('/orders') || location.pathname.includes('/live-orders'),
       Settings: location.pathname.includes('/alerts') || location.pathname.includes('/delivery') || location.pathname.includes('/checkout') || location.pathname.includes('/policies'),
       Themes: location.pathname.includes('/themes') || location.pathname.includes('/theme-customization')
     };
@@ -125,7 +126,13 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
         { name: 'Products', path: activeStoreId ? `/store/${activeStoreId}/products` : '#' }
       ]
     },
-    { name: 'Orders', icon: <ClipboardList size={20} />, path: activeStoreId ? `/store/${activeStoreId}/orders` : '#' },
+    { 
+      name: 'Orders', icon: <ClipboardList size={20} />, 
+      subItems: [
+        { name: 'Manage Orders', path: activeStoreId ? `/store/${activeStoreId}/orders` : '#' },
+        { name: 'Live Orders Monitor', path: activeStoreId ? `/store/${activeStoreId}/live-orders` : '#' }
+      ]
+    },
     { name: 'Customers', icon: <Users size={20} />, path: activeStoreId ? `/store/${activeStoreId}/customers` : '#' },
     { name: 'Coupons & Offers', icon: <Ticket size={20} />, path: activeStoreId ? `/store/${activeStoreId}/coupons` : '#' },
     { name: 'Domains', icon: <Globe size={20} />, path: activeStoreId ? `/store/${activeStoreId}/domains` : '#' },
