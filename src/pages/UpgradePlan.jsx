@@ -38,7 +38,9 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
         const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         // Note: You will need to expose a public/user-facing route for GET /api/plans 
         // as the current one is protected under the SuperAdmin middleware
-        const response = await fetch(`${API_BASE_URL}/api/plans`);
+        const response = await fetch(`${API_BASE_URL}/api/plans`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (response.ok) {
           const data = await response.json();
           setPlans(data);
