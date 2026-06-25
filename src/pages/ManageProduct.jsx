@@ -728,6 +728,21 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
   const isNastaCorner = storeTypeName.toLowerCase() === 'nasta corner';
 
+  const lowercaseStoreType = storeTypeName.toLowerCase();
+  const canImportCatalog = 
+    lowercaseStoreType === 'kirana' ||
+    lowercaseStoreType.includes('vegetable') ||
+    lowercaseStoreType.includes('fruit') ||
+    lowercaseStoreType.includes('nasta corner') ||
+    lowercaseStoreType.includes('nsta corner') ||
+    lowercaseStoreType.includes('mobile & computer') ||
+    lowercaseStoreType.includes('mobile') ||
+    lowercaseStoreType.includes('computer') ||
+    lowercaseStoreType.includes('accessories') ||
+    lowercaseStoreType.includes('asscerois') ||
+    lowercaseStoreType.includes('restaurant') ||
+    lowercaseStoreType.includes('resturant');
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
     <div className="w-full px-6 py-10">
@@ -739,12 +754,12 @@ const ManageProduct = ({ token, stores, onLogout }) => {
             </p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2 col-span-2 md:col-span-auto w-full md:w-auto">
             <select
               value={stockFilter}
               onChange={(e) => setStockFilter(e.target.value)}
-              className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white"
+              className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white h-11"
             >
               <option value="all">All Products</option>
               <option value="out_of_stock">Out of Stock</option>
@@ -755,30 +770,32 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                 type="number" 
                 value={stockThreshold}
                 onChange={(e) => setStockThreshold(Number(e.target.value))}
-                className="w-16 px-2 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white text-center"
+                className="w-16 px-2 py-2.5 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white text-center h-11"
                 min="0"
               />
             )}
           </div>
 
-          <button onClick={handleExportCSV} className="px-4 py-2.5 bg-white text-blue-600 border-2 border-blue-200 font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap">
+          <button onClick={handleExportCSV} className="w-full px-4 py-2.5 bg-white text-blue-600 border-2 border-blue-200 font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap">
             <DownloadCloud size={18} /> Export Stock CSV
           </button>
 
-          <label className="px-4 py-2.5 bg-white text-indigo-600 border-2 border-indigo-200 font-bold rounded-xl hover:bg-indigo-50 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap cursor-pointer">
+          <label className="w-full px-4 py-2.5 bg-white text-indigo-600 border-2 border-indigo-200 font-bold rounded-xl hover:bg-indigo-50 transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap cursor-pointer">
             <UploadCloud size={18} /> Bulk Update Stock
             <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} disabled={loading} />
           </label>
 
-          <button onClick={() => { setIsBulkEditing(!isBulkEditing); setBulkEdits({}); }} className={`px-4 py-2.5 bg-white border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm whitespace-nowrap ${isBulkEditing ? 'text-red-500 border-red-200 hover:bg-red-50' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}>
+          <button onClick={() => { setIsBulkEditing(!isBulkEditing); setBulkEdits({}); }} className={`w-full px-4 py-2.5 bg-white border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap ${isBulkEditing ? 'text-red-500 border-red-200 hover:bg-red-50' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}>
             <Edit3 size={18} /> {isBulkEditing ? 'Cancel Quick Edit' : 'Quick Edit'}
           </button>
 
-          <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsImportModalOpen(true)} className={`px-4 py-2.5 border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm whitespace-nowrap ${isLimitReached ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-[#76b900] border-[#76b900] hover:bg-green-50'}`}>
-            {isLimitReached ? <Lock size={18} /> : <DownloadCloud size={18} />} {isLimitReached ? 'Upgrade to Import' : 'Import Catalog'}
-          </button>
+          {canImportCatalog && (
+            <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsImportModalOpen(true)} className={`w-full px-4 py-2.5 border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap ${isLimitReached ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-[#76b900] border-[#76b900] hover:bg-green-50'}`}>
+              {isLimitReached ? <Lock size={18} /> : <DownloadCloud size={18} />} {isLimitReached ? 'Upgrade to Import' : 'Import Catalog'}
+            </button>
+          )}
           
-          <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsFormOpen(true)} className={`px-6 py-2.5 font-bold rounded-xl transition flex items-center justify-center gap-2 whitespace-nowrap ${isLimitReached ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm' : 'bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white hover:shadow-lg'}`}>
+          <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsFormOpen(true)} className={`w-full col-span-2 md:col-span-auto px-6 py-2.5 font-bold rounded-xl transition flex items-center justify-center gap-2 h-11 whitespace-nowrap ${isLimitReached ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm' : 'bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white hover:shadow-lg'}`}>
             {isLimitReached ? <><Lock size={18} /> Upgrade to Add</> : <><span className="text-xl leading-none">+</span> Add Product</>}
           </button>
         </div>
@@ -792,7 +809,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
       {/* Product List */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="grid grid-cols-12 gap-4 p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-sm items-center">
+        <div className="hidden md:grid grid-cols-12 gap-4 p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-sm items-center">
           <div className="col-span-3">Product Name</div><div className="col-span-2">Category</div><div className="col-span-2">Price</div><div className="col-span-2">Stock</div><div className="col-span-1 text-center">Status</div>
           <div className="col-span-2 text-right flex justify-end">
             {isBulkEditing ? (
@@ -808,65 +825,123 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           <div className="p-8 text-center text-slate-500 font-medium">No products match the selected filter.</div>
         ) : (
           displayedProducts.map(p => (
-            <div key={p._id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 items-center hover:bg-slate-50 transition">
-              <div className="col-span-3">
-                <div className="font-semibold text-slate-800">{p.name}</div>
-                {p.Brand && <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block">{p.Brand}</span>}
+            <div key={p._id} className="flex flex-col md:grid md:grid-cols-12 gap-3 md:gap-4 p-4 border-b border-slate-100 items-start md:items-center hover:bg-slate-50 transition">
+              
+              {/* Product Info */}
+              <div className="col-span-3 w-full flex items-center gap-3">
+                {/* Thumbnail Image */}
+                <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] text-slate-400 font-bold">
+                  {p.images && p.images.length > 0 ? (
+                    <img 
+                      src={p.images[0]} 
+                      alt={p.name} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = 'No image';
+                      }}
+                    />
+                  ) : p.image ? (
+                    <img 
+                      src={p.image} 
+                      alt={p.name} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = 'No image';
+                      }}
+                    />
+                  ) : (
+                    "No image"
+                  )}
+                </div>
+                
+                {/* Name, Brand, Category */}
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-slate-800 text-base md:text-sm truncate" title={p.name}>{p.name}</div>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {p.Brand && <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded">{p.Brand}</span>}
+                    <span className="text-[10px] bg-emerald-50 text-emerald-600 font-bold px-1.5 py-0.5 rounded md:hidden">
+                      {categories.find(c => c._id === p.category)?.name || 'Uncategorized'}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="col-span-2 text-slate-600 text-sm font-medium">
+
+              {/* Category (Desktop only) */}
+              <div className="col-span-2 text-slate-600 text-sm font-medium hidden md:block">
                 {categories.find(c => c._id === p.category)?.name || <span className="text-slate-400 italic">None</span>}
               </div>
-              <div className="col-span-2 text-green-600 font-bold">
-                {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-500 text-xs">₹</span>
+
+              {/* Price */}
+              <div className="col-span-2 w-full md:w-auto flex items-center justify-between md:block">
+                <span className="text-slate-400 text-xs md:hidden font-bold">Price</span>
+                <div className="text-green-600 font-bold">
+                  {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-500 text-xs">₹</span>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="w-24 md:w-full md:max-w-[80px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-[#76b900] text-sm text-slate-800 font-medium" 
+                        value={bulkEdits[p._id]?.basePrice ?? (p.basePrice || p.price || 0)} 
+                        onChange={e => handleBulkEditChange(p._id, 'basePrice', e.target.value)} 
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      {p.discount > 0 ? (
+                        <div className="flex flex-col items-end md:items-start">
+                          <span className="line-through text-slate-400 text-xs mr-1">₹{p.basePrice}</span>
+                          <div>
+                            <span>₹{p.price}</span>
+                            <span className="text-red-500 text-[10px] font-bold ml-1">(-{p.discount}%)</span>
+                          </div>
+                        </div>
+                      ) : (
+                        `₹${p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}`
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Stock */}
+              <div className="col-span-2 w-full md:w-auto flex items-center justify-between md:block">
+                <span className="text-slate-400 text-xs md:hidden font-bold">Stock</span>
+                <div className="text-slate-600 text-sm md:text-base font-medium">
+                  {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
                     <input 
                       type="number" 
                       min="0"
-                      className="w-full max-w-[80px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-[#76b900] text-sm text-slate-800 font-medium" 
-                      value={bulkEdits[p._id]?.basePrice ?? (p.basePrice || p.price || 0)} 
-                      onChange={e => handleBulkEditChange(p._id, 'basePrice', e.target.value)} 
+                      className="w-24 md:w-full md:max-w-[80px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-[#76b900] text-sm text-slate-800 font-medium" 
+                      value={bulkEdits[p._id]?.totalStock ?? (p.totalStock !== undefined ? p.totalStock : (p.stock || 0))} 
+                      onChange={e => handleBulkEditChange(p._id, 'totalStock', e.target.value)} 
                     />
-                  </div>
-                ) : (
-                  <div>
-                    {p.discount > 0 ? (
-                      <div>
-                        <span className="line-through text-slate-400 text-xs mr-1">₹{p.basePrice}</span>
-                        <span>₹{p.price}</span>
-                        <span className="text-red-500 text-[10px] font-bold ml-1">(-{p.discount}%)</span>
-                      </div>
-                    ) : (
-                      `₹${p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}`
-                    )}
-                  </div>
-                )}
+                  ) : (
+                    `${p.totalStock !== undefined ? p.totalStock : (p.stock || 0)} ${p.unitType || 'units'}`
+                  )}
+                  {isBulkEditing && p.variants?.length > 0 && <span className="text-[10px] font-bold text-amber-500 block leading-tight mt-1 bg-amber-50 px-2 py-0.5 rounded w-fit">Has variants</span>}
+                </div>
               </div>
-              <div className="col-span-2 text-slate-600">
-                {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
-                  <input 
-                    type="number" 
-                    min="0"
-                    className="w-full max-w-[80px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-[#76b900] text-sm text-slate-800 font-medium" 
-                    value={bulkEdits[p._id]?.totalStock ?? (p.totalStock !== undefined ? p.totalStock : (p.stock || 0))} 
-                    onChange={e => handleBulkEditChange(p._id, 'totalStock', e.target.value)} 
-                  />
-                ) : (
-                  `${p.totalStock !== undefined ? p.totalStock : (p.stock || 0)} ${p.unitType || 'units'}`
-                )}
-                {isBulkEditing && p.variants?.length > 0 && <span className="text-[10px] font-bold text-amber-500 block leading-tight mt-1 bg-amber-50 px-2 py-0.5 rounded w-fit">Has variants</span>}
-              </div>
-              <div className="col-span-1 text-center">
+
+              {/* Status */}
+              <div className="col-span-1 w-full md:w-auto flex items-center justify-between md:block md:text-center">
+                <span className="text-slate-400 text-xs md:hidden font-bold">Status</span>
                 <button 
                   type="button"
                   onClick={() => handleToggleActive(p)}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${p.isActive !== false ? 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100' : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'}`}
+                  className={`px-3 py-1 md:px-2 md:py-0.5 rounded text-[11px] md:text-[10px] font-bold transition-all ${p.isActive !== false ? 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100' : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'}`}
                   title="Click to toggle status"
                 >
                   {p.isActive !== false ? 'Active' : 'Inactive'}
                 </button>
               </div>
-              <div className="col-span-2 text-right flex justify-end gap-2">
+
+              {/* Actions */}
+              <div className="col-span-2 w-full md:w-auto flex md:justify-end gap-2 mt-2 md:mt-0 pt-3 md:pt-0 border-t border-slate-100 md:border-none justify-end">
                 {!isBulkEditing && (
                   <>
                     <button onClick={() => handleEdit(p)} className="text-blue-500 hover:text-blue-700 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded-lg transition">Edit</button>
@@ -874,6 +949,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                   </>
                 )}
               </div>
+
             </div>
           ))
         )}
