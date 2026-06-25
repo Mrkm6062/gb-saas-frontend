@@ -747,6 +747,40 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
+      <style>{`
+        .floating-label {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          background-color: transparent;
+          transition: all 0.2s ease-out;
+          pointer-events: none;
+          color: #94a3b8;
+          font-size: 0.875rem;
+          padding: 0 4px;
+        }
+        .floating-textarea ~ .floating-label {
+          top: 24px;
+          transform: translateY(-50%);
+        }
+        .floating-input:focus ~ .floating-label,
+        .floating-input:not(:placeholder-shown) ~ .floating-label,
+        .floating-input.has-value ~ .floating-label,
+        .floating-textarea:focus ~ .floating-label,
+        .floating-textarea:not(:placeholder-shown) ~ .floating-label {
+          top: 0px;
+          transform: translateY(-50%) scale(0.85);
+          color: #76b900;
+          background-color: #ffffff;
+          font-weight: 600;
+        }
+        .floating-input:focus,
+        .floating-textarea:focus {
+          border-color: #76b900 !important;
+          box-shadow: 0 0 0 1px #76b900;
+        }
+      `}</style>
     <div className="w-full px-6 py-10">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
         <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-3 w-full md:w-auto">
@@ -977,21 +1011,34 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               {/* Basic Info */}
               <div className="space-y-4">
                 <h4 className="font-bold text-lg border-b border-slate-100 pb-2 text-slate-800">Basic Info</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Product Name <span className="text-red-500">*</span></label><input required value={formData.name} onChange={e=>setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Fresh Tomatoes" /></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                  <div className="relative">
+                    <input required placeholder=" " value={formData.name} onChange={e=>setFormData({...formData, name: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white" />
+                    <label className="floating-label">Product Name <span className="text-red-500">*</span></label>
+                  </div>
                   {isNastaCorner && (
-                    <div><label className="block text-sm font-semibold mb-1 text-slate-700">Food Type <span className="text-red-500">*</span></label><input required value={formData.foodtype} onChange={e=>setFormData({...formData, foodtype: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Veg, Non-Veg, Vegan" /></div>
+                    <div className="relative">
+                      <input required placeholder=" " value={formData.foodtype} onChange={e=>setFormData({...formData, foodtype: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white" />
+                      <label className="floating-label">Food Type <span className="text-red-500">*</span></label>
+                    </div>
                   )}
-                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Category</label>
-                    <select value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow bg-white">
+                  <div className="relative">
+                    <select value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})} className={`floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none bg-white text-sm ${formData.category ? 'has-value' : ''}`}>
                       <option value="">Select Category</option>
                       {categories.map(c => (
                         <option key={c._id} value={c._id}>{c.name}</option>
                       ))}
                     </select>
+                    <label className="floating-label">Category</label>
                   </div>
-                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Brand</label><input value={formData.brand} onChange={e=>setFormData({...formData, brand: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Nestlé, Apple" /></div>
-                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Sub Category</label><input value={formData.subCategory} onChange={e=>setFormData({...formData, subCategory: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Dairy, Smartphones" /></div>
+                  <div className="relative">
+                    <input placeholder=" " value={formData.brand} onChange={e=>setFormData({...formData, brand: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white" />
+                    <label className="floating-label">Brand</label>
+                  </div>
+                  <div className="relative">
+                    <input placeholder=" " value={formData.subCategory} onChange={e=>setFormData({...formData, subCategory: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white" />
+                    <label className="floating-label">Sub Category</label>
+                  </div>
               <div className="md:col-span-2 pt-2 border-t border-slate-100 mt-2 space-y-3">
                 {canCustomize && (
                   <>
@@ -1010,7 +1057,10 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                   Product is Active (Visible to Customers)
                 </label>
               </div>
-                  <div className="md:col-span-2"><label className="block text-sm font-semibold mb-1 text-slate-700">Description</label><textarea rows="3" value={formData.description} onChange={e=>setFormData({...formData, description: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow resize-none" placeholder="Provide product details..." /></div>
+                  <div className="md:col-span-2 relative">
+                    <textarea rows="3" placeholder=" " value={formData.description} onChange={e=>setFormData({...formData, description: e.target.value})} className="floating-textarea w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none resize-none text-sm bg-white" />
+                    <label className="floating-label">Description</label>
+                  </div>
                 </div>
               </div>
 
@@ -1058,12 +1108,21 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               {/* Pricing & Inventory */}
               <div className="space-y-4">
                 <h4 className="font-bold text-lg border-b border-slate-100 pb-2 text-slate-800">Pricing & Default Inventory</h4>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Base Price (₹) <span className="text-red-500">*</span></label><input type="number" required={formData.variants.length === 0} value={formData.basePrice} onChange={e=>setFormData({...formData, basePrice: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="0.00" /></div>
-                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Discount (%)</label><input type="number" min="0" max="100" value={formData.discount} onChange={e=>setFormData({...formData, discount: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="0" /></div>
-                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Total Stock</label><input type="number" value={formData.totalStock} onChange={e=>setFormData({...formData, totalStock: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow disabled:bg-slate-50" disabled={formData.variants.length > 0} placeholder={formData.variants.length > 0 ? "Calculated from variants" : "0"} /></div>
-                  <div><label className="block text-sm font-semibold mb-1 text-slate-700">Selling Unit Type</label>
-                    <select value={formData.unitType} onChange={e=>setFormData({...formData, unitType: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow bg-white">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5 pt-2">
+                  <div className="relative">
+                    <input type="number" required={formData.variants.length === 0} placeholder=" " value={formData.basePrice} onChange={e=>setFormData({...formData, basePrice: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white" />
+                    <label className="floating-label">Base Price (₹) <span className="text-red-500">*</span></label>
+                  </div>
+                  <div className="relative">
+                    <input type="number" min="0" max="100" placeholder=" " value={formData.discount} onChange={e=>setFormData({...formData, discount: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white" />
+                    <label className="floating-label">Discount (%)</label>
+                  </div>
+                  <div className="relative">
+                    <input type="number" placeholder=" " value={formData.totalStock} onChange={e=>setFormData({...formData, totalStock: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm disabled:bg-slate-50 bg-white" disabled={formData.variants.length > 0} />
+                    <label className="floating-label">Total Stock</label>
+                  </div>
+                  <div className="relative">
+                    <select value={formData.unitType} onChange={e=>setFormData({...formData, unitType: e.target.value})} className={`floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none bg-white text-sm ${formData.unitType ? 'has-value' : ''}`}>
                       <option value="piece">Piece</option>
                       <option value="kg">Kg</option>
                       <option value="gram">Gram</option>
@@ -1075,6 +1134,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                       <option value="packet">Packet</option>
                       <option value="dozen">Dozen</option>
                     </select>
+                    <label className="floating-label">Selling Unit Type</label>
                   </div>
                 </div>
               </div>
