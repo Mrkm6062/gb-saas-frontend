@@ -57,6 +57,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [favicon, setFavicon] = useState(currentStore.favicon || '');
   const [banner, setBanner] = useState(Array.isArray(currentStore.banner) ? currentStore.banner : (currentStore.banner ? [currentStore.banner] : []));
   const [supportPhoneNumbers, setSupportPhoneNumbers] = useState(Array.isArray(currentStore.supportPhoneNumbers) ? currentStore.supportPhoneNumbers : []);
+  const [whatsappNumber, setWhatsappNumber] = useState(currentStore.whatsappNumber || '');
+  const [whatsappSupportEnabled, setWhatsappSupportEnabled] = useState(currentStore.whatsappSupportEnabled || false);
   const [supportEmail, setSupportEmail] = useState(currentStore.supportEmail || '');
   const [locationAddress, setLocationAddress] = useState(currentStore.locationAddress || '');
   const [mapLocation, setMapLocation] = useState(currentStore.mapLocation || '');
@@ -102,11 +104,13 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setFavicon(currentStore.favicon || '');
     setBanner(Array.isArray(currentStore.banner) ? currentStore.banner : (currentStore.banner ? [currentStore.banner] : []));
     setSupportPhoneNumbers(Array.isArray(currentStore.supportPhoneNumbers) ? currentStore.supportPhoneNumbers : []);
+    setWhatsappNumber(currentStore.whatsappNumber || '');
+    setWhatsappSupportEnabled(currentStore.whatsappSupportEnabled || false);
     setSupportEmail(currentStore.supportEmail || '');
     setLocationAddress(currentStore.locationAddress || '');
     setMapLocation(currentStore.mapLocation || '');
     setStatus('');
-  }, [storeId, currentStore.storeName, currentStore.storeType, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation]);
+  }, [storeId, currentStore.storeName, currentStore.storeType, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.whatsappNumber, currentStore.whatsappSupportEnabled, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation]);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -192,6 +196,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
           favicon,
           banner,
           supportPhoneNumbers,
+          whatsappNumber,
+          whatsappSupportEnabled,
           supportEmail,
           locationAddress,
           mapLocation
@@ -202,7 +208,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
       if (response.ok) {
         setStatus('Store updated successfully!');
-        // Optional: Update your local App.jsx stores state here if passed down as a prop
+        setTimeout(() => window.location.reload(), 1500);
       } else {
         setStatus(`Error: ${data.message || 'Failed to update store'}`);
       }
@@ -955,6 +961,38 @@ const ManageStore = ({ token, stores, onLogout }) => {
                 ))}
                 {supportPhoneNumbers.length === 0 && <div className="text-sm text-slate-500 italic">No support numbers added.</div>}
               </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-5 mt-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-800">WhatsApp Contact Support</h4>
+                  <p className="text-xs text-slate-500">Enable floating WhatsApp button for customer help & support on your storefront.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={whatsappSupportEnabled} 
+                    onChange={e => setWhatsappSupportEnabled(e.target.checked)} 
+                  />
+                  <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#76b900]"></div>
+                </label>
+              </div>
+
+              {whatsappSupportEnabled && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700">WhatsApp Number</label>
+                  <input 
+                    type="text" 
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    placeholder="e.g. 919876543210 (include country code without +)"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
+                  />
+                  <p className="text-xs text-slate-500">Enter your full number starting with country code. Do not include spaces, hyphens, or the '+' sign (e.g. 919876543210 for India).</p>
+                </div>
+              )}
             </div>
 
             <div>
