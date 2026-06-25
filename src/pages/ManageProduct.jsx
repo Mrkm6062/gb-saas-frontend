@@ -752,7 +752,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
             <select
               value={stockFilter}
               onChange={(e) => setStockFilter(e.target.value)}
-              className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white h-11"
+              className="w-full md:w-auto px-4 py-2.5 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white h-11"
             >
               <option value="all">All Products</option>
               <option value="out_of_stock">Out of Stock</option>
@@ -769,26 +769,26 @@ const ManageProduct = ({ token, stores, onLogout }) => {
             )}
           </div>
 
-          <button onClick={handleExportCSV} className="w-full px-4 py-2.5 bg-white text-blue-600 border-2 border-blue-200 font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap">
+          <button onClick={handleExportCSV} className="w-full md:w-auto px-4 py-2.5 bg-white text-blue-600 border-2 border-blue-200 font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap">
             <DownloadCloud size={18} /> Export Stock CSV
           </button>
 
-          <label className="w-full px-4 py-2.5 bg-white text-indigo-600 border-2 border-indigo-200 font-bold rounded-xl hover:bg-indigo-50 transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap cursor-pointer">
+          <label className="w-full md:w-auto px-4 py-2.5 bg-white text-indigo-600 border-2 border-indigo-200 font-bold rounded-xl hover:bg-indigo-50 transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap cursor-pointer">
             <UploadCloud size={18} /> Bulk Update Stock
             <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} disabled={loading} />
           </label>
 
-          <button onClick={() => { setIsBulkEditing(!isBulkEditing); setBulkEdits({}); }} className={`w-full px-4 py-2.5 bg-white border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap ${isBulkEditing ? 'text-red-500 border-red-200 hover:bg-red-50' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}>
+          <button onClick={() => { setIsBulkEditing(!isBulkEditing); setBulkEdits({}); }} className={`w-full md:w-auto px-4 py-2.5 bg-white border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap ${isBulkEditing ? 'text-red-500 border-red-200 hover:bg-red-50' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}>
             <Edit3 size={18} /> {isBulkEditing ? 'Cancel Quick Edit' : 'Quick Edit'}
           </button>
 
           {canImportCatalog && (
-            <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsImportModalOpen(true)} className={`w-full px-4 py-2.5 border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap ${isLimitReached ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-[#76b900] border-[#76b900] hover:bg-green-50'}`}>
+            <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsImportModalOpen(true)} className={`w-full md:w-auto px-4 py-2.5 border-2 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm h-11 whitespace-nowrap ${isLimitReached ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-[#76b900] border-[#76b900] hover:bg-green-50'}`}>
               {isLimitReached ? <Lock size={18} /> : <DownloadCloud size={18} />} {isLimitReached ? 'Upgrade to Import' : 'Import Catalog'}
             </button>
           )}
           
-          <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsFormOpen(true)} className={`w-full col-span-2 md:col-span-auto px-6 py-2.5 font-bold rounded-xl transition flex items-center justify-center gap-2 h-11 whitespace-nowrap ${isLimitReached ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm' : 'bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white hover:shadow-lg'}`}>
+          <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsFormOpen(true)} className={`w-full md:w-auto col-span-2 md:col-span-auto px-6 py-2.5 font-bold rounded-xl transition flex items-center justify-center gap-2 h-11 whitespace-nowrap ${isLimitReached ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm' : 'bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white hover:shadow-lg'}`}>
             {isLimitReached ? <><Lock size={18} /> Upgrade to Add</> : <><span className="text-xl leading-none">+</span> Add Product</>}
           </button>
         </div>
