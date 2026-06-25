@@ -733,8 +733,6 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     <div className="w-full px-6 py-10">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Product Management</h2>
-          <p className="text-slate-500">Manage inventory and variants for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p>
           {maxProducts > 0 && (
             <p className={`text-sm font-bold mt-1 ${isLimitReached ? 'text-red-500' : 'text-slate-500'}`}>
               Plan Limit: {products.length} / {maxProducts} Products Used
