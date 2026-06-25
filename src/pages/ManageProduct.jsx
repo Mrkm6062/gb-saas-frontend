@@ -52,7 +52,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     name: '', description: '', category: '', foodtype: '', unitType: 'piece',
     brand: '', subCategory: '', discount: '', isActive: true,
     basePrice: '', totalStock: '', images: [], variants: [], isCustomizable: false, allowCustomText: false,
-    customizableArea: { x: 25, y: 30, width: 50, height: 40 }
+    customizableArea: { x: 25, y: 30, width: 50, height: 40 },
+    variantType: 'option'
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -305,7 +306,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       variants: product.variants || [],
       isCustomizable: product.isCustomizable || false,
       allowCustomText: product.allowCustomText || false,
-      customizableArea: product.customizableArea || { x: 25, y: 30, width: 50, height: 40 }
+      customizableArea: product.customizableArea || { x: 25, y: 30, width: 50, height: 40 },
+      variantType: product.variantType || 'option'
     });
     setEditingId(product._id);
     setIsFormOpen(true);
@@ -1117,9 +1119,28 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
               {/* Variants */}
               <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                  <h4 className="font-bold text-lg text-slate-800">Product Variants</h4>
-                  <button type="button" onClick={handleAddVariant} className="text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">+ Add Variant</button>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-slate-100 pb-2 gap-3">
+                  <div className="flex items-center gap-3">
+                    <h4 className="font-bold text-lg text-slate-800">Product Variants</h4>
+                    {formData.variants.length > 0 && (
+                      <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-lg">
+                        <label className="text-xs font-bold text-slate-600">Type:</label>
+                        <select 
+                          value={formData.variantType || 'option'} 
+                          onChange={e => setFormData({ ...formData, variantType: e.target.value })}
+                          className="px-2 py-0.5 border border-slate-200 rounded text-xs font-bold text-slate-700 bg-white outline-none focus:border-[#76b900]"
+                        >
+                          <option value="option">Option</option>
+                          <option value="size">Size</option>
+                          <option value="color">Color</option>
+                          <option value="flavor">Flavor</option>
+                          <option value="weight">Weight</option>
+                          <option value="pack">Pack</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                  <button type="button" onClick={handleAddVariant} className="text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors shrink-0">+ Add Variant</button>
                 </div>
                 {formData.variants.length === 0 ? (
                   <p className="text-sm text-slate-500 italic">No variants added. The product will use the base price and total stock.</p>
