@@ -747,13 +747,6 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
     <div className="w-full px-6 py-10">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
-        <div>
-          {maxProducts > 0 && (
-            <p className={`text-sm font-bold mt-1 ${isLimitReached ? 'text-red-500' : 'text-slate-500'}`}>
-              Plan Limit: {products.length} / {maxProducts} Products Used
-            </p>
-          )}
-        </div>
         <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="flex items-center gap-2 col-span-2 md:col-span-auto w-full md:w-auto">
             <select
@@ -798,6 +791,14 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           <button onClick={() => isLimitReached ? navigate(`/store/${storeId}/plan`) : setIsFormOpen(true)} className={`w-full col-span-2 md:col-span-auto px-6 py-2.5 font-bold rounded-xl transition flex items-center justify-center gap-2 h-11 whitespace-nowrap ${isLimitReached ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm' : 'bg-gradient-to-r from-[#76b900] to-[#5a8d00] text-white hover:shadow-lg'}`}>
             {isLimitReached ? <><Lock size={18} /> Upgrade to Add</> : <><span className="text-xl leading-none">+</span> Add Product</>}
           </button>
+        </div>
+
+        <div className="w-full md:w-auto md:text-right">
+          {maxProducts > 0 && (
+            <p className={`text-sm font-bold ${isLimitReached ? 'text-red-500' : 'text-slate-500'}`}>
+              Plan Limit: {products.length} / {maxProducts} Products Used
+            </p>
+          )}
         </div>
       </div>
 
