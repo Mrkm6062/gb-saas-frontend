@@ -134,7 +134,7 @@ const SeoSetting = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="SEO & AI Settings">
-      <div className="w-full px-4 sm:px-6 py-10 max-w-5xl mx-auto">
+      <div className="w-full mx-auto">
         
         {/* Header Title */}
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -164,18 +164,18 @@ const SeoSetting = ({ token, stores, onLogout }) => {
             <p className="text-slate-500 font-semibold">Loading your SEO & AI configurations...</p>
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-8">
+          <div className="space-y-6">
             
-            {/* Sidebar Tabs */}
-            <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-2 border-b lg:border-b-0 lg:border-r border-slate-200 pb-4 lg:pb-0 lg:pr-6 scrollbar-hide">
+            {/* Top Navigation Tabs */}
+            <div className="flex flex-row overflow-x-auto gap-3 border-b border-slate-200 pb-4 scrollbar-hide w-full">
               {sections.map(sec => (
                 <button
                   key={sec.id}
                   onClick={() => setActiveSection(sec.id)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all whitespace-nowrap lg:w-full ${
+                  className={`flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                     activeSection === sec.id
-                      ? 'bg-[#f1f8e9] text-[#76b900] shadow-sm'
-                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                      ? 'bg-[#76b900] text-white shadow-md shadow-green-100'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-slate-200 bg-white'
                   }`}
                 >
                   {sec.icon}
@@ -185,7 +185,7 @@ const SeoSetting = ({ token, stores, onLogout }) => {
             </div>
 
             {/* Config Panels */}
-            <div className="flex-1">
+            <div className="w-full">
               <form onSubmit={handleSave} className="space-y-6">
                 
                 {/* 1. SEO Tab */}
