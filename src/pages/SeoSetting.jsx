@@ -135,19 +135,6 @@ const SeoSetting = ({ token, stores, onLogout }) => {
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="SEO & AI Settings">
       <div className="w-full mx-auto">
-        
-        {/* Header Title */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-extrabold text-slate-800 flex items-center gap-3">
-              <Globe className="text-[#76b900]" /> SEO & AI Control Panel
-            </h2>
-            <p className="text-slate-500 mt-1">
-              Configure search indexing, robots.txt, dynamic sitemaps, and restrict AI bots from scraping <span className="font-bold text-slate-700">{currentStore.storeName}</span>.
-            </p>
-          </div>
-        </div>
-
         {status && (
           <div className={`p-4 mb-6 rounded-xl font-bold text-sm border transition-all animate-fadeIn ${
             status.toLowerCase().includes('error') 
@@ -182,6 +169,18 @@ const SeoSetting = ({ token, stores, onLogout }) => {
                   {sec.label}
                 </button>
               ))}
+
+               {/* Save Button */}
+                <div className="flex justify-end gap-4">
+                  <button 
+                    type="submit" 
+                    disabled={loading} 
+                    className="px-8 py-3 bg-[#76b900] text-white font-bold text-lg rounded-xl hover:bg-[#659e00] transition shadow-lg shadow-green-100 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <Save size={20} />
+                    {loading ? 'Saving...' : 'Save Settings'}
+                  </button>
+                </div>
             </div>
 
             {/* Config Panels */}
@@ -503,19 +502,6 @@ const SeoSetting = ({ token, stores, onLogout }) => {
                     </div>
                   </div>
                 )}
-
-                {/* Save Button */}
-                <div className="flex justify-end gap-4">
-                  <button 
-                    type="submit" 
-                    disabled={loading} 
-                    className="px-8 py-3 bg-[#76b900] text-white font-bold text-lg rounded-xl hover:bg-[#659e00] transition shadow-lg shadow-green-100 disabled:opacity-50 flex items-center gap-2"
-                  >
-                    <Save size={20} />
-                    {loading ? 'Saving...' : 'Save Settings'}
-                  </button>
-                </div>
-
               </form>
             </div>
           </div>
