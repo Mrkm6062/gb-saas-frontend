@@ -90,6 +90,9 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [createStatus, setCreateStatus] = useState('');
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('settings');
+  const [storeHours, setStoreHours] = useState(null);
+  const [loadingHours, setLoadingHours] = useState(false);
+  const [savingHours, setSavingHours] = useState(false);
   const [storeTypes, setStoreTypes] = useState([]);
   const [empName, setEmpName] = useState('');
   const [verifyingEmp, setVerifyingEmp] = useState(false);
@@ -160,6 +163,28 @@ const ManageStore = ({ token, stores, onLogout }) => {
     };
     fetchSettings();
   }, []);
+
+  useEffect(() => {
+    const fetchHours = async () => {
+      if (!currentStore._id) return;
+      setLoadingHours(true);
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        const res = await fetch(`${API_BASE_URL}/api/store-hours?storeId=${currentStore._id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStoreHours(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch store hours", err);
+      } finally {
+        setLoadingHours(false);
+      }
+    };
+    fetchHours();
+  }, [currentStore._id]);
 
   const fetchSocialLinks = async () => {
     if (!currentStore._id) return;
@@ -706,6 +731,38 @@ const ManageStore = ({ token, stores, onLogout }) => {
     printWindow.focus();
   };
 
+  const handleSaveStoreHours = async (e) => {
+    e.preventDefault();
+    setSavingHours(true);
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const res = await fetch(`${API_BASE_URL}/api/store-hours`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          storeId: currentStore._id,
+          ...storeHours
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStoreHours(data);
+        alert("Store Hours updated successfully!");
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to update Store Hours");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error while saving Store Hours");
+    } finally {
+      setSavingHours(false);
+    }
+  };
+
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Store">
     <div className="p-6 mx-auto mt-6">
@@ -732,6 +789,13 @@ const ManageStore = ({ token, stores, onLogout }) => {
           className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'qrcode' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
         >
           QR Code
+        </button>
+        <button 
+          type="button"
+          onClick={() => setActiveTab('timing')} 
+          className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'timing' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+        >
+          Store Timing
         </button>
         <button 
           type="button"
@@ -1231,6 +1295,308 @@ const ManageStore = ({ token, stores, onLogout }) => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Store Timing Tab */}
+      {activeTab === 'timing' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn text-left">
+          <h2 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+            ⏰ Store Timing & Open/Close Schedule
+          </h2>
+          
+          {loadingHours ? (
+            <div className="text-center py-12 text-slate-400 font-medium animate-pulse">Loading Store Timing...</div>
+          ) : !storeHours ? (
+            <div className="text-center py-12 text-slate-400 font-medium">No hours loaded or configured.</div>
+          ) : (
+            <form onSubmit={handleSaveStoreHours} className="space-y-8">
+              {/* General Settings */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Store Operation Mode</label>
+                  <select
+                    value={storeHours.mode}
+                    onChange={e => setStoreHours({ ...storeHours, mode: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none bg-white font-medium"
+                  >
+                    <option value="24x7">24x7 (Always Open)</option>
+                    <option value="custom">Custom Schedule</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Store Timezone</label>
+                  <input
+                    type="text"
+                    value={storeHours.timezone || 'Asia/Kolkata'}
+                    onChange={e => setStoreHours({ ...storeHours, timezone: e.target.value })}
+                    placeholder="e.g. Asia/Kolkata"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none font-medium"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Configure timezone so opening hours match your local time.</p>
+                </div>
+                <div className="md:col-span-2 flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="displayStoreStatus"
+                    checked={storeHours.displayStoreStatus !== false}
+                    onChange={e => setStoreHours({ ...storeHours, displayStoreStatus: e.target.checked })}
+                    className="w-4 h-4 text-[#76b900] focus:ring-[#76b900] rounded cursor-pointer"
+                  />
+                  <label htmlFor="displayStoreStatus" className="text-sm font-bold text-slate-700 cursor-pointer">
+                    Show open/closed badge status to customers on storefront
+                  </label>
+                </div>
+              </div>
+
+              {/* Custom Schedule Builder */}
+              {storeHours.mode === 'custom' && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Weekly Opening Hours</h3>
+                  <div className="space-y-4">
+                    {storeHours.weeklySchedule?.map((sched, dayIdx) => (
+                      <div key={sched.day} className="flex flex-col md:flex-row md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                        {/* Day & Toggle Checkbox */}
+                        <div className="flex items-center gap-3 w-40">
+                          <input
+                            type="checkbox"
+                            id={`day-${sched.day}`}
+                            checked={sched.enabled}
+                            onChange={e => {
+                              const newSched = [...storeHours.weeklySchedule];
+                              newSched[dayIdx].enabled = e.target.checked;
+                              // If enabling and has no slots, add a default slot
+                              if (e.target.checked && (!sched.slots || sched.slots.length === 0)) {
+                                newSched[dayIdx].slots = [{ open: "09:00", close: "18:00" }];
+                              }
+                              setStoreHours({ ...storeHours, weeklySchedule: newSched });
+                            }}
+                            className="w-4 h-4 text-[#76b900] focus:ring-[#76b900] rounded cursor-pointer"
+                          />
+                          <label htmlFor={`day-${sched.day}`} className="text-sm font-bold text-slate-700 capitalize cursor-pointer">
+                            {sched.day}
+                          </label>
+                        </div>
+
+                        {/* Slots */}
+                        <div className="flex-1 space-y-2">
+                          {sched.enabled ? (
+                            <>
+                              {sched.slots?.map((slot, slotIdx) => (
+                                <div key={slotIdx} className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-slate-400">Open</span>
+                                    <input
+                                      type="time"
+                                      value={slot.open}
+                                      onChange={e => {
+                                        const newSched = [...storeHours.weeklySchedule];
+                                        newSched[dayIdx].slots[slotIdx].open = e.target.value;
+                                        setStoreHours({ ...storeHours, weeklySchedule: newSched });
+                                      }}
+                                      className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-1 focus:ring-[#76b900] outline-none"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-slate-400">Close</span>
+                                    <input
+                                      type="time"
+                                      value={slot.close}
+                                      onChange={e => {
+                                        const newSched = [...storeHours.weeklySchedule];
+                                        newSched[dayIdx].slots[slotIdx].close = e.target.value;
+                                        setStoreHours({ ...storeHours, weeklySchedule: newSched });
+                                      }}
+                                      className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-1 focus:ring-[#76b900] outline-none"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newSched = [...storeHours.weeklySchedule];
+                                      newSched[dayIdx].slots = newSched[dayIdx].slots.filter((_, idx) => idx !== slotIdx);
+                                      setStoreHours({ ...storeHours, weeklySchedule: newSched });
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Remove Slot"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newSched = [...storeHours.weeklySchedule];
+                                  newSched[dayIdx].slots = [...(newSched[dayIdx].slots || []), { open: "09:00", close: "18:00" }];
+                                  setStoreHours({ ...storeHours, weeklySchedule: newSched });
+                                }}
+                                className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline mt-1"
+                              >
+                                <Plus size={12} /> Add Time Slot
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Closed Entire Day</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Temporary Closure */}
+              <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Temporary Store Closure</h3>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="tempClosureEnabled"
+                    checked={storeHours.temporaryClosure?.enabled || false}
+                    onChange={e => setStoreHours({
+                      ...storeHours,
+                      temporaryClosure: { ...(storeHours.temporaryClosure || {}), enabled: e.target.checked }
+                    })}
+                    className="w-4 h-4 text-[#76b900] focus:ring-[#76b900] rounded cursor-pointer"
+                  />
+                  <label htmlFor="tempClosureEnabled" className="text-sm font-bold text-slate-700 cursor-pointer">
+                    Enable Temporary Store Closure
+                  </label>
+                </div>
+                
+                {storeHours.temporaryClosure?.enabled && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Reason for closure</label>
+                      <input
+                        type="text"
+                        value={storeHours.temporaryClosure?.reason || ''}
+                        onChange={e => setStoreHours({
+                          ...storeHours,
+                          temporaryClosure: { ...(storeHours.temporaryClosure || {}), reason: e.target.value }
+                        })}
+                        placeholder="e.g. Closed for renovations / staff training"
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none text-sm font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Start Date/Time</label>
+                      <input
+                        type="datetime-local"
+                        value={storeHours.temporaryClosure?.startDate ? new Date(storeHours.temporaryClosure.startDate).toISOString().slice(0, 16) : ''}
+                        onChange={e => setStoreHours({
+                          ...storeHours,
+                          temporaryClosure: { ...(storeHours.temporaryClosure || {}), startDate: e.target.value ? new Date(e.target.value) : null }
+                        })}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none text-sm font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">End Date/Time</label>
+                      <input
+                        type="datetime-local"
+                        value={storeHours.temporaryClosure?.endDate ? new Date(storeHours.temporaryClosure.endDate).toISOString().slice(0, 16) : ''}
+                        onChange={e => setStoreHours({
+                          ...storeHours,
+                          temporaryClosure: { ...(storeHours.temporaryClosure || {}), endDate: e.target.value ? new Date(e.target.value) : null }
+                        })}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Holidays list */}
+              <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <h3 className="text-lg font-bold text-slate-800">Holidays List</h3>
+                  <button
+                    type="button"
+                    onClick={() => setStoreHours({
+                      ...storeHours,
+                      holidays: [...(storeHours.holidays || []), { name: "", date: new Date(), closed: true, slots: [] }]
+                    })}
+                    className="px-3.5 py-1.5 bg-[#76b900] text-white font-bold rounded-lg hover:bg-[#659e00] transition-colors text-xs flex items-center gap-1"
+                  >
+                    <Plus size={14} /> Add Holiday
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  {storeHours.holidays?.length === 0 ? (
+                    <p className="text-xs text-slate-400 font-medium">No holidays scheduled.</p>
+                  ) : (
+                    storeHours.holidays?.map((hol, idx) => (
+                      <div key={idx} className="flex flex-wrap items-center gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
+                        <div className="flex-1 min-w-[200px]">
+                          <input
+                            type="text"
+                            value={hol.name || ''}
+                            onChange={e => {
+                              const newHols = [...storeHours.holidays];
+                              newHols[idx].name = e.target.value;
+                              setStoreHours({ ...storeHours, holidays: newHols });
+                            }}
+                            placeholder="Holiday Name (e.g. Diwali)"
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-[#76b900]"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="date"
+                            value={hol.date ? new Date(hol.date).toISOString().split('T')[0] : ''}
+                            onChange={e => {
+                              const newHols = [...storeHours.holidays];
+                              newHols[idx].date = e.target.value ? new Date(e.target.value) : null;
+                              setStoreHours({ ...storeHours, holidays: newHols });
+                            }}
+                            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-[#76b900]"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id={`holiday-closed-${idx}`}
+                            checked={hol.closed !== false}
+                            onChange={e => {
+                              const newHols = [...storeHours.holidays];
+                              newHols[idx].closed = e.target.checked;
+                              setStoreHours({ ...storeHours, holidays: newHols });
+                            }}
+                            className="w-4 h-4 text-[#76b900] focus:ring-[#76b900] rounded cursor-pointer"
+                          />
+                          <label htmlFor={`holiday-closed-${idx}`} className="text-xs font-bold text-slate-600 cursor-pointer">Closed Entire Day</label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newHols = storeHours.holidays.filter((_, hIdx) => hIdx !== idx);
+                            setStoreHours({ ...storeHours, holidays: newHols });
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Submit Action */}
+              <div className="flex justify-end pt-4 border-t border-slate-100">
+                <button
+                  type="submit"
+                  disabled={savingHours}
+                  className="px-8 py-3 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition-colors shadow-lg shadow-green-100 disabled:opacity-50"
+                >
+                  {savingHours ? 'Saving Timing...' : 'Save Timing Settings'}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       )}
 
