@@ -21,6 +21,7 @@ import ManageTheme from './pages/ManageTheme';
 import ManageThemeCustomization from './pages/ManageThemeCustomization';
 import ManageReviews from './pages/ManageReviews';
 import SeoSetting from './pages/SeoSetting';
+import ManageNewsletter from './pages/ManageNewsletter';
 
 
 function App() {
@@ -148,6 +149,10 @@ function App() {
         <Route 
           path="/store/:storeId/seo" 
           element={token ? <SeoSetting token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/store/:storeId/newsletter" 
+          element={token ? <ManageNewsletter token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="*" 
