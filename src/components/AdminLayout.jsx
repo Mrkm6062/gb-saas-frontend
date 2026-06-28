@@ -136,7 +136,10 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     { name: 'Customers', icon: <Users size={20} />, path: activeStoreId ? `/store/${activeStoreId}/customers` : '#' },
     { name: 'Coupons & Offers', icon: <Ticket size={20} />, path: activeStoreId ? `/store/${activeStoreId}/coupons` : '#' },
     { name: 'Newsletter', icon: <Bell size={20} />, path: activeStoreId ? `/store/${activeStoreId}/newsletter` : '#' },
-    { name: 'Domains', icon: <Globe size={20} />, path: activeStoreId ? `/store/${activeStoreId}/domains` : '#' },
+    ...((currentStoreInfo?.planDetails?.features?.customDomain === true || 
+         (currentStoreInfo?.planId && typeof currentStoreInfo.planId === 'object' && currentStoreInfo.planId?.features?.customDomain === true)) ? [
+      { name: 'Domains', icon: <Globe size={20} />, path: activeStoreId ? `/store/${activeStoreId}/domains` : '#' }
+    ] : []),
     { name: 'Storage', icon: <HardDrive size={20} />, path: activeStoreId ? `/store/${activeStoreId}/storage` : '#' },
     { 
       name: 'Themes', icon: <Layers size={20} />, 

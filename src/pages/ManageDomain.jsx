@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { Globe, CheckCircle, AlertCircle } from 'lucide-react';
 import DomainCard from '../components/DomainCard';
@@ -7,6 +7,7 @@ import FixSSLModal from '../components/FixSSLModal';
 
 const ManageDomain = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
+  const navigate = useNavigate();
   const currentStore = stores.find(s => s.storeId === storeId) || {};
 
   const [domains, setDomains] = useState([]);
@@ -142,6 +143,29 @@ const ManageDomain = ({ token, stores, onLogout }) => {
 
   // Filter domains specifically belonging to the active store being managed
   const storeDomains = domains.filter(d => d.storeId && (d.storeId._id === currentStore._id || d.storeId === currentStore._id));
+
+  const hasCustomDomain = currentStore?.planDetails?.features?.customDomain === true || 
+                          (currentStore?.planId && typeof currentStore.planId === 'object' && currentStore.planId?.features?.customDomain === true);
+
+  if (!loading && !hasCustomDomain) {
+    return (
+      <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Custom Domains">
+        <div className="max-w-xl mx-auto px-6 py-20 text-center flex flex-col items-center justify-center min-h-[400px]">
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-3xl mb-6 shadow-inner text-slate-500">🔒</div>
+          <h2 className="text-2xl font-black text-slate-800 mb-3">Upgrade to Enable Custom Domains</h2>
+          <p className="text-slate-500 mb-8 font-medium text-sm leading-relaxed">
+            Connecting your own custom domain (e.g. www.yourbrand.com) is a premium feature. Upgrade your subscription plan to unlock custom domains and brand consistency.
+          </p>
+          <button 
+            onClick={() => navigate(`/store/${storeId}/plan`)}
+            className="px-8 py-3.5 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition-all duration-200 shadow-lg shadow-green-100"
+          >
+            Upgrade Plan &rarr;
+          </button>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Custom Domains">
