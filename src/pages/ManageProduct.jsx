@@ -1108,7 +1108,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               {/* Pricing & Inventory */}
               <div className="space-y-4">
                 <h4 className="font-bold text-lg border-b border-slate-100 pb-2 text-slate-800">Pricing & Default Inventory</h4>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-5 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-5 pt-2">
                   <div className="relative">
                     <input type="number" required={formData.variants.length === 0} placeholder=" " value={formData.basePrice} onChange={e=>setFormData({...formData, basePrice: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white" />
                     <label className="floating-label">Base Price (₹) <span className="text-red-500">*</span></label>
@@ -1116,6 +1116,16 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                   <div className="relative">
                     <input type="number" min="0" max="100" placeholder=" " value={formData.discount} onChange={e=>setFormData({...formData, discount: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white" />
                     <label className="floating-label">Discount (%)</label>
+                  </div>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      placeholder=" " 
+                      value={formData.basePrice ? (Number(formData.basePrice) - (Number(formData.basePrice) * (Number(formData.discount || 0) / 100))).toFixed(2) : ''} 
+                      disabled 
+                      className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-slate-50 text-slate-500 cursor-not-allowed font-semibold" 
+                    />
+                    <label className="floating-label">Selling Price (₹)</label>
                   </div>
                   <div className="relative">
                     <input type="number" placeholder=" " value={formData.totalStock} onChange={e=>setFormData({...formData, totalStock: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm disabled:bg-slate-50 bg-white" disabled={formData.variants.length > 0} />
