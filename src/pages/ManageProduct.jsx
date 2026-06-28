@@ -1121,7 +1121,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                     <input 
                       type="text" 
                       placeholder=" " 
-                      value={formData.basePrice ? (Number(formData.basePrice) - (Number(formData.basePrice) * (Number(formData.discount || 0) / 100))).toFixed(2) : ''} 
+                      value={formData.basePrice ? Math.round(Number(formData.basePrice) - (Number(formData.basePrice) * (Number(formData.discount || 0) / 100))) : ''} 
                       disabled 
                       className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-slate-50 text-slate-500 cursor-not-allowed font-semibold" 
                     />
