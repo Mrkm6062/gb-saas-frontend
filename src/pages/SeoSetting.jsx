@@ -134,7 +134,7 @@ const SeoSetting = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="SEO & AI Settings">
-      <div className="w-full mx-auto">
+      <div className="p-6 mx-auto mt-6 w-full">
         {status && (
           <div className={`p-4 mb-6 rounded-xl font-bold text-sm border transition-all animate-fadeIn ${
             status.toLowerCase().includes('error') 
@@ -153,39 +153,43 @@ const SeoSetting = ({ token, stores, onLogout }) => {
         ) : (
           <div className="space-y-6">
             
-            {/* Top Navigation Tabs */}
-            <div className="flex flex-row overflow-x-auto gap-3 border-b border-slate-200 pb-4 scrollbar-hide w-full">
-              {sections.map(sec => (
-                <button
-                  key={sec.id}
-                  onClick={() => setActiveSection(sec.id)}
-                  className={`flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                    activeSection === sec.id
-                      ? 'bg-[#76b900] text-white shadow-md shadow-green-100'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-slate-200 bg-white'
-                  }`}
-                >
-                  {sec.icon}
-                  {sec.label}
-                </button>
-              ))}
-
-               {/* Save Button */}
-                <div className="flex justify-end gap-4">
-                  <button 
-                    type="submit" 
-                    disabled={loading} 
-                    className="px-8 py-3 bg-[#76b900] text-white font-bold text-lg rounded-xl hover:bg-[#659e00] transition shadow-lg shadow-green-100 disabled:opacity-50 flex items-center gap-2"
+            {/* Top Navigation Tabs & Save Button Row */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4 w-full">
+              {/* Top Navigation Tabs */}
+              <div className="flex flex-row overflow-x-auto gap-3 scrollbar-hide w-full sm:w-auto">
+                {sections.map(sec => (
+                  <button
+                    key={sec.id}
+                    onClick={() => setActiveSection(sec.id)}
+                    className={`flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                      activeSection === sec.id
+                        ? 'bg-[#76b900] text-white shadow-md shadow-green-100'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-slate-200 bg-white'
+                    }`}
                   >
-                    <Save size={20} />
-                    {loading ? 'Saving...' : 'Save Settings'}
+                    {sec.icon}
+                    {sec.label}
                   </button>
-                </div>
+                ))}
+              </div>
+
+              {/* Save Button */}
+              <div className="shrink-0 w-full sm:w-auto flex justify-end">
+                <button 
+                  type="submit" 
+                  form="seo-settings-form"
+                  disabled={loading} 
+                  className="px-8 py-3 bg-[#76b900] text-white font-bold text-lg rounded-xl hover:bg-[#659e00] transition shadow-lg shadow-green-100 disabled:opacity-50 flex items-center gap-2 w-full sm:w-auto justify-center"
+                >
+                  <Save size={20} />
+                  {loading ? 'Saving...' : 'Save Settings'}
+                </button>
+              </div>
             </div>
 
             {/* Config Panels */}
             <div className="w-full">
-              <form onSubmit={handleSave} className="space-y-6">
+              <form id="seo-settings-form" onSubmit={handleSave} className="space-y-6">
                 
                 {/* 1. SEO Tab */}
                 {activeSection === 'seo' && (
