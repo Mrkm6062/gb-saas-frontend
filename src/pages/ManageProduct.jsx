@@ -53,7 +53,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     brand: '', subCategory: '', discount: '', isActive: true,
     basePrice: '', totalStock: '', images: [], variants: [], isCustomizable: false, allowCustomText: false,
     customizableArea: { x: 25, y: 30, width: 50, height: 40 },
-    variantType: 'option'
+    variantType: 'option',
+    keyFeaturesEnabled: false, specificationsEnabled: false, keyFeatures: [''], specifications: [{ name: '', value: '' }]
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -267,7 +268,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           customizableArea: formData.customizableArea,
           isCustomizable: formData.isCustomizable || false,
           allowCustomText: formData.allowCustomText || false,
-          storeId: currentStore._id // Explicitly bind product to this store
+          storeId: currentStore._id, // Explicitly bind product to this store
+          keyFeatures: (formData.keyFeatures || []).map(f => f.trim()).filter(Boolean),
+          specifications: (formData.specifications || []).map(s => ({ name: s.name.trim(), value: s.value.trim() })).filter(s => s.name && s.value)
         })
       });
 
@@ -307,7 +310,11 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       isCustomizable: product.isCustomizable || false,
       allowCustomText: product.allowCustomText || false,
       customizableArea: product.customizableArea || { x: 25, y: 30, width: 50, height: 40 },
-      variantType: product.variantType || 'option'
+      variantType: product.variantType || 'option',
+      keyFeaturesEnabled: product.keyFeaturesEnabled || false,
+      specificationsEnabled: product.specificationsEnabled || false,
+      keyFeatures: product.keyFeatures && product.keyFeatures.length > 0 ? product.keyFeatures : [''],
+      specifications: product.specifications && product.specifications.length > 0 ? product.specifications : [{ name: '', value: '' }]
     });
     setEditingId(product._id);
     setIsFormOpen(true);
@@ -1149,6 +1156,130 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                       <option value="other">Other</option>
                     </select>
                     <label className="floating-label">Selling Unit Type</label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Features & Specifications */}
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-left space-y-6">
+                <h4 className="font-bold text-lg border-b border-slate-200 pb-2 text-slate-800">Features & Specifications</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Key Features */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="m-keyFeaturesEnabled" 
+                        checked={formData.keyFeaturesEnabled || false} 
+                        onChange={e => setFormData({ ...formData, keyFeaturesEnabled: e.target.checked })} 
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer" 
+                      />
+                      <label htmlFor="m-keyFeaturesEnabled" className="text-sm font-bold text-slate-700 cursor-pointer">Enable Key Features</label>
+                    </div>
+
+                    {formData.keyFeaturesEnabled && (
+                      <div className="space-y-2.5">
+                        {formData.keyFeatures?.map((feature, fIdx) => (
+                          <div key={fIdx} className="flex items-center gap-2">
+                            <input 
+                              type="text" 
+                              value={feature} 
+                              onChange={e => {
+                                  const newFeatures = [...(formData.keyFeatures || [])];
+                                  newFeatures[fIdx] = e.target.value;
+                                  setFormData({ ...formData, keyFeatures: newFeatures });
+                              }} 
+                              placeholder="e.g. 100% Organic Cotton" 
+                              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                  setFormData({
+                                      ...formData,
+                                      keyFeatures: formData.keyFeatures.filter((_, idx) => idx !== fIdx)
+                                  });
+                              }} 
+                              className="text-red-500 hover:text-red-700 text-lg font-bold p-1 bg-red-50 hover:bg-red-100 rounded-lg transition"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                        <button 
+                          type="button" 
+                          onClick={() => setFormData({ ...formData, keyFeatures: [...(formData.keyFeatures || []), ''] })} 
+                          className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 mt-1"
+                        >
+                          + Add Key Feature
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Specifications */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="m-specificationsEnabled" 
+                        checked={formData.specificationsEnabled || false} 
+                        onChange={e => setFormData({ ...formData, specificationsEnabled: e.target.checked })} 
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer" 
+                      />
+                      <label htmlFor="m-specificationsEnabled" className="text-sm font-bold text-slate-700 cursor-pointer">Enable Specifications</label>
+                    </div>
+
+                    {formData.specificationsEnabled && (
+                      <div className="space-y-2.5">
+                        {formData.specifications?.map((spec, sIdx) => (
+                          <div key={sIdx} className="flex items-center gap-2">
+                            <input 
+                              type="text" 
+                              value={spec.name} 
+                              onChange={e => {
+                                  const newSpecs = [...(formData.specifications || [])];
+                                  newSpecs[sIdx].name = e.target.value;
+                                  setFormData({ ...formData, specifications: newSpecs });
+                              }} 
+                              placeholder="Name (e.g. Weight)" 
+                              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
+                            />
+                            <input 
+                              type="text" 
+                              value={spec.value} 
+                              onChange={e => {
+                                  const newSpecs = [...(formData.specifications || [])];
+                                  newSpecs[sIdx].value = e.target.value;
+                                  setFormData({ ...formData, specifications: newSpecs });
+                              }} 
+                              placeholder="Value (e.g. 500g)" 
+                              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                  setFormData({
+                                      ...formData,
+                                      specifications: formData.specifications.filter((_, idx) => idx !== sIdx)
+                                  });
+                              }} 
+                              className="text-red-500 hover:text-red-700 text-lg font-bold p-1 bg-red-50 hover:bg-red-100 rounded-lg transition"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                        <button 
+                          type="button" 
+                          onClick={() => setFormData({ ...formData, specifications: [...(formData.specifications || []), { name: '', value: '' }] })} 
+                          className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 mt-1"
+                        >
+                          + Add Specification
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
