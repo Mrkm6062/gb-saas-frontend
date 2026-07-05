@@ -1141,8 +1141,12 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                       <option value="bottle">Bottle</option>
                       <option value="box">Box</option>
                       <option value="liter">Liter</option>
-                      <option value="packet">Packet</option>
+                      <option value="ml">Ml</option>
                       <option value="dozen">Dozen</option>
+                      <option value="packet">Packet</option>
+                      <option value="size">Size</option>
+                      <option value="set">Set</option>
+                      <option value="other">Other</option>
                     </select>
                     <label className="floating-label">Selling Unit Type</label>
                   </div>
