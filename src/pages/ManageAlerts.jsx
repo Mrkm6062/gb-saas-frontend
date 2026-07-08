@@ -71,6 +71,8 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
     <div style="text-align: right;">
       <p style="margin: 2px 0;"><strong>Invoice #:</strong> {{orderId}}</p>
       <p style="margin: 2px 0;"><strong>Date:</strong> {{orderDate}}</p>
+      <p style="margin: 2px 0;"><strong>Payment Method:</strong> {{paymentMethod}}</p>
+      <p style="margin: 2px 0;"><strong>Order Status:</strong> {{orderStatus}}</p>
     </div>
   </div>
   <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
@@ -284,6 +286,8 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
       .replace(/{{totalAmount}}/g, "1500")
       .replace(/{{discountAmount}}/g, "100")
       .replace(/{{discountRows}}/g, `<tr><td style="padding: 5px 10px; text-align: left;"><strong>Discount:</strong></td><td style="padding: 5px 10px; text-align: right;">-₹100</td></tr>`)
+      .replace(/{{paymentMethod}}/g, "Online (Razorpay)")
+      .replace(/{{orderStatus}}/g, "PLACED")
       .replace(/{{shippingCharge}}/g, "50")
       .replace(/{{reviewLinks}}/g, dummyReviewLinks)
       .replace(/{{trackingDetails}}/g, dummyTrackingDetails);
@@ -461,7 +465,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
                        {isPreviewMode ? 'Edit Code' : 'Preview HTML'}
                      </button>
                    </div>
-                 <p className="text-xs text-slate-500 mb-2 font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">Variables: {'{{storeName}}'}, {'{{customerName}}'}, {'{{customerPhone}}'}, {'{{customerEmail}}'}, {'{{customerAddress}}'}, {'{{orderDate}}'}, {'{{orderId}}'}, {'{{orderItems}}'}, {'{{billItems}}'}, {'{{subTotal}}'}, {'{{totalAmount}}'}, {'{{discountAmount}}'}, {'{{shippingCharge}}'}, {'{{trackingDetails}}'}, {'{{ShippingMethod}}'}, {'{{ShippingCompany}}'}, {'{{ShippingTrackingNumber}}'}, {'{{DeliveryPersonName}}'}, {'{{DeliveryPersonPhone}}'}</p>
+                 <p className="text-xs text-slate-500 mb-2 font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">Variables: {'{{storeName}}'}, {'{{customerName}}'}, {'{{customerPhone}}'}, {'{{customerEmail}}'}, {'{{customerAddress}}'}, {'{{orderDate}}'}, {'{{orderId}}'}, {'{{orderItems}}'}, {'{{billItems}}'}, {'{{subTotal}}'}, {'{{totalAmount}}'}, {'{{discountAmount}}'}, {'{{shippingCharge}}'}, {'{{trackingDetails}}'}, {'{{ShippingMethod}}'}, {'{{ShippingCompany}}'}, {'{{ShippingTrackingNumber}}'}, {'{{DeliveryPersonName}}'}, {'{{DeliveryPersonPhone}}'}, {'{{paymentMethod}}'}, {'{{orderStatus}}'}</p>
                    {isPreviewMode ? (
                      <div className="w-full px-4 py-4 border border-slate-200 rounded-xl bg-white min-h-[200px] max-h-[400px] overflow-y-auto" dangerouslySetInnerHTML={{ __html: getPreviewHtml(templateForm.body) }}></div>
                    ) : (

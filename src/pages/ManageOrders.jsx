@@ -310,6 +310,8 @@ const ManageOrders = ({ token, stores, onLogout }) => {
     <div style="text-align: right;">
       <p style="margin: 2px 0;"><strong>Invoice #:</strong> {{orderId}}</p>
       <p style="margin: 2px 0;"><strong>Date:</strong> {{orderDate}}</p>
+      <p style="margin: 2px 0;"><strong>Payment Method:</strong> {{paymentMethod}}</p>
+      <p style="margin: 2px 0;"><strong>Order Status:</strong> {{orderStatus}}</p>
     </div>
   </div>
   <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
@@ -372,6 +374,8 @@ const ManageOrders = ({ token, stores, onLogout }) => {
         .replace(/{{subTotal}}/g, subTotal)
         .replace(/{{totalAmount}}/g, order.totalAmount || 0)
         .replace(/{{discountRows}}/g, discountRowsHtml)
+        .replace(/{{paymentMethod}}/g, (order.paymentMethod === 'whatsapp' || order.WhasAppOrder) ? 'WhatsApp' : order.paymentMethod === 'razorpay' ? 'Online' : 'COD')
+        .replace(/{{orderStatus}}/g, order.orderStatus ? order.orderStatus.toUpperCase() : "")
         .replace(/{{shippingCharge}}/g, order.shippingCharge || 0);
 
       printWindow.document.write(`<html><head><title>Invoice - ${order._id.toString().slice(-6).toUpperCase()}</title><style>@media print { body { -webkit-print-color-adjust: exact; } }</style></head><body>${finalHtml}</body></html>`);
@@ -617,9 +621,8 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                 </div>
               </div>
               
-              {/* Modal Body */}
               <div className="p-6 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Customer Info</h4>
                     <p className="font-bold text-slate-800 text-lg">{selectedOrder.customerName}</p>
@@ -633,8 +636,14 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                     <p className="text-sm text-slate-600 mt-1">{selectedOrder.address?.city}, {selectedOrder.address?.state} {selectedOrder.address?.pincode}</p>
                     {selectedOrder.address?.alternateNumber && <p className="text-xs text-slate-500 mt-2">Alt Phone: {selectedOrder.address?.alternateNumber}</p>}
                   </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Order Info</h4>
+                    <p className="text-sm text-slate-800 font-semibold">Status: <span className={`ml-1 text-xs font-extrabold uppercase px-2 py-0.5 rounded-full ${selectedOrder.orderStatus === 'delivered' ? 'bg-blue-100 text-blue-700' : selectedOrder.orderStatus === 'shipped' ? 'bg-indigo-100 text-indigo-700' : selectedOrder.orderStatus === 'canceled' ? 'bg-red-100 text-red-700' : selectedOrder.orderStatus === 'returned' ? 'bg-orange-100 text-orange-700' : 'bg-slate-200 text-slate-700'}`}>{selectedOrder.orderStatus}</span></p>
+                    <p className="text-sm text-slate-800 font-semibold mt-2.5">Payment: <span className={`ml-1 text-xs font-extrabold uppercase px-2 py-0.5 rounded-full ${selectedOrder.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{selectedOrder.paymentStatus}</span></p>
+                    <p className="text-sm text-slate-800 font-semibold mt-2.5">Method: <span className="bg-slate-200 px-2 py-1 rounded text-xs ml-1 uppercase">{(selectedOrder.paymentMethod === 'whatsapp' || selectedOrder.WhasAppOrder) ? 'WhatsApp' : selectedOrder.paymentMethod === 'razorpay' ? 'Online' : 'COD'}</span></p>
+                  </div>
                   {(selectedOrder.orderStatus === 'shipped' || selectedOrder.ShippingMethod || selectedOrder.ShippingTrackingNumber || selectedOrder.DeliveryPersonName) && (
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 md:col-span-2">
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 md:col-span-3">
                       <div className="flex justify-between items-center mb-3">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tracking Information</h4>
                         {selectedOrder.orderStatus === 'shipped' && (
