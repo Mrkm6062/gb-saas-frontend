@@ -351,10 +351,9 @@ const ManageOrders = ({ token, stores, onLogout }) => {
           </tr>
         `).join('');
       } else {
-        const discountLabel = order.discountType ? `Discount (${order.discountType === 'percentage' ? 'Percentage' : 'Flat'})` : 'Discount';
         discountRowsHtml = `
           <tr>
-            <td style="padding: 5px 10px; text-align: left;"><strong>${discountLabel}:</strong></td>
+            <td style="padding: 5px 10px; text-align: left;"><strong>Discount:</strong></td>
             <td style="padding: 5px 10px; text-align: right;">-₹${order.discountAmount || 0}</td>
           </tr>
         `;
@@ -750,7 +749,7 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                         <td colSpan="3" className="p-3 text-right font-semibold text-slate-600">Subtotal:</td>
                         <td className="p-3 text-right font-bold text-slate-800">₹{selectedOrder.totalAmount + (selectedOrder.discountAmount || 0) - (selectedOrder.shippingCharge || 0)}</td>
                       </tr>
-                      {selectedOrder.discountDetails && selectedOrder.discountDetails.length > 0 ? (
+                      {selectedOrder.discountDetails && selectedOrder.discountDetails.length > 0 && (
                         selectedOrder.discountDetails.map((detail, idx) => (
                           <tr key={idx}>
                             <td colSpan="3" className="p-3 text-right font-semibold text-green-600">
@@ -759,16 +758,14 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                             <td className="p-3 text-right font-bold text-green-600">-₹{detail.amount}</td>
                           </tr>
                         ))
-                      ) : (
-                        selectedOrder.discountAmount > 0 && (
-                          <tr>
-                            <td colSpan="3" className="p-3 text-right font-semibold text-green-600">
-                              Discount {selectedOrder.couponCode ? `(${selectedOrder.couponCode})` : ''} 
-                              {selectedOrder.discountType ? ` [${selectedOrder.discountType === 'percentage' ? 'Percentage' : 'Flat'}]` : ''}:
-                            </td>
-                            <td className="p-3 text-right font-bold text-green-600">-₹{selectedOrder.discountAmount}</td>
-                          </tr>
-                        )
+                      )}
+                      {selectedOrder.discountAmount > 0 && (
+                        <tr>
+                          <td colSpan="3" className="p-3 text-right font-semibold text-green-600">
+                            {selectedOrder.discountDetails && selectedOrder.discountDetails.length > 0 ? "Total Discount" : `Discount ${selectedOrder.couponCode ? `(${selectedOrder.couponCode})` : ''}`}:
+                          </td>
+                          <td className="p-3 text-right font-bold text-green-600">-₹{selectedOrder.discountAmount}</td>
+                        </tr>
                       )}
                       {selectedOrder.shippingCharge > 0 && (
                         <tr>

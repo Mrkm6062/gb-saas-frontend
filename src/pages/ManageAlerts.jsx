@@ -89,7 +89,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
   <div style="width: 100%; display: flex; justify-content: flex-end;">
     <table style="width: 300px; border-collapse: collapse;">
       <tr><td style="padding: 5px 10px; text-align: left;"><strong>Subtotal:</strong></td><td style="padding: 5px 10px; text-align: right;">₹{{subTotal}}</td></tr>
-      <tr><td style="padding: 5px 10px; text-align: left;"><strong>Discount:</strong></td><td style="padding: 5px 10px; text-align: right;">-₹{{discountAmount}}</td></tr>
+      {{discountRows}}
       <tr><td style="padding: 5px 10px; text-align: left;"><strong>Shipping:</strong></td><td style="padding: 5px 10px; text-align: right;">₹{{shippingCharge}}</td></tr>
       <tr><td style="padding: 10px; text-align: left; font-size: 18px; border-top: 2px solid #333;"><strong>Total:</strong></td><td style="padding: 10px; text-align: right; font-size: 18px; border-top: 2px solid #333;"><strong>₹{{totalAmount}}</strong></td></tr>
     </table>
@@ -283,6 +283,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
       .replace(/{{subTotal}}/g, "1500")
       .replace(/{{totalAmount}}/g, "1500")
       .replace(/{{discountAmount}}/g, "100")
+      .replace(/{{discountRows}}/g, `<tr><td style="padding: 5px 10px; text-align: left;"><strong>Discount:</strong></td><td style="padding: 5px 10px; text-align: right;">-₹100</td></tr>`)
       .replace(/{{shippingCharge}}/g, "50")
       .replace(/{{reviewLinks}}/g, dummyReviewLinks)
       .replace(/{{trackingDetails}}/g, dummyTrackingDetails);
