@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PlatformFooter from '../components/PlatformFooter';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 function Login({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,6 +11,25 @@ function Login({ onLoginSuccess }) {
   const [status, setStatus] = useState('');
   const [settings, setSettings] = useState({ mainLogoUrl: "https://storage.googleapis.com/galibrand/superadmin/products/galibrandfullname-logo.png", loginImageGrid: [] });
   const [imagesPreloaded, setImagesPreloaded] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState('');
+
+  useEffect(() => {
+    const fetchGoogleConfig = async () => {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        const res = await fetch(`${API_BASE_URL}/api/store-owner/auth/google/config`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.clientId) {
+            setGoogleClientId(data.clientId);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load Google OAuth config:", e);
+      }
+    };
+    fetchGoogleConfig();
+  }, []);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -104,7 +124,37 @@ function Login({ onLoginSuccess }) {
     }
   };
 
-  return (
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setStatus('Verifying Google account...');
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      const response = await fetch(`${API_BASE_URL}/api/store-owner/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: credentialResponse.credential })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStatus('Authentication successful!');
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          onLoginSuccess(data.token, data.user?.stores || []);
+        }
+      } else {
+        setStatus(`Error: ${data.message || 'Google Login failed'}`);
+      }
+    } catch (err) {
+      setStatus(`Error: ${err.message}`);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setStatus('Error: Google Login initialization failed.');
+  };
+
+  const loginLayout = (
     <div className="min-h-screen bg-gradient-to-br from-[#f1f8e9] via-white to-[#fff8e1] flex flex-col font-sans overflow-hidden text-left">
       <div className="flex-1 flex flex-col md:flex-row w-full h-full">
         {/* Left Side: Logo and Text */}
@@ -140,37 +190,59 @@ function Login({ onLoginSuccess }) {
             </div>
 
             {step === 1 ? (
-              <form onSubmit={handleSendOtp} className="space-y-5 animate-fadeIn">
-                {!isLogin && (
+              <>
+                <form onSubmit={handleSendOtp} className="space-y-5 animate-fadeIn">
+                  {!isLogin && (
+                    <div className="space-y-1.5 text-left">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Full Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="Enter your full name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#76b900] focus:ring-2 focus:ring-[#76b900]/20 transition bg-white text-sm text-black"
+                        required
+                      />
+                    </div>
+                  )}
+
                   <div className="space-y-1.5 text-left">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Full Name</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
                     <input 
-                      type="text" 
-                      placeholder="Enter your full name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      type="email" 
+                      placeholder="Enter your registered email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#76b900] focus:ring-2 focus:ring-[#76b900]/20 transition bg-white text-sm text-black"
                       required
                     />
                   </div>
+
+                  <button type="submit" className="w-full py-3.5 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-xl hover:opacity-95 transition shadow-md shadow-green-100 text-sm">
+                    Send OTP Code
+                  </button>
+                </form>
+
+                {googleClientId && (
+                  <div className="space-y-4 pt-4 border-t border-slate-100 mt-4">
+                    <div className="relative flex py-2 items-center">
+                      <div className="flex-grow border-t border-slate-200"></div>
+                      <span className="flex-shrink mx-4 text-slate-400 text-xs font-bold uppercase tracking-wider">Or continue with</span>
+                      <div className="flex-grow border-t border-slate-200"></div>
+                    </div>
+                    <div className="flex justify-center w-full">
+                      <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={handleGoogleError}
+                        text={isLogin ? "signin_with" : "signup_with"}
+                        shape="pill"
+                        theme="outline"
+                        width="100%"
+                      />
+                    </div>
+                  </div>
                 )}
-
-                <div className="space-y-1.5 text-left">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
-                  <input 
-                    type="email" 
-                    placeholder="Enter your registered email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#76b900] focus:ring-2 focus:ring-[#76b900]/20 transition bg-white text-sm text-black"
-                    required
-                  />
-                </div>
-
-                <button type="submit" className="w-full py-3.5 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-xl hover:opacity-95 transition shadow-md shadow-green-100 text-sm">
-                  Send OTP Code
-                </button>
-              </form>
+              </>
             ) : (
               <form onSubmit={handleVerifyOtp} className="space-y-5 animate-fadeIn">
                 <div className="space-y-1.5 text-left">
@@ -215,6 +287,14 @@ function Login({ onLoginSuccess }) {
       </div>
       <PlatformFooter />
     </div>
+  );
+
+  return googleClientId ? (
+    <GoogleOAuthProvider clientId={googleClientId}>
+      {loginLayout}
+    </GoogleOAuthProvider>
+  ) : (
+    loginLayout
   );
 }
 
