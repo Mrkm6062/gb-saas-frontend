@@ -105,22 +105,22 @@ function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden text-left">
+    <div className="min-h-screen bg-gradient-to-br from-[#f1f8e9] via-white to-[#fff8e1] flex flex-col font-sans overflow-hidden text-left">
       <div className="flex-1 flex flex-col md:flex-row w-full h-full">
         {/* Left Side: Logo and Text */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-20 lg:px-24 py-12 bg-white">
-          <div className="mb-8">
+        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-20 lg:px-24 pt-12 pb-4 md:py-12 bg-transparent">
+          <div className="mb-6 md:mb-8">
             <img src={settings.mainLogoUrl} alt="Galibrand Logo" className="h-16 w-auto" />
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-6 leading-tight tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 md:mb-6 leading-tight tracking-tight">
             {isLogin ? 'Digital Ordering' : 'Join Us Today'} <br /> 
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#76b900] to-[#ff8a00]">
               {isLogin ? 'for Local Shops' : 'Grow Your Shop'}
             </span>
           </h1>
           
-          <p className="text-slate-600 mb-8 max-w-md leading-relaxed text-sm md:text-base">
+          <p className="text-slate-600 mb-4 md:mb-8 max-w-md leading-relaxed text-sm md:text-base">
             Launch your own online ordering system for Kirana stores, vegetable shops, 
             and local food nasta corners. Take orders and deliver locally — zero high 
             commissions. The trusted choice for grocery online ordering in India.
@@ -128,7 +128,7 @@ function Login({ onLoginSuccess }) {
         </div>
 
         {/* Right Side: Login & Registration Form */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-20 lg:px-24 py-12 bg-slate-50/50 border-t md:border-t-0 md:border-l border-slate-100">
+        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-20 lg:px-24 pt-4 pb-12 md:py-12 bg-white/40 backdrop-blur-md border-t md:border-t-0 md:border-l border-slate-200/50">
           <div className="w-full max-w-md mx-auto space-y-6">
             <div className="text-left">
               <h2 className="text-2xl font-bold text-slate-800">
