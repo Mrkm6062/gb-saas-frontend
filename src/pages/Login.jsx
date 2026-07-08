@@ -223,25 +223,23 @@ function Login({ onLoginSuccess }) {
                   </button>
                 </form>
 
-                {googleClientId && (
-                  <div className="space-y-4 pt-4 border-t border-slate-100 mt-4">
-                    <div className="relative flex py-2 items-center">
-                      <div className="flex-grow border-t border-slate-200"></div>
-                      <span className="flex-shrink mx-4 text-slate-400 text-xs font-bold uppercase tracking-wider">Or continue with</span>
-                      <div className="flex-grow border-t border-slate-200"></div>
-                    </div>
-                    <div className="flex justify-center w-full">
-                      <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={handleGoogleError}
-                        text={isLogin ? "signin_with" : "signup_with"}
-                        shape="pill"
-                        theme="outline"
-                        width="100%"
-                      />
-                    </div>
+                <div className="space-y-4 pt-4 border-t border-slate-100 mt-4">
+                  <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-slate-200"></div>
+                    <span className="flex-shrink mx-4 text-slate-400 text-xs font-bold uppercase tracking-wider">Or continue with</span>
+                    <div className="flex-grow border-t border-slate-200"></div>
                   </div>
-                )}
+                  <div className="flex justify-center w-full">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={handleGoogleError}
+                      text={isLogin ? "signin_with" : "signup_with"}
+                      shape="pill"
+                      theme="outline"
+                      width="100%"
+                    />
+                  </div>
+                </div>
               </>
             ) : (
               <form onSubmit={handleVerifyOtp} className="space-y-5 animate-fadeIn">
@@ -289,12 +287,12 @@ function Login({ onLoginSuccess }) {
     </div>
   );
 
-  return googleClientId ? (
-    <GoogleOAuthProvider clientId={googleClientId}>
+  const activeClientId = googleClientId || "445781559811-dummygoogleclientidplaceholder.apps.googleusercontent.com";
+
+  return (
+    <GoogleOAuthProvider clientId={activeClientId}>
       {loginLayout}
     </GoogleOAuthProvider>
-  ) : (
-    loginLayout
   );
 }
 
