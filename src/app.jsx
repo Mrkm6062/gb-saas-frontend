@@ -31,6 +31,7 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [stores, setStores] = useState([]);
   const [googleClientId, setGoogleClientId] = useState('');
+  const [googleConfigLoaded, setGoogleConfigLoaded] = useState(false);
 
   useEffect(() => {
     const fetchGoogleConfig = async () => {
@@ -44,6 +45,8 @@ function App() {
         }
       } catch (e) {
         console.error("Failed to load Google OAuth config:", e);
+      } finally {
+        setGoogleConfigLoaded(true);
       }
     };
     fetchGoogleConfig();
@@ -82,6 +85,14 @@ function App() {
     };
     fetchMyStores();
   }, [token]);
+
+  if (!googleConfigLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#f1f8e9] via-white to-[#fff8e1] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#76b900] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const activeClientId = googleClientId || "445781559811-dummygoogleclientidplaceholder.apps.googleusercontent.com";
 
