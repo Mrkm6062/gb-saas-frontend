@@ -21,7 +21,8 @@ import {
   Ticket,
   Bell,
   ShieldCheck,
-  MessageSquare
+  MessageSquare,
+  User
 } from 'lucide-react';
 import PlatformFooter from './PlatformFooter';
 
@@ -317,9 +318,18 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
               </div>
             )}
           </div>
-          <button onClick={onLogout} className="px-5 py-2 text-sm font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-full transition duration-200">
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => navigate(activeStoreId ? `/store/${activeStoreId}/profile` : '#')} 
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-slate-600 hover:text-[#76b900] hover:bg-[#f1f8e9] rounded-full transition duration-200"
+            >
+              <User size={18} />
+              Profile
+            </button>
+            <button onClick={onLogout} className="px-5 py-2 text-sm font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-full transition duration-200">
+              Logout
+            </button>
+          </div>
         </nav>
 
         {/* Page Content */}
