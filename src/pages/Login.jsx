@@ -91,10 +91,9 @@ function Login({ onLoginSuccess }) {
 
       if (response.ok) {
         setStatus(`${isLogin ? 'Login' : 'Registration'} successful!`);
-        if (data.token) {
-          localStorage.setItem('token', data.token);
-          onLoginSuccess(data.token, data.user?.stores || []);
-        }
+        localStorage.removeItem('token');
+        localStorage.setItem('isLoggedIn', 'true');
+        onLoginSuccess("dummy-token", data.user?.stores || []);
       } else {
         setStatus(`Error: ${data.message || 'Invalid OTP'}`);
       }
@@ -116,10 +115,9 @@ function Login({ onLoginSuccess }) {
 
       if (response.ok) {
         setStatus('Authentication successful!');
-        if (data.token) {
-          localStorage.setItem('token', data.token);
-          onLoginSuccess(data.token, data.user?.stores || []);
-        }
+        localStorage.removeItem('token');
+        localStorage.setItem('isLoggedIn', 'true');
+        onLoginSuccess("dummy-token", data.user?.stores || []);
       } else {
         setStatus(`Error: ${data.message || 'Google Login failed'}`);
       }

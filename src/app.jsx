@@ -28,7 +28,7 @@ import ManageProfile from './pages/ManageProfile';
 
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem('isLoggedIn') === 'true');
   const [stores, setStores] = useState([]);
   const [googleClientId, setGoogleClientId] = useState('');
   const [googleConfigLoaded, setGoogleConfigLoaded] = useState(false);
@@ -53,29 +53,33 @@ function App() {
   }, []);
 
   const handleLoginSuccess = (newToken, userStores) => {
-    setToken(newToken);
+    localStorage.setItem('isLoggedIn', 'true');
+    setIsLoggedIn(true);
     setStores(userStores || []);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_BASE_URL}/api/auth/logout`, { method: "POST" });
+    } catch (e) {
+      console.error("Logout failed:", e);
+    }
+    localStorage.removeItem('isLoggedIn');
+    setIsLoggedIn(false);
     setStores([]);
   };
 
-  // Fetch stores on initial load if token exists
+  // Fetch stores on initial load if logged in
   useEffect(() => {
     const fetchMyStores = async () => {
-      if (token && stores.length === 0) {
+      if (isLoggedIn && stores.length === 0) {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/store/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
+          const response = await fetch(`${API_BASE_URL}/api/store/me`);
           if (response.ok) {
             const data = await response.json();
             setStores(data.stores || []);
           } else {
-            handleLogout(); // Invalid token
+            handleLogout();
           }
         } catch (error) {
           console.error("Failed to fetch stores", error);
@@ -84,7 +88,7 @@ function App() {
       }
     };
     fetchMyStores();
-  }, [token]);
+  }, [isLoggedIn]);
 
   if (!googleConfigLoaded) {
     return (
@@ -102,7 +106,7 @@ function App() {
         <Routes>
           <Route 
             path="/login" 
-            element={!token ? <Login onLoginSuccess={handleLoginSuccess} /> : <Navigate to="/" />} 
+            element={!isLoggedIn ? <Login onLoginSuccess={handleLoginSuccess} /> : <Navigate to="/" />} 
           />
           <Route 
             path="/policies/:type" 
@@ -110,91 +114,91 @@ function App() {
           />
           <Route 
             path="/" 
-            element={token ? <Mainpanel token={token} stores={stores} setStores={setStores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <Mainpanel token="dummy-token" stores={stores} setStores={setStores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId" 
-            element={token ? <ManageStore token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageStore token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/products" 
-            element={token ? <ManageProduct token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageProduct token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/categories" 
-            element={token ? <ManageCategory token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageCategory token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/domains" 
-            element={token ? <ManageDomain token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageDomain token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/storage" 
-            element={token ? <ManageStorage token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageStorage token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/themes" 
-            element={token ? <ManageTheme token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageTheme token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/theme-customization" 
-            element={token ? <ManageThemeCustomization token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageThemeCustomization token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/customers" 
-            element={token ? <ManageCustomer token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageCustomer token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/coupons" 
-            element={token ? <ManageCoupon token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageCoupon token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/alerts" 
-            element={token ? <ManageAlerts token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageAlerts token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
         <Route 
             path="/store/:storeId/reviews" 
-            element={token ? <ManageReviews token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageReviews token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
         <Route 
           path="/store/:storeId/delivery" 
-          element={token ? <ManageDelivery token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+          element={isLoggedIn ? <ManageDelivery token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/store/:storeId/checkout" 
-          element={token ? <ManageCheckout token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+          element={isLoggedIn ? <ManageCheckout token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
         />
           <Route 
             path="/store/:storeId/plan" 
-            element={token ? <UpgradePlan token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <UpgradePlan token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/orders" 
-            element={token ? <ManageOrders token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageOrders token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/live-orders" 
-            element={token ? <LiveOrderManage token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <LiveOrderManage token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/policies" 
-            element={token ? <ManagePolicy token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManagePolicy token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/seo" 
-            element={token ? <SeoSetting token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <SeoSetting token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/newsletter" 
-            element={token ? <ManageNewsletter token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageNewsletter token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/profile" 
-            element={token ? <ManageProfile token={token} onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageProfile token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="*" 
-            element={<Navigate to={token ? "/" : "/login"} />} 
+            element={<Navigate to={isLoggedIn ? "/" : "/login"} />} 
           />
         </Routes>
       </Router>
