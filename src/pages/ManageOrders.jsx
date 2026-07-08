@@ -361,6 +361,21 @@ const ManageOrders = ({ token, stores, onLogout }) => {
         `;
       }
 
+      let trackingDetailsHtml = '';
+      if (order.ShippingMethod || order.ShippingTrackingNumber || order.DeliveryPersonName) {
+        trackingDetailsHtml = `<div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px solid #e2e8f0;">
+          <h4 style="margin-top: 0; color: #3b82f6; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 10px;">Tracking Information</h4>`;
+        if (order.ShippingMethod) trackingDetailsHtml += `<p style="margin: 5px 0; font-size: 14px;"><strong>Shipping Method:</strong> ${order.ShippingMethod}</p>`;
+        if (order.ShippingCompany) trackingDetailsHtml += `<p style="margin: 5px 0; font-size: 14px;"><strong>Shipping Company:</strong> ${order.ShippingCompany}</p>`;
+        if (order.ShippingTrackingNumber) trackingDetailsHtml += `<p style="margin: 5px 0; font-size: 14px;"><strong>Tracking Number:</strong> ${order.ShippingTrackingNumber}</p>`;
+        if (order.DeliveryPersonName || order.DeliveryPersonPhone) {
+          const name = order.DeliveryPersonName || 'N/A';
+          const phone = order.DeliveryPersonPhone ? ` (${order.DeliveryPersonPhone})` : '';
+          trackingDetailsHtml += `<p style="margin: 5px 0; font-size: 14px;"><strong>Delivery Person:</strong> ${name}${phone}</p>`;
+        }
+        trackingDetailsHtml += `</div>`;
+      }
+
       const finalHtml = templateBody
         .replace(/{{storeName}}/g, currentStore.storeName || "")
         .replace(/{{customerName}}/g, order.customerName || "")
@@ -376,6 +391,12 @@ const ManageOrders = ({ token, stores, onLogout }) => {
         .replace(/{{discountRows}}/g, discountRowsHtml)
         .replace(/{{paymentMethod}}/g, (order.paymentMethod === 'whatsapp' || order.WhasAppOrder) ? 'WhatsApp' : order.paymentMethod === 'razorpay' ? 'Online' : 'COD')
         .replace(/{{orderStatus}}/g, order.orderStatus ? order.orderStatus.toUpperCase() : "")
+        .replace(/{{trackingDetails}}/g, trackingDetailsHtml)
+        .replace(/{{ShippingMethod}}/g, order.ShippingMethod || 'N/A')
+        .replace(/{{ShippingTrackingNumber}}/g, order.ShippingTrackingNumber || 'N/A')
+        .replace(/{{ShippingCompany}}/g, order.ShippingCompany || 'N/A')
+        .replace(/{{DeliveryPersonName}}/g, order.DeliveryPersonName || 'N/A')
+        .replace(/{{DeliveryPersonPhone}}/g, order.DeliveryPersonPhone || 'N/A')
         .replace(/{{shippingCharge}}/g, order.shippingCharge || 0);
 
       printWindow.document.write(`<html><head><title>Invoice - ${order._id.toString().slice(-6).toUpperCase()}</title><style>@media print { body { -webkit-print-color-adjust: exact; } }</style></head><body>${finalHtml}</body></html>`);
