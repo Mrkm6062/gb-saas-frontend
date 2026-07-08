@@ -349,8 +349,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       specificationsEnabled: product.specificationsEnabled || false,
       keyFeatures: product.keyFeatures && product.keyFeatures.length > 0 ? product.keyFeatures : [''],
       specifications: product.specifications && product.specifications.length > 0 ? product.specifications : [{ name: '', value: '' }],
-      subCategories: product.subCategories || [],
-      offerCategories: product.offerCategories || []
+      subCategories: (product.subCategories || []).map(sc => sc._id || sc),
+      offerCategories: (product.offerCategories || []).map(oc => oc._id || oc)
     });
     setEditingId(product._id);
     setIsFormOpen(true);
