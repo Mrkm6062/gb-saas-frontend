@@ -147,12 +147,6 @@ function Login({ onLoginSuccess }) {
               {isLogin ? 'for Local Shops' : 'Grow Your Shop'}
             </span>
           </h1>
-          
-          <p className="text-slate-600 mb-4 md:mb-8 max-w-md leading-relaxed text-sm md:text-base">
-            Launch your own online ordering system for Kirana stores, vegetable shops, 
-            and local food nasta corners. Take orders and deliver locally — zero high 
-            commissions. The trusted choice for grocery online ordering in India.
-          </p>
         </div>
 
         {/* Right Side: Login & Registration Form */}
@@ -263,6 +257,8 @@ function Login({ onLoginSuccess }) {
       </div>
       <PlatformFooter />
     </div>
+  );
+
   return loginLayout;
 }
 
