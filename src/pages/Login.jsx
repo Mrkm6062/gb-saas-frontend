@@ -232,7 +232,7 @@ function Login({ onLoginSuccess }) {
                       text={isLogin ? "signin_with" : "signup_with"}
                       shape="pill"
                       theme="outline"
-                      width="100%"
+                      width="320"
                     />
                   </div>
                 </div>
