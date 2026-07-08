@@ -15,6 +15,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   
   const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
+  const [offerCategories, setOfferCategories] = useState([]);
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [mediaImages, setMediaImages] = useState([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
@@ -54,7 +56,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     basePrice: '', totalStock: '', images: [], variants: [], isCustomizable: false, allowCustomText: false,
     customizableArea: { x: 25, y: 30, width: 50, height: 40 },
     variantType: 'option',
-    keyFeaturesEnabled: false, specificationsEnabled: false, keyFeatures: [''], specifications: [{ name: '', value: '' }]
+    keyFeaturesEnabled: false, specificationsEnabled: false, keyFeatures: [''], specifications: [{ name: '', value: '' }],
+    subCategories: [],
+    offerCategories: []
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -169,10 +173,40 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     }
   };
 
+  const fetchSubCategories = async () => {
+    if (!currentStore._id) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/subcategories?storeId=${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setSubCategories(await response.json());
+      }
+    } catch (error) {
+      console.error("Failed to fetch subcategories:", error);
+    }
+  };
+
+  const fetchOfferCategories = async () => {
+    if (!currentStore._id) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/offercategories?storeId=${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setOfferCategories(await response.json());
+      }
+    } catch (error) {
+      console.error("Failed to fetch offer categories:", error);
+    }
+  };
+
   useEffect(() => {
     if (currentStore._id) {
       fetchProducts();
       fetchCategories();
+      fetchSubCategories();
+      fetchOfferCategories();
     }
   }, [currentStore._id]);
 
@@ -314,7 +348,9 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       keyFeaturesEnabled: product.keyFeaturesEnabled || false,
       specificationsEnabled: product.specificationsEnabled || false,
       keyFeatures: product.keyFeatures && product.keyFeatures.length > 0 ? product.keyFeatures : [''],
-      specifications: product.specifications && product.specifications.length > 0 ? product.specifications : [{ name: '', value: '' }]
+      specifications: product.specifications && product.specifications.length > 0 ? product.specifications : [{ name: '', value: '' }],
+      subCategories: product.subCategories || [],
+      offerCategories: product.offerCategories || []
     });
     setEditingId(product._id);
     setIsFormOpen(true);
@@ -1044,7 +1080,81 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                   </div>
                   <div className="relative">
                     <input placeholder=" " value={formData.subCategory} onChange={e=>setFormData({...formData, subCategory: e.target.value})} className="floating-input w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none text-sm bg-white" />
-                    <label className="floating-label">Sub Category</label>
+                    <label className="floating-label">Sub Category (Legacy)</label>
+                  </div>
+
+                  {/* Select Sub-Categories (dynamic) */}
+                  {formData.category && (
+                    <div className="md:col-span-2 space-y-2 border border-slate-100 p-4 rounded-xl text-left">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Apply Sub-categories</label>
+                      {subCategories.filter(sc => (sc.category?._id || sc.category) === formData.category).length === 0 ? (
+                        <p className="text-xs text-slate-400 italic">No sub-categories defined for this category. Go to Catalog Manager to add some.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-3">
+                          {subCategories.filter(sc => (sc.category?._id || sc.category) === formData.category).map(sc => {
+                            const isChecked = formData.subCategories?.includes(sc._id);
+                            return (
+                              <label key={sc._id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition ${isChecked ? 'bg-green-50 border-[#76b900] text-green-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={isChecked} 
+                                  onChange={e => {
+                                    const checked = e.target.checked;
+                                    let newSubCats = [...(formData.subCategories || [])];
+                                    if (checked) {
+                                      newSubCats.push(sc._id);
+                                    } else {
+                                      newSubCats = newSubCats.filter(id => id !== sc._id);
+                                    }
+                                    setFormData({ ...formData, subCategories: newSubCats });
+                                  }} 
+                                  className="hidden" 
+                                />
+                                {sc.name}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Select Offer Categories */}
+                  <div className="md:col-span-2 space-y-2 border border-slate-100 p-4 rounded-xl text-left">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Apply Offer Categories</label>
+                    {offerCategories.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic">No offer categories defined. Go to Catalog Manager to add some.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-3">
+                        {offerCategories.map(oc => {
+                          const isChecked = formData.offerCategories?.includes(oc._id);
+                          return (
+                            <label key={oc._id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition ${isChecked ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                              <input 
+                                type="checkbox" 
+                                checked={isChecked} 
+                                onChange={e => {
+                                  const checked = e.target.checked;
+                                  let newOfferCats = [...(formData.offerCategories || [])];
+                                  if (checked) {
+                                    newOfferCats.push(oc._id);
+                                  } else {
+                                    newOfferCats = newOfferCats.filter(id => id !== oc._id);
+                                  }
+                                  setFormData({ ...formData, offerCategories: newOfferCats });
+                                }} 
+                                className="hidden" 
+                              />
+                              <span style={{ backgroundColor: oc.color }} className="w-2.5 h-2.5 rounded-full inline-block mr-1"></span>
+                              {oc.name}
+                              <span className="text-[9px] uppercase bg-white/60 px-1 py-0.5 rounded border border-black/5 ml-1">
+                                {oc.offerType === 'B1G1' ? 'B1G1' : oc.offerType === 'B2G1' ? 'B2G1' : oc.offerType === 'DISCOUNT' ? 'Discount' : 'None'}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
               <div className="md:col-span-2 pt-2 border-t border-slate-100 mt-2 space-y-3">
                 {canCustomize && (
