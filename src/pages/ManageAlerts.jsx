@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -107,7 +108,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
   };
   const [templateForm, setTemplateForm] = useState(initialTemplate);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   useEffect(() => {
     const fetchConfig = async () => {

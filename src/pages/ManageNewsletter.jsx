@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -48,7 +49,7 @@ const ManageNewsletter = ({ token, stores, onLogout }) => {
   const [sendingNewsletter, setSendingNewsletter] = useState(false);
   const [sendResult, setSendResult] = useState(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   // Fetch subscribers
   const fetchSubscribers = async () => {

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -26,7 +27,7 @@ const PlatformFooter = () => {
   useEffect(() => {
     const fetchFooterData = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        
         const [policyRes, socialRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/platform-policies/public`),
           fetch(`${API_BASE_URL}/api/platform-social-media/public`)

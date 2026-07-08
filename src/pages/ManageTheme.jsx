@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -29,7 +30,7 @@ const ManageTheme = ({ token, stores, onLogout }) => {
   const [themes, setThemes] = useState([]);
   const [showAllThemes, setShowAllThemes] = useState(false);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
   const [purchaseModal, setPurchaseModal] = useState({ isOpen: false, theme: null });
 
   useEffect(() => {

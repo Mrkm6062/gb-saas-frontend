@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -54,7 +55,7 @@ const ManageCategory = ({ token, stores, onLogout }) => {
   const [offerDiscountPercentage, setOfferDiscountPercentage] = useState(0);
   const [editingOfferId, setEditingOfferId] = useState(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   // API Call Helpers
   const fetchCategories = async () => {

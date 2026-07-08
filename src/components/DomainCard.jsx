@@ -1,9 +1,10 @@
+import { API_BASE_URL } from '../api';
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, Clock, AlertCircle, Trash2, Copy, RefreshCw, Lock, Unlock, ShieldAlert } from 'lucide-react';
 
 const DomainCard = ({ domain: initialDomain, token, currentStore, onDelete, onVerify, onFixSSL, copyToClipboard }) => {
   const [domain, setDomain] = useState(initialDomain);
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   // Auto-refresh logic: Poll every 10s if SSL is pending and domain is connected
   useEffect(() => {

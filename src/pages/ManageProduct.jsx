@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';                                                                                             
@@ -140,7 +141,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       };
   }, [interaction]);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   const fetchProducts = async () => {
     if (!currentStore._id) return;

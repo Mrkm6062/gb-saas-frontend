@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import PlatformFooter from '../components/PlatformFooter';
@@ -11,7 +12,7 @@ const PlatformPolicy = () => {
     const fetchPolicy = async () => {
       setLoading(true);
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        
         const response = await fetch(`${API_BASE_URL}/api/platform-policies/public`);
         if (response.ok) {
           const data = await response.json();

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -34,7 +35,7 @@ const ManageCoupon = ({ token, stores, onLogout }) => {
 
   const [formData, setFormData] = useState(initialForm);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   const fetchCoupons = async () => {
     if (!currentStore._id) return;

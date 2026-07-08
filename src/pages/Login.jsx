@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PlatformFooter from '../components/PlatformFooter';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { API_BASE_URL } from '../api';
 
 function Login({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,7 +17,6 @@ function Login({ onLoginSuccess }) {
   useEffect(() => {
     const fetchGoogleConfig = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/store-owner/auth/google/config`);
         if (res.ok) {
           const data = await res.json();
@@ -34,7 +34,6 @@ function Login({ onLoginSuccess }) {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
         if (res.ok) {
           const data = await res.json();
@@ -76,7 +75,6 @@ function Login({ onLoginSuccess }) {
     setStatus('Sending OTP...');
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -101,7 +99,6 @@ function Login({ onLoginSuccess }) {
     setStatus('Verifying...');
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,7 +124,6 @@ function Login({ onLoginSuccess }) {
   const handleGoogleSuccess = async (credentialResponse) => {
     setStatus('Verifying Google account...');
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const response = await fetch(`${API_BASE_URL}/api/store-owner/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

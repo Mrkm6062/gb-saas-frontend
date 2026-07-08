@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -49,7 +50,7 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
   const [loadingMedia, setLoadingMedia] = useState(false);
   const [activeMediaTarget, setActiveMediaTarget] = useState(null); // { type: 'nested', section, field } or { type: 'whyChooseUs', index }
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   useEffect(() => {
     const fetchCustomization = async () => {

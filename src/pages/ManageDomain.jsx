@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -17,7 +18,7 @@ const ManageDomain = ({ token, stores, onLogout }) => {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [fixingSslFor, setFixingSslFor] = useState(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   const fetchDomains = async () => {
     try {

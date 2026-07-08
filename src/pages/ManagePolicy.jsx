@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -15,7 +16,7 @@ const ManagePolicy = ({ token, stores, onLogout }) => {
   const [activeTab, setActiveTab] = useState('list');
   const [viewPolicy, setViewPolicy] = useState(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   const fetchPolicies = async () => {
     if (!currentStore._id) return;

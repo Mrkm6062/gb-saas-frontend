@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -24,7 +25,7 @@ const ManageProfile = ({ token, stores, onLogout }) => {
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState({ text: '', type: '' });
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   // Fetch Profile
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -118,7 +119,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        
         const res = await fetch(`${API_BASE_URL}/api/plans`);
         if (res.ok) {
           const data = await res.json();
@@ -135,7 +136,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   useEffect(() => {
     const fetchStoreTypes = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        
         const res = await fetch(`${API_BASE_URL}/api/store-types/active`);
         if (res.ok) {
           const data = await res.json();
@@ -152,7 +153,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        
         const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
         if (res.ok) {
           setPlatformSettings(await res.json());
@@ -169,7 +170,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
       if (!currentStore._id) return;
       setLoadingHours(true);
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        
         const res = await fetch(`${API_BASE_URL}/api/store-hours?storeId=${currentStore._id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -189,7 +190,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const fetchSocialLinks = async () => {
     if (!currentStore._id) return;
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      
       const res = await fetch(`${API_BASE_URL}/api/social-media?storeId=${currentStore._id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -205,7 +206,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setStatus('Updating...');
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      
       
       const response = await fetch(`${API_BASE_URL}/api/store/${storeId}`, {
         method: 'PUT',
@@ -262,7 +263,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setUploadProgress(0);
     setUploadSpeed('Calculating...');
 
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+    
     const startTime = Date.now();
     let lastLoaded = 0;
     let lastTime = startTime;
@@ -337,7 +338,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const fetchMedia = async () => {
     setLoadingMedia(true);
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      
       const response = await fetch(`${API_BASE_URL}/api/upload?storeId=${currentStore._id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -353,7 +354,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const handleDeleteMedia = async (filename) => {
     if (!window.confirm("Delete this image permanently from cloud storage?")) return;
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -370,7 +371,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     if (!newUrl) return;
     setSocialStatus('Adding...');
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      
       const res = await fetch(`${API_BASE_URL}/api/social-media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -390,7 +391,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
   const handleDeleteSocial = async (id) => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      
       const res = await fetch(`${API_BASE_URL}/api/social-media/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -407,7 +408,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setEmpName('');
     
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      
       const res = await fetch(`${API_BASE_URL}/api/store/verify-employee`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -483,7 +484,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     const planPrice = selectedPlanObj ? selectedPlanObj.price : 0;
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      
 
       let keyData = null;
       if (planPrice > 0) {
@@ -595,7 +596,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
   const handleRestoreStore = async (storeObjId) => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      
       const response = await fetch(`${API_BASE_URL}/api/store/${storeObjId}/restore`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -735,7 +736,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     e.preventDefault();
     setSavingHours(true);
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+      
       const res = await fetch(`${API_BASE_URL}/api/store-hours`, {
         method: 'PUT',
         headers: {

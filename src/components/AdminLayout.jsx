@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -59,7 +60,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        
         const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
         if (res.ok) {
           const data = await res.json();

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -12,7 +13,7 @@ const ManageReviews = ({ token, stores, onLogout }) => {
   const [status, setStatus] = useState('');
   const [filter, setFilter] = useState('pending'); // 'all', 'pending', 'approved'
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   const fetchReviews = async () => {
     if (!currentStore._id) return;

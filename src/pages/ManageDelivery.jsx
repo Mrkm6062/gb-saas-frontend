@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -27,7 +28,7 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
   const [activeTab, setActiveTab] = useState('charges');
   const [pincodeSearch, setPincodeSearch] = useState('');
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   // Fetch state & district map
   useEffect(() => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from './api';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Mainpanel from './pages/Mainpanel';
@@ -45,7 +46,6 @@ function App() {
     const fetchMyStores = async () => {
       if (token && stores.length === 0) {
         try {
-          const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
           const response = await fetch(`${API_BASE_URL}/api/store/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });

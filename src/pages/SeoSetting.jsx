@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -36,7 +37,7 @@ const SeoSetting = ({ token, stores, onLogout }) => {
     customLlmsContent: ''
   });
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+  
 
   useEffect(() => {
     const fetchSeoSettings = async () => {

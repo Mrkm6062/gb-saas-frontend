@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -35,7 +36,7 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+        
         // Note: You will need to expose a public/user-facing route for GET /api/plans 
         // as the current one is protected under the SuperAdmin middleware
         const response = await fetch(`${API_BASE_URL}/api/plans`, {
@@ -56,7 +57,7 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
 
   const handleUpgrade = async (plan) => {
     setStatus('Initializing payment...');
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
+    
 
     // If plan is free, fallback to the old direct upgrade logic (if applicable)
     if (plan.price === 0) {
