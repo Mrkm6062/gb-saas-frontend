@@ -107,100 +107,109 @@ function Login({ onLoginSuccess }) {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden text-left">
       <div className="flex-1 flex flex-col md:flex-row w-full h-full">
-        {/* Left Side: Login Form */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-24 py-12 overflow-y-auto">
-        <div className="mb-8">
-          <img src={settings.mainLogoUrl} alt="Galibrand Logo" className="h-16 w-auto" />
+        {/* Left Side: Logo and Text */}
+        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-20 lg:px-24 py-12 bg-white">
+          <div className="mb-8">
+            <img src={settings.mainLogoUrl} alt="Galibrand Logo" className="h-16 w-auto" />
+          </div>
+
+          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-6 leading-tight tracking-tight">
+            {isLogin ? 'Digital Ordering' : 'Join Us Today'} <br /> 
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#76b900] to-[#ff8a00]">
+              {isLogin ? 'for Local Shops' : 'Grow Your Shop'}
+            </span>
+          </h1>
+          
+          <p className="text-slate-600 mb-8 max-w-md leading-relaxed text-sm md:text-base">
+            Launch your own online ordering system for Kirana stores, vegetable shops, 
+            and local food nasta corners. Take orders and deliver locally — zero high 
+            commissions. The trusted choice for grocery online ordering in India.
+          </p>
         </div>
 
-        <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4 leading-tight">
-          {isLogin ? 'Digital Ordering' : 'Join Us Today'} <br /> {isLogin ? 'for Local Shops' : 'Grow Your Shop'}
-        </h1>
-        
-        <p className="text-slate-600 mb-8 max-w-md leading-relaxed">
-          Launch your own online ordering system for Kirana stores, vegetable shops, 
-          and local food nasta corners. Take orders and deliver locally — zero high 
-          commissions. The trusted choice for grocery online ordering in India.
-        </p>
+        {/* Right Side: Login & Registration Form */}
+        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-20 lg:px-24 py-12 bg-slate-50/50 border-t md:border-t-0 md:border-l border-slate-100">
+          <div className="w-full max-w-md mx-auto space-y-6">
+            <div className="text-left">
+              <h2 className="text-2xl font-bold text-slate-800">
+                {isLogin ? 'Welcome Back' : 'Create Owner Account'}
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                {isLogin ? 'Verify your email to manage your store' : 'Enter your details to register as store owner'}
+              </p>
+            </div>
 
-        {step === 1 ? (
-          <form onSubmit={handleSendOtp} className="space-y-5 max-w-md animate-fadeIn">
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-bold text-slate-800 mb-2">Full Name</label>
-                <input 
-                  type="text" 
-                  placeholder="Full Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-[#76b900] outline-none transition text-black"
-                  required
-                />
+            {step === 1 ? (
+              <form onSubmit={handleSendOtp} className="space-y-5 animate-fadeIn">
+                {!isLogin && (
+                  <div className="space-y-1.5 text-left">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Full Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="Enter your full name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#76b900] focus:ring-2 focus:ring-[#76b900]/20 transition bg-white text-sm text-black"
+                      required
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1.5 text-left">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
+                  <input 
+                    type="email" 
+                    placeholder="Enter your registered email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#76b900] focus:ring-2 focus:ring-[#76b900]/20 transition bg-white text-sm text-black"
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="w-full py-3.5 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-xl hover:opacity-95 transition shadow-md shadow-green-100 text-sm">
+                  Send OTP Code
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyOtp} className="space-y-5 animate-fadeIn">
+                <div className="space-y-1.5 text-left">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Enter 6-Digit OTP</label>
+                  <p className="text-xs text-slate-500">
+                    We sent a code to <span className="font-bold text-slate-800">{email}</span>. 
+                    <button type="button" onClick={() => {setStep(1); setStatus('');}} className="text-[#76b900] hover:underline ml-1 font-bold">Change Email</button>
+                  </p>
+                  <input 
+                    type="text" 
+                    placeholder="• • • • • •"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                    maxLength="6"
+                    className="w-full px-4 py-3 border border-slate-200 focus:outline-none focus:border-[#76b900] rounded-xl transition bg-white text-black text-center text-2xl tracking-[0.5em] font-bold"
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="w-full py-3.5 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-xl hover:opacity-95 transition shadow-md shadow-green-100 text-sm">
+                  Verify & {isLogin ? 'Login' : 'Create Account'}
+                </button>
+              </form>
+            )}
+
+            {status && (
+              <div className={`p-3 text-center rounded-xl text-xs font-bold ${status.startsWith('Error') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+                {status}
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-bold text-slate-800 mb-2">Email Address</label>
-              <input 
-                type="email" 
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-[#76b900] outline-none transition text-black"
-                required
-              />
-            </div>
-
-            <button type="submit" className="w-full py-3 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-full hover:opacity-90 transition shadow-lg text-lg">
-              Get OTP
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-5 max-w-md animate-fadeIn">
-            <div>
-              <label className="block text-sm font-bold text-slate-800 mb-2">Enter 6-Digit OTP</label>
-              <p className="text-xs text-slate-500 mb-3">We sent a code to <span className="font-bold text-slate-800">{email}</span>. <button type="button" onClick={() => {setStep(1); setStatus('');}} className="text-[#76b900] hover:underline ml-1">Change Email</button></p>
-              <input 
-                type="text" 
-                placeholder="• • • • • •"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                maxLength="6"
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-[#76b900] outline-none transition text-black text-center text-2xl tracking-[0.5em] font-bold"
-                required
-              />
-            </div>
-
-            <button type="submit" className="w-full py-3 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-full hover:opacity-90 transition shadow-lg text-lg">
-              Verify & {isLogin ? 'Login' : 'Create Account'}
-            </button>
-          </form>
-        )}
-
-          {status && (
-            <div className={`p-3 mt-4 max-w-md text-center rounded-md text-sm font-medium ${status.startsWith('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-              {status}
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="text-center pt-6 text-slate-700 max-w-md">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <button type="button" onClick={() => { setIsLogin(!isLogin); setStatus(''); }} className="text-[#76b900] font-bold hover:underline bg-transparent border-none p-0 cursor-pointer">
-                {isLogin ? 'Sign Up Now' : 'Login here'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Right Side: Image Grid Overlay */}
-        <div className="hidden md:flex w-1/2 relative bg-gradient-to-r from-[#76b900] via-[#ff8a00] to-[#76b900] bg-[length:200%_200%] animate-gradient items-center justify-start shadow-inner overflow-hidden pl-6 lg:pl-16">
-          <div className={`grid grid-cols-3 gap-4 lg:gap-6 transform rotate-12 scale-110 lg:scale-125 w-[750px] lg:w-[1000px] shrink-0 transition-opacity duration-1000 ease-out ${imagesPreloaded ? 'opacity-90' : 'opacity-0'}`}>
-            {(settings.loginImageGrid.length > 0 ? settings.loginImageGrid : Array(9).fill("")).slice(0, 9).map((img, idx) => (
-              <div key={idx} className={`relative transition-transform duration-500 hover:scale-105 hover:z-10 w-full aspect-square bg-slate-200 rounded-2xl lg:rounded-3xl overflow-hidden border-4 lg:border-8 shadow-xl ${idx % 2 === 0 ? 'border-[#ff8a00]' : 'border-[#76b900]'} ${idx % 3 === 1 ? 'translate-y-[20%]' : ''}`}>
-                {img && <img src={img} alt={`Login Grid Image ${idx + 1}`} className="w-full h-full object-cover" />}
+            {step === 1 && (
+              <div className="text-center pt-2 text-sm text-slate-500">
+                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                <button type="button" onClick={() => { setIsLogin(!isLogin); setStatus(''); }} className="text-[#76b900] font-bold hover:underline bg-transparent border-none p-0 cursor-pointer">
+                  {isLogin ? 'Sign Up Now' : 'Login here'}
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
