@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PlatformFooter from '../components/PlatformFooter';
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import { API_BASE_URL } from '../api';
 
 function Login({ onLoginSuccess }) {
@@ -12,24 +12,6 @@ function Login({ onLoginSuccess }) {
   const [status, setStatus] = useState('');
   const [settings, setSettings] = useState({ mainLogoUrl: "https://storage.googleapis.com/galibrand/superadmin/products/galibrandfullname-logo.png", loginImageGrid: [] });
   const [imagesPreloaded, setImagesPreloaded] = useState(false);
-  const [googleClientId, setGoogleClientId] = useState('');
-
-  useEffect(() => {
-    const fetchGoogleConfig = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/store-owner/auth/google/config`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.clientId) {
-            setGoogleClientId(data.clientId);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to load Google OAuth config:", e);
-      }
-    };
-    fetchGoogleConfig();
-  }, []);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -281,15 +263,7 @@ function Login({ onLoginSuccess }) {
       </div>
       <PlatformFooter />
     </div>
-  );
-
-  const activeClientId = googleClientId || "445781559811-dummygoogleclientidplaceholder.apps.googleusercontent.com";
-
-  return (
-    <GoogleOAuthProvider clientId={activeClientId}>
-      {loginLayout}
-    </GoogleOAuthProvider>
-  );
+  return loginLayout;
 }
 
 export default Login;
