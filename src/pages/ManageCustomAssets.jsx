@@ -131,7 +131,10 @@ const ManageCustomAssets = ({ token, stores, onLogout }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-assets/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'x-csrf-token': document.cookie.match(/(^| )csrfToken=([^;]+)/)?.[2] || ''
+        },
         credentials: 'include'
       });
       if (res.ok) {

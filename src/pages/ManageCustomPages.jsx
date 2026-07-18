@@ -71,7 +71,8 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-csrf-token': document.cookie.match(/(^| )csrfToken=([^;]+)/)?.[2] || ''
         },
         credentials: 'include'
       });
@@ -94,7 +95,10 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-pages/page/${pageId}/duplicate`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'x-csrf-token': document.cookie.match(/(^| )csrfToken=([^;]+)/)?.[2] || ''
+        },
         credentials: 'include'
       });
       if (res.ok) {
@@ -117,7 +121,10 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-pages/page/${pageId}/soft`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'x-csrf-token': document.cookie.match(/(^| )csrfToken=([^;]+)/)?.[2] || ''
+        },
         credentials: 'include'
       });
       if (res.ok) {
@@ -141,7 +148,8 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json' 
+          'Content-Type': 'application/json',
+          'x-csrf-token': document.cookie.match(/(^| )csrfToken=([^;]+)/)?.[2] || ''
         },
         body: JSON.stringify({ isDeleted: false, deletedAt: null, status: 'draft', isPublished: false }),
         credentials: 'include'
@@ -166,7 +174,10 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-pages/page/${pageId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'x-csrf-token': document.cookie.match(/(^| )csrfToken=([^;]+)/)?.[2] || ''
+        },
         credentials: 'include'
       });
       if (res.ok) {

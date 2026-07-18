@@ -172,7 +172,8 @@ const ManageCustomMenus = ({ token, stores, onLogout }) => {
         method,
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-csrf-token': document.cookie.match(/(^| )csrfToken=([^;]+)/)?.[2] || ''
         },
         body: JSON.stringify(payload),
         credentials: 'include'
@@ -219,7 +220,10 @@ const ManageCustomMenus = ({ token, stores, onLogout }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-menus/menu/${selectedMenuId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'x-csrf-token': document.cookie.match(/(^| )csrfToken=([^;]+)/)?.[2] || ''
+        },
         credentials: 'include'
       });
 

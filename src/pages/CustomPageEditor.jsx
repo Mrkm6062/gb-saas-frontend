@@ -296,7 +296,8 @@ const CustomPageEditor = ({ token, stores, onLogout }) => {
         method,
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-csrf-token': document.cookie.match(/(^| )csrfToken=([^;]+)/)?.[2] || ''
         },
         body: JSON.stringify(payload),
         credentials: 'include'
