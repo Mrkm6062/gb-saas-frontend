@@ -1,9 +1,30 @@
-import React, { useRef, useEffect } from "react";
-import Editor, { loader } from "@monaco-editor/react";
+import React, { useEffect, useRef } from "react";
 import * as monaco from "monaco-editor";
 
-// Configure loader to use the locally bundled monaco-editor instance, bypassing CDN script injections
-loader.config({ monaco });
+// Register web workers natively for Vite local bundling and syntax compilation
+import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
+import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
+import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
+import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+
+self.MonacoEnvironment = {
+  getWorker(_, label) {
+    if (label === 'json') {
+      return new jsonWorker();
+    }
+    if (label === 'css' || label === 'less' || label === 'scss') {
+      return new cssWorker();
+    }
+    if (label === 'html' || label === 'handlebars' || label === 'razor') {
+      return new htmlWorker();
+    }
+    if (label === 'typescript' || label === 'javascript') {
+      return new tsWorker();
+    }
+    return new editorWorker();
+  },
+};
 
 const MonacoEditor = ({ 
   value, 
@@ -13,18 +34,66 @@ const MonacoEditor = ({
   wordWrap = "off",
   editorRefExposed // Optional ref to expose raw editor instance
 }) => {
+  const containerRef = useRef(null);
   const editorRef = useRef(null);
+  const isSettingValueRef = useRef(false);
 
-  const handleEditorDidMount = (editor, monacoInstance) => {
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Clean container to prepare for fresh instance
+    containerRef.current.innerHTML = "";
+
+    const editor = monaco.editor.create(containerRef.current, {
+      value: value || "",
+      language: language === "javascript" ? "javascript" : language,
+      theme: theme,
+      wordWrap: wordWrap,
+      automaticLayout: true,
+      minimap: { enabled: true },
+      fontSize: 14,
+      lineNumbers: "on",
+      scrollBeyondLastLine: false,
+      roundedSelection: true,
+      scrollbar: {
+        verticalScrollbarSize: 10,
+        horizontalScrollbarSize: 10
+      }
+    });
+
     editorRef.current = editor;
     if (editorRefExposed) {
       editorRefExposed.current = editor;
     }
-    // Apply wordwrap option initially
-    editor.updateOptions({ wordWrap });
-  };
 
-  // Sync Word Wrap option if updated from parent controls
+    // Sync content updates
+    editor.onDidChangeModelContent(() => {
+      if (onChange && !isSettingValueRef.current) {
+        onChange(editor.getValue());
+      }
+    });
+
+    return () => {
+      editor.dispose();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language]);
+
+  // Sync value changes from parent components
+  useEffect(() => {
+    if (editorRef.current && value !== editorRef.current.getValue()) {
+      isSettingValueRef.current = true;
+      editorRef.current.setValue(value || "");
+      isSettingValueRef.current = false;
+    }
+  }, [value]);
+
+  // Sync editor theme changes (Dark vs Light)
+  useEffect(() => {
+    monaco.editor.setTheme(theme);
+  }, [theme]);
+
+  // Sync word wrap options
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.updateOptions({ wordWrap });
@@ -33,19 +102,19 @@ const MonacoEditor = ({
 
   const triggerUndo = () => {
     if (editorRef.current) {
-      editorRef.current.trigger("editor-interface", "undo");
+      editorRef.current.trigger("editor-action", "undo");
     }
   };
 
   const triggerRedo = () => {
     if (editorRef.current) {
-      editorRef.current.trigger("editor-interface", "redo");
+      editorRef.current.trigger("editor-action", "redo");
     }
   };
 
   const formatCode = () => {
     if (editorRef.current) {
-      editorRef.current.trigger("editor-interface", "editor.action.formatDocument");
+      editorRef.current.trigger("editor-action", "editor.action.formatDocument");
     }
   };
 
@@ -74,28 +143,7 @@ const MonacoEditor = ({
           Format Code
         </button>
       </div>
-      <div className="flex-1 w-full min-h-[350px]" style={{ height: "calc(100% - 38px)" }}>
-        <Editor
-          height="100%"
-          language={language === "javascript" ? "javascript" : language}
-          theme={theme}
-          value={value}
-          onChange={onChange}
-          onMount={handleEditorDidMount}
-          options={{
-            minimap: { enabled: true },
-            fontSize: 14,
-            lineNumbers: "on",
-            scrollBeyondLastLine: false,
-            roundedSelection: true,
-            scrollbar: {
-              verticalScrollbarSize: 10,
-              horizontalScrollbarSize: 10
-            }
-          }}
-          loading={<div className="p-4 text-slate-400 text-sm animate-pulse">Loading code editor...</div>}
-        />
-      </div>
+      <div ref={containerRef} className="flex-1 w-full min-h-[350px]" style={{ height: "calc(100% - 38px)" }} />
     </div>
   );
 };
