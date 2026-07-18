@@ -1,5 +1,9 @@
 import React, { useRef, useEffect } from "react";
-import Editor from "@monaco-editor/react";
+import Editor, { loader } from "@monaco-editor/react";
+import * as monaco from "monaco-editor";
+
+// Configure loader to use the locally bundled monaco-editor instance, bypassing CDN script injections
+loader.config({ monaco });
 
 const MonacoEditor = ({ 
   value, 
@@ -11,7 +15,7 @@ const MonacoEditor = ({
 }) => {
   const editorRef = useRef(null);
 
-  const handleEditorDidMount = (editor, monaco) => {
+  const handleEditorDidMount = (editor, monacoInstance) => {
     editorRef.current = editor;
     if (editorRefExposed) {
       editorRefExposed.current = editor;
