@@ -49,7 +49,8 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       Inventory: location.pathname.includes('/products') || location.pathname.includes('/categories'),
       Orders: location.pathname.includes('/orders') || location.pathname.includes('/live-orders'),
       Settings: location.pathname.includes('/alerts') || location.pathname.includes('/delivery') || location.pathname.includes('/checkout') || location.pathname.includes('/policies') || location.pathname.includes('/seo'),
-      Themes: location.pathname.includes('/themes') || location.pathname.includes('/theme-customization')
+      Themes: location.pathname.includes('/themes') || location.pathname.includes('/theme-customization'),
+      'Website Builder': location.pathname.includes('/custom-pages') || location.pathname.includes('/navigation-menus') || location.pathname.includes('/assets')
     };
   });
 
@@ -148,6 +149,14 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       subItems: [
         { name: 'Theme Gallery', path: activeStoreId ? `/store/${activeStoreId}/themes` : '#' },
         { name: 'Customize Theme', path: activeStoreId ? `/store/${activeStoreId}/theme-customization` : '#' }
+      ]
+    },
+    {
+      name: 'Website Builder', icon: <Globe size={20} />,
+      subItems: [
+        { name: 'Custom Pages', path: activeStoreId ? `/store/${activeStoreId}/custom-pages` : '#' },
+        { name: 'Menu Builder', path: activeStoreId ? `/store/${activeStoreId}/navigation-menus` : '#' },
+        { name: 'Asset Manager', path: activeStoreId ? `/store/${activeStoreId}/assets` : '#' }
       ]
     },
     { name: 'Analytics', icon: <BarChart3 size={20} />, path: '#' },
