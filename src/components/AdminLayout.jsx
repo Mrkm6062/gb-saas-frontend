@@ -114,43 +114,64 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     setOpenMenus(prev => ({ ...prev, [menuName]: !prev[menuName] }));
   };
 
+  const isCustomWebsite = currentStoreInfo?.storeType && (
+    currentStoreInfo.storeType === "Custom Website(HTML,CSS,JS)" ||
+    currentStoreInfo.storeType.toLowerCase().includes("custom website")
+  );
+
   const menuItems = [
     { 
       name: 'Overview', icon: <LayoutGrid size={20} />, 
-      subItems: [
+      subItems: isCustomWebsite ? [
+        { name: 'Manage Store', path: activeStoreId ? `/store/${activeStoreId}` : '#' }
+      ] : [
         { name: 'Live Dashboard', path: '/' },
         { name: 'Manage Store', path: activeStoreId ? `/store/${activeStoreId}` : '#' }
       ]
     },
-    { 
+    // Hide Inventory if Custom Website
+    ...(!isCustomWebsite ? [{ 
       name: 'Inventory', icon: <Package size={20} />, 
       subItems: [
         { name: 'Categories', path: activeStoreId ? `/store/${activeStoreId}/categories` : '#' },
         { name: 'Products', path: activeStoreId ? `/store/${activeStoreId}/products` : '#' }
       ]
-    },
-    { 
+    }] : []),
+    // Hide Orders if Custom Website
+    ...(!isCustomWebsite ? [{ 
       name: 'Orders', icon: <ClipboardList size={20} />, 
       subItems: [
         { name: 'Manage Orders', path: activeStoreId ? `/store/${activeStoreId}/orders` : '#' },
         { name: 'Live Orders Monitor', path: activeStoreId ? `/store/${activeStoreId}/live-orders` : '#' }
       ]
-    },
-    { name: 'Customers', icon: <Users size={20} />, path: activeStoreId ? `/store/${activeStoreId}/customers` : '#' },
-    { name: 'Coupons & Offers', icon: <Ticket size={20} />, path: activeStoreId ? `/store/${activeStoreId}/coupons` : '#' },
+    }] : []),
+    // Hide Customers if Custom Website
+    ...(!isCustomWebsite ? [{ name: 'Customers', icon: <Users size={20} />, path: activeStoreId ? `/store/${activeStoreId}/customers` : '#' }] : []),
+    // Hide Coupons if Custom Website
+    ...(!isCustomWebsite ? [{ name: 'Coupons & Offers', icon: <Ticket size={20} />, path: activeStoreId ? `/store/${activeStoreId}/coupons` : '#' }] : []),
+    
+    // Always show Newsletter
     { name: 'Newsletter', icon: <Bell size={20} />, path: activeStoreId ? `/store/${activeStoreId}/newsletter` : '#' },
+    
+    // Conditionally show domains if plan permits
     ...((currentStoreInfo?.planDetails?.features?.customDomain === true || 
          (currentStoreInfo?.planId && typeof currentStoreInfo.planId === 'object' && currentStoreInfo.planId?.features?.customDomain === true)) ? [
       { name: 'Domains', icon: <Globe size={20} />, path: activeStoreId ? `/store/${activeStoreId}/domains` : '#' }
     ] : []),
+    
+    // Always show Storage
     { name: 'Storage', icon: <HardDrive size={20} />, path: activeStoreId ? `/store/${activeStoreId}/storage` : '#' },
-    { 
+    
+    // Hide Themes if Custom Website (since themes are predefined ecommerce templates)
+    ...(!isCustomWebsite ? [{ 
       name: 'Themes', icon: <Layers size={20} />, 
       subItems: [
         { name: 'Theme Gallery', path: activeStoreId ? `/store/${activeStoreId}/themes` : '#' },
         { name: 'Customize Theme', path: activeStoreId ? `/store/${activeStoreId}/theme-customization` : '#' }
       ]
-    },
+    }] : []),
+    
+    // Always show Website Builder for Custom Websites
     {
       name: 'Website Builder', icon: <Globe size={20} />,
       subItems: [
@@ -159,11 +180,20 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
         { name: 'Asset Manager', path: activeStoreId ? `/store/${activeStoreId}/assets` : '#' }
       ]
     },
+    
+    // Always show Analytics
     { name: 'Analytics', icon: <BarChart3 size={20} />, path: '#' },
-    { name: 'Reviews', icon: <MessageSquare size={20} />, path: activeStoreId ? `/store/${activeStoreId}/reviews` : '#' },
+    
+    // Hide Reviews if Custom Website
+    ...(!isCustomWebsite ? [{ name: 'Reviews', icon: <MessageSquare size={20} />, path: activeStoreId ? `/store/${activeStoreId}/reviews` : '#' }] : []),
+    
+    // Filter Settings Sub-items conditionally (only Alerts & Emails and SEO & AI Settings for Custom Websites)
     { 
       name: 'Settings', icon: <Settings size={20} />, 
-      subItems: [
+      subItems: isCustomWebsite ? [
+        { name: 'Alerts & Emails', path: activeStoreId ? `/store/${activeStoreId}/alerts` : '#' },
+        { name: 'SEO & AI Settings', path: activeStoreId ? `/store/${activeStoreId}/seo` : '#' }
+      ] : [
         { name: 'Alerts & Emails', path: activeStoreId ? `/store/${activeStoreId}/alerts` : '#' },
         { name: 'Delivery', path: activeStoreId ? `/store/${activeStoreId}/delivery` : '#' },
         { name: 'Checkout & Payment', path: activeStoreId ? `/store/${activeStoreId}/checkout` : '#' },
@@ -171,7 +201,9 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
         { name: 'SEO & AI Settings', path: activeStoreId ? `/store/${activeStoreId}/seo` : '#' }
       ]
     },
-    { name: 'Plan & Billing', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' },
+    
+    // Always show Plan & Billing
+    { name: 'Plan & Billing', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' }
   ];
 
   return (
