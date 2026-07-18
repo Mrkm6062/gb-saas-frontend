@@ -17,7 +17,8 @@ const CustomPagePreview = ({ token }) => {
     setError('');
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-pages/page/${pageId}/preview`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       if (res.ok) {
         setPage(await res.json());
@@ -47,7 +48,8 @@ const CustomPagePreview = ({ token }) => {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include'
       });
       if (res.ok) {
         const data = await res.json();

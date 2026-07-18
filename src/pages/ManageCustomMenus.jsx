@@ -43,7 +43,8 @@ const ManageCustomMenus = ({ token, stores, onLogout }) => {
     try {
       // 1. Fetch menus
       const menuRes = await fetch(`${API_BASE_URL}/api/custom-menus/menus?storeId=${currentStore._id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       let menusData = [];
       if (menuRes.ok) {
@@ -56,7 +57,8 @@ const ManageCustomMenus = ({ token, stores, onLogout }) => {
 
       // 2. Fetch custom pages for internal link dropdown
       const pagesRes = await fetch(`${API_BASE_URL}/api/custom-pages/pages?storeId=${currentStore._id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       if (pagesRes.ok) {
         setPages(await pagesRes.json());
@@ -172,7 +174,8 @@ const ManageCustomMenus = ({ token, stores, onLogout }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        credentials: 'include'
       });
 
       if (res.ok) {
@@ -182,7 +185,8 @@ const ManageCustomMenus = ({ token, stores, onLogout }) => {
         
         // Refresh menus list
         const menuRes = await fetch(`${API_BASE_URL}/api/custom-menus/menus?storeId=${currentStore._id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` },
+          credentials: 'include'
         });
         if (menuRes.ok) {
           const list = await menuRes.json();
@@ -215,7 +219,8 @@ const ManageCustomMenus = ({ token, stores, onLogout }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-menus/menu/${selectedMenuId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
 
       if (res.ok) {

@@ -130,6 +130,7 @@ const ManageCategory = ({ token, stores, onLogout }) => {
     const xhr = new XMLHttpRequest();
     setActiveXhr(xhr);
     xhr.open('POST', `${API_BASE_URL}/api/upload`);
+    xhr.withCredentials = true; // Include credentials (accessToken cookie)
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
     xhr.upload.onprogress = (event) => {
@@ -201,7 +202,8 @@ const ManageCategory = ({ token, stores, onLogout }) => {
     setLoadingMedia(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/upload?storeId=${currentStore._id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       const data = await response.json();
       if (response.ok) setMediaImages(data.images || []);
@@ -218,7 +220,8 @@ const ManageCategory = ({ token, stores, onLogout }) => {
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename })
+        body: JSON.stringify({ filename }),
+        credentials: 'include'
       });
       if (response.ok) fetchMedia();
     } catch (err) {

@@ -34,7 +34,8 @@ const ManageCustomAssets = ({ token, stores, onLogout }) => {
       const res = await fetch(
         `${API_BASE_URL}/api/custom-assets/list?storeId=${currentStore._id}${folderParam}${searchParam}`,
         {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` },
+          credentials: 'include'
         }
       );
       if (res.ok) {
@@ -99,7 +100,8 @@ const ManageCustomAssets = ({ token, stores, onLogout }) => {
       const res = await fetch(`${API_BASE_URL}/api/custom-assets/upload`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }, // Note: Do NOT set Content-Type header when uploading FormData!
-        body: formData
+        body: formData,
+        credentials: 'include'
       });
 
       if (res.ok) {
@@ -129,7 +131,8 @@ const ManageCustomAssets = ({ token, stores, onLogout }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-assets/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       if (res.ok) {
         fetchAssets();

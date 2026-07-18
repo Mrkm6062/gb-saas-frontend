@@ -84,7 +84,8 @@ const CustomPageEditor = ({ token, stores, onLogout }) => {
       if (!isEditMode || !currentStore._id) return;
       try {
         const res = await fetch(`${API_BASE_URL}/api/custom-pages/page/${pageId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` },
+          credentials: 'include'
         });
         if (res.ok) {
           const page = await res.json();
@@ -136,7 +137,8 @@ const CustomPageEditor = ({ token, stores, onLogout }) => {
     if (!currentStore._id) return;
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-assets/list?storeId=${currentStore._id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       if (res.ok) {
         const data = await res.json();
@@ -296,7 +298,8 @@ const CustomPageEditor = ({ token, stores, onLogout }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        credentials: 'include'
       });
 
       if (res.ok) {

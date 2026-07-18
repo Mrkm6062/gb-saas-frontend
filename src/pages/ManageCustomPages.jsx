@@ -32,7 +32,8 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
       const res = await fetch(
         `${API_BASE_URL}/api/custom-pages/pages?storeId=${currentStore._id}${statusParam}${deletedParam}${searchParam}`,
         {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` },
+          credentials: 'include'
         }
       );
 
@@ -71,7 +72,8 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include'
       });
       if (res.ok) {
         fetchPages();
@@ -92,7 +94,8 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-pages/page/${pageId}/duplicate`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       if (res.ok) {
         fetchPages();
@@ -114,7 +117,8 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-pages/page/${pageId}/soft`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       if (res.ok) {
         fetchPages();
@@ -139,7 +143,8 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify({ isDeleted: false, deletedAt: null, status: 'draft', isPublished: false })
+        body: JSON.stringify({ isDeleted: false, deletedAt: null, status: 'draft', isPublished: false }),
+        credentials: 'include'
       });
       if (res.ok) {
         setStatusFilter('all'); // Go back to all active pages
@@ -161,7 +166,8 @@ const ManageCustomPages = ({ token, stores, onLogout }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/custom-pages/page/${pageId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       if (res.ok) {
         fetchPages();
