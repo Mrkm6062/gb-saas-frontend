@@ -155,11 +155,17 @@ const CustomPageEditor = ({ token, stores, onLogout }) => {
   // Trigger Save function
   const handleSave = async (silent = false) => {
     if (!title.trim()) {
-      if (!silent) setError('Page Title is required');
+      if (!silent) {
+        setError('Page Title is required');
+        setActiveTab('settings'); // Switch to settings tab so they see the error/field
+      }
       return;
     }
     if (!slug.trim()) {
-      if (!silent) setError('Page Slug is required');
+      if (!silent) {
+        setError('Page Slug is required');
+        setActiveTab('settings'); // Switch to settings tab so they see the error/field
+      }
       return;
     }
 
@@ -580,9 +586,21 @@ const CustomPageEditor = ({ token, stores, onLogout }) => {
             >
               <ArrowLeft size={20} />
             </button>
-            <div>
+            <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-black truncate max-w-xs">{title || "Untitled Custom Page"}</span>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (!isEditMode) {
+                      // Auto-slugify on title change in create mode
+                      setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+                    }
+                  }}
+                  placeholder="Page Title (e.g. About Us)"
+                  className="bg-slate-800 border border-slate-700 text-white rounded px-3 py-1 text-sm font-bold focus:outline-none focus:ring-1 focus:ring-[#76b900] w-48 sm:w-64"
+                />
                 {isHomepage && <span className="bg-[#f1f8e9]/10 text-[#76b900] text-[9px] font-bold uppercase px-2 py-0.5 rounded border border-[#76b900]/20">Home</span>}
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${status === 'published' ? 'bg-green-900/40 text-green-400 border border-green-800/40' : 'bg-slate-700 text-slate-300'}`}>
                   {status === 'published' ? 'Live' : 'Draft'}
