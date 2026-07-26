@@ -105,8 +105,6 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
     playNotificationSound(newTheme);
   };
 
-  
-
   // Fetch orders from backend
   const fetchOrders = async () => {
     if (!currentStore._id) return;
@@ -364,254 +362,256 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Live Orders Monitor">
       <div 
         ref={fullscreenRef}
-        className="w-full bg-slate-50 text-slate-900 h-screen flex flex-col overflow-hidden"
+        className="w-full bg-slate-50 text-slate-900 h-screen overflow-hidden"
       >
-        {/* Sticky Header Actions & Tabs */}
-        <div className="sticky top-0 z-30 bg-slate-50 px-6 pt-8 pb-3 border-b border-slate-200 shadow-sm shrink-0">
-          {/* Top Header Actions */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-6 p-6 h-full overflow-hidden">
+          {/* Left Column: Sound Alert, Fullscreen Controls & Queue Selector */}
+          <div className="w-full md:w-80 shrink-0 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-5 h-fit md:h-full md:overflow-y-auto">
             <div>
-              <h2 className="text-2xl font-black text-slate-800">Live Order Dashboard</h2>
-              <p className="text-sm text-slate-500 mt-1">
-                Monitoring incoming sales for <span className="font-bold">{currentStore.storeName}</span>
+              <h2 className="text-xl font-black text-slate-800">Live order Feed</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Monitoring incoming sales for <span className="font-bold text-slate-700">{currentStore.storeName}</span>
               </p>
             </div>
-            
-            <div className="flex gap-3 items-center flex-wrap">
-              {/* Sound Selector */}
-              <div className="flex items-center gap-2 bg-white px-3 py-2 border border-slate-200 rounded-xl shadow-sm text-sm">
-                <span className="text-xs text-slate-500 font-bold">🔊 Sound Alert:</span>
-                <select 
-                  value={soundTheme} 
-                  onChange={e => handleSoundThemeChange(e.target.value)}
-                  className="text-xs font-bold text-slate-700 outline-none cursor-pointer bg-transparent"
-                >
-                  <option value="chime">Sweet Chime</option>
-                  <option value="doorbell">Ding Dong</option>
-                  <option value="beep">Alert Beep</option>
-                  <option value="arcade">Retro Arcade</option>
-                  <option value="mute">Muted</option>
-                </select>
-              </div>
 
-              <button 
-                onClick={handleToggleFullscreen}
-                className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-950 font-bold rounded-xl transition shadow-sm text-sm"
+            {/* Sound Selector widget */}
+            <div className="flex flex-col gap-2 p-3.5 bg-slate-50 border border-slate-200 rounded-xl shadow-sm text-sm">
+              <span className="text-xs text-slate-500 font-bold">🔊 Sound Alert</span>
+              <select 
+                value={soundTheme} 
+                onChange={e => handleSoundThemeChange(e.target.value)}
+                className="w-full text-xs font-bold text-slate-700 outline-none cursor-pointer bg-white border border-slate-200 p-2 rounded-lg"
               >
-                {isFullscreen ? (
-                  <><Minimize2 size={16} /> Exit Fullscreen</>
-                ) : (
-                  <><Maximize2 size={16} /> Enter Fullscreen</>
-                )}
+                <option value="chime">Sweet Chime</option>
+                <option value="doorbell">Ding Dong</option>
+                <option value="beep">Alert Beep</option>
+                <option value="arcade">Retro Arcade</option>
+                <option value="mute">Muted</option>
+              </select>
+            </div>
+
+            {/* Fullscreen control button */}
+            <button 
+              onClick={handleToggleFullscreen}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-950 font-bold rounded-xl transition shadow-sm text-xs"
+            >
+              {isFullscreen ? (
+                <><Minimize2 size={15} /> Exit Fullscreen</>
+              ) : (
+                <><Maximize2 size={15} /> Enter Fullscreen</>
+              )}
+            </button>
+
+            {/* Order status queues */}
+            <div className="flex flex-col gap-2 border-t border-slate-100 pt-4">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Queue Selector</span>
+              
+              <button 
+                onClick={() => setActiveTab('placed')}
+                className={`w-full py-2.5 px-4 text-xs font-bold transition-all rounded-xl flex items-center justify-between border ${activeTab === 'placed' ? 'bg-blue-50 text-blue-700 border-blue-200 font-extrabold' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Clock size={16} className={activeTab === 'placed' ? 'text-blue-600 animate-pulse' : 'text-slate-400'} />
+                  <span>Order Placed (Live)</span>
+                </div>
+                <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 font-bold rounded-full">
+                  {orders.filter(o => o.orderStatus === 'placed').length}
+                </span>
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab('shipped')}
+                className={`w-full py-2.5 px-4 text-xs font-bold transition-all rounded-xl flex items-center justify-between border ${activeTab === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-extrabold' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Truck size={16} className={activeTab === 'shipped' ? 'text-indigo-600' : 'text-slate-400'} />
+                  <span>Shipped Orders</span>
+                </div>
+                <span className="px-2 py-0.5 text-xs bg-indigo-100 text-indigo-700 font-bold rounded-full">
+                  {orders.filter(o => o.orderStatus === 'shipped').length}
+                </span>
               </button>
             </div>
           </div>
 
-          {/* Tab Buttons accordingly Status */}
-          <div className="flex gap-4 pb-1">
-            <button 
-              onClick={() => setActiveTab('placed')}
-              className={`pb-2 text-sm font-bold transition-all relative flex items-center gap-2 ${activeTab === 'placed' ? 'text-blue-600 font-extrabold border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              <Clock size={16} className={activeTab === 'placed' ? 'text-blue-600 animate-pulse' : 'text-slate-400'} />
-              Order Placed (Live)
-              <span className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 font-bold rounded-full">
-                {orders.filter(o => o.orderStatus === 'placed').length}
-              </span>
-            </button>
-            
-            <button 
-              onClick={() => setActiveTab('shipped')}
-              className={`pb-2 text-sm font-bold transition-all relative flex items-center gap-2 ${activeTab === 'shipped' ? 'text-indigo-600 font-extrabold border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              <Truck size={16} className={activeTab === 'shipped' ? 'text-indigo-600' : 'text-slate-400'} />
-              Shipped Orders
-              <span className="px-2 py-0.5 text-xs bg-indigo-50 text-indigo-600 font-bold rounded-full">
-                {orders.filter(o => o.orderStatus === 'shipped').length}
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable Orders Area */}
-        <div className="flex-1 overflow-y-auto px-6 py-8">
-
-        {/* Orders Card Grid */}
-        {loading ? (
-          <div className="text-center py-20 text-slate-500 font-bold">Connecting to live order feed...</div>
-        ) : filteredOrders.length === 0 ? (
-          <div className="text-center py-20 border-2 border-dashed border-slate-200 bg-white rounded-2xl">
-            <ClipboardList size={40} className="mx-auto text-slate-400 mb-4" />
-            <h4 className="font-bold text-lg">No Orders in this queue</h4>
-            <p className="text-sm text-slate-400 mt-1">New incoming orders will appear here automatically.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredOrders.map(order => {
-              const fullAddress = order.address 
-                ? `${order.address.addressLine1 || ''}, ${order.address.city || ''}, ${order.address.state || ''} - ${order.address.pincode || ''}`
-                : 'No delivery address details provided.';
-              
-              return (
-                <div 
-                  key={order._id}
-                  className={`flex flex-col h-full rounded-2xl border border-slate-200 bg-white shadow-sm transition-all ${!order.orderConfirmed && activeTab === 'placed' ? 'ring-2 ring-amber-500/55' : ''} overflow-hidden`}
-                >
-                  {/* Card Header */}
-                  <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <div>
-                      <span className="text-xs text-slate-400 font-bold font-mono">ID:</span>
-                      <span className="text-sm font-bold font-mono text-blue-600 ml-1">#{order._id.slice(-6).toUpperCase()}</span>
-                    </div>
-                    <span className="text-xs text-slate-400 font-semibold">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-
-                  {/* Customer Information */}
-                  <div className="p-4 flex-1 space-y-3">
-                    <div>
-                      <h4 className="text-sm font-extrabold text-slate-700 flex justify-between items-center">
-                        <span>{order.customerName}</span>
-                        {!order.orderConfirmed ? (
-                          <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] uppercase font-bold">Unconfirmed</span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] uppercase font-bold">Confirmed</span>
-                        )}
-                      </h4>
-                      
-                      <div className="text-xs space-y-1 mt-2 text-slate-500">
-                        <p className="flex items-center gap-1.5"><Phone size={12} /> {order.customerPhone}</p>
-                        {order.customerEmail && <p className="flex items-center gap-1.5"><Mail size={12} /> {order.customerEmail}</p>}
-                        <p className="flex items-start gap-1.5 leading-relaxed mt-1"><MapPin size={12} className="shrink-0 mt-0.5" /> {fullAddress}</p>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-dashed border-slate-200 pt-3">
-                      <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Order Items</h5>
-                      <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                        {order.orderItems?.map((item, idx) => {
-                          const imgUrl = item.customImage || (item.product?.images && item.product.images[0]);
-                          return (
-                            <div key={idx} className="flex gap-2 items-center text-xs">
-                              {imgUrl ? (
-                                <img src={imgUrl} alt={item.name} className="h-8 w-8 object-cover rounded border border-slate-200 shadow-sm" />
-                              ) : (
-                                <div className="h-8 w-8 bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center rounded font-bold uppercase text-[10px]" title={item.name}>
-                                  {item.name ? item.name.charAt(0) : 'P'}
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-slate-700 truncate" title={item.name}>{item.name}</p>
-                                <p className="text-[10px] text-slate-400">Qty: {item.qty} × ₹{item.price}</p>
-                              </div>
-                              <span className="font-bold text-slate-700 text-right">₹{item.price * item.qty}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions & Status Grid */}
-                  <div className="p-4 border-t border-slate-100 bg-slate-50/20 space-y-3">
-                    
-                    {/* Order Confirmation button */}
-                    {!order.orderConfirmed ? (
-                      <button 
-                        onClick={() => handleConfirmOrder(order._id)}
-                        className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider rounded-xl transition shadow flex items-center justify-center gap-1.5"
-                      >
-                        <CheckCircle size={14} /> Confirm Order
-                      </button>
-                    ) : (
-                      <div className="flex items-center justify-center gap-1 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold">
-                        <Check size={14} /> Order Confirmed
-                      </div>
-                    )}
-
-                    {/* Status Options */}
-                    <div className="grid grid-cols-2 gap-2 text-xs font-bold">
-                      <button 
-                        disabled={!order.orderConfirmed}
-                        onClick={() => {
-                          if (order.orderStatus === 'shipped') {
-                            const isOwn = order.ShippingMethod && !order.ShippingMethod.startsWith('By Shipping Company');
-                            setTrackingModal({
-                              isOpen: true,
-                              orderId: order._id,
-                              ShippingMethod: isOwn ? 'By Store Name' : 'By Shipping Company',
-                              ShippingCompany: order.ShippingCompany || '',
-                              ShippingTrackingNumber: order.ShippingTrackingNumber || '',
-                              DeliveryPersonName: order.DeliveryPersonName || '',
-                              DeliveryPersonPhone: order.DeliveryPersonPhone || ''
-                            });
-                          } else {
-                            handleMarkShipped(order._id);
-                          }
-                        }}
-                        className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
-                          !order.orderConfirmed
-                            ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
-                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
-                        }`}
-                      >
-                        <Truck size={12} />
-                        {order.orderStatus === 'shipped' ? 'Edit Tracking' : 'Mark Shipped'}
-                      </button>
-
-                      <button 
-                        disabled={!order.orderConfirmed}
-                        onClick={() => handleMarkDelivered(order)}
-                        className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
-                          !order.orderConfirmed 
-                            ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
-                            : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'
-                        }`}
-                      >
-                        <CheckCircle size={12} /> Mark Delivered
-                      </button>
-
-                      <button 
-                        disabled={!order.orderConfirmed}
-                        onClick={() => handleCancelOrder(order._id)}
-                        className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
-                          !order.orderConfirmed 
-                            ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
-                            : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
-                        }`}
-                      >
-                        <XCircle size={12} /> Cancel Order
-                      </button>
-
-                      <button 
-                        disabled={!order.orderConfirmed}
-                        onClick={() => handleReturnOrder(order._id)}
-                        className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
-                          !order.orderConfirmed 
-                            ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
-                            : 'bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200'
-                        }`}
-                      >
-                        <RotateCcw size={12} /> Mark Returned
-                      </button>
-                    </div>
-
-                    {/* Bottom side Print Bill Button */}
-                    <button 
-                      onClick={() => handlePrintBill(order)}
-                      disabled={printingOrderId === order._id}
-                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-extrabold text-xs rounded-xl transition border border-slate-200 flex items-center justify-center gap-1.5 mt-1"
+          {/* Right Column: Scrollable Orders Grid Panel */}
+          <div className="flex-1 overflow-y-auto h-full pr-1 pb-10">
+            {loading ? (
+              <div className="text-center py-20 text-slate-500 font-bold">Connecting to live order feed...</div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="text-center py-20 border-2 border-dashed border-slate-200 bg-white rounded-2xl">
+                <ClipboardList size={40} className="mx-auto text-slate-400 mb-4" />
+                <h4 className="font-bold text-lg">No Orders in this queue</h4>
+                <p className="text-sm text-slate-400 mt-1">New incoming orders will appear here automatically.</p>
+              </div>
+            ) : (
+              /* Tablets: 2 columns, Desktops: 4 columns */
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                {filteredOrders.map(order => {
+                  const fullAddress = order.address 
+                    ? `${order.address.addressLine1 || ''}, ${order.address.city || ''}, ${order.address.state || ''} - ${order.address.pincode || ''}`
+                    : 'No delivery address details provided.';
+                  
+                  return (
+                    <div 
+                      key={order._id}
+                      className={`flex flex-col h-full rounded-2xl border border-slate-200 bg-white shadow-sm transition-all ${!order.orderConfirmed && activeTab === 'placed' ? 'ring-2 ring-amber-500/55' : ''} overflow-hidden`}
                     >
-                      <Printer size={13} />
-                      {printingOrderId === order._id ? 'Generating...' : 'Print Bill / Invoice'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        </div>
+                      {/* Card Header */}
+                      <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <div>
+                          <span className="text-xs text-slate-400 font-bold font-mono">ID:</span>
+                          <span className="text-sm font-bold font-mono text-blue-600 ml-1">#{order._id.slice(-6).toUpperCase()}</span>
+                        </div>
+                        <span className="text-xs text-slate-400 font-semibold">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
 
+                      {/* Customer Information */}
+                      <div className="p-4 flex-1 space-y-3">
+                        <div>
+                          <h4 className="text-sm font-extrabold text-slate-700 flex justify-between items-center">
+                            <span>{order.customerName}</span>
+                            {!order.orderConfirmed ? (
+                              <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] uppercase font-bold">Unconfirmed</span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] uppercase font-bold">Confirmed</span>
+                            )}
+                          </h4>
+                          
+                          <div className="text-xs space-y-1 mt-2 text-slate-500">
+                            <p className="flex items-center gap-1.5"><Phone size={12} /> {order.customerPhone}</p>
+                            {order.customerEmail && <p className="flex items-center gap-1.5"><Mail size={12} /> {order.customerEmail}</p>}
+                            <p className="flex items-start gap-1.5 leading-relaxed mt-1"><MapPin size={12} className="shrink-0 mt-0.5" /> {fullAddress}</p>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-dashed border-slate-200 pt-3">
+                          <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Order Items</h5>
+                          <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                            {order.orderItems?.map((item, idx) => {
+                              const imgUrl = item.customImage || (item.product?.images && item.product.images[0]);
+                              return (
+                                <div key={idx} className="flex gap-2 items-center text-xs">
+                                  {imgUrl ? (
+                                    <img src={imgUrl} alt={item.name} className="h-8 w-8 object-cover rounded border border-slate-200 shadow-sm" />
+                                  ) : (
+                                    <div className="h-8 w-8 bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center rounded font-bold uppercase text-[10px]" title={item.name}>
+                                      {item.name ? item.name.charAt(0) : 'P'}
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-slate-700 truncate" title={item.name}>{item.name}</p>
+                                    <p className="text-[10px] text-slate-400">Qty: {item.qty} × ₹{item.price}</p>
+                                  </div>
+                                  <span className="font-bold text-slate-700 text-right">₹{item.price * item.qty}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions & Status Grid */}
+                      <div className="p-4 border-t border-slate-100 bg-slate-50/20 space-y-3">
+                        
+                        {/* Order Confirmation button */}
+                        {!order.orderConfirmed ? (
+                          <button 
+                            onClick={() => handleConfirmOrder(order._id)}
+                            className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider rounded-xl transition shadow flex items-center justify-center gap-1.5"
+                          >
+                            <CheckCircle size={14} /> Confirm Order
+                          </button>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold">
+                            <Check size={14} /> Order Confirmed
+                          </div>
+                        )}
+
+                        {/* Status Options */}
+                        <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+                          <button 
+                            disabled={!order.orderConfirmed}
+                            onClick={() => {
+                              if (order.orderStatus === 'shipped') {
+                                const isOwn = order.ShippingMethod && !order.ShippingMethod.startsWith('By Shipping Company');
+                                setTrackingModal({
+                                  isOpen: true,
+                                  orderId: order._id,
+                                  ShippingMethod: isOwn ? 'By Store Name' : 'By Shipping Company',
+                                  ShippingCompany: order.ShippingCompany || '',
+                                  ShippingTrackingNumber: order.ShippingTrackingNumber || '',
+                                  DeliveryPersonName: order.DeliveryPersonName || '',
+                                  DeliveryPersonPhone: order.DeliveryPersonPhone || ''
+                                });
+                              } else {
+                                handleMarkShipped(order._id);
+                              }
+                            }}
+                            className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
+                              !order.orderConfirmed
+                                ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
+                                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+                            }`}
+                          >
+                            <Truck size={12} />
+                            {order.orderStatus === 'shipped' ? 'Edit Tracking' : 'Mark Shipped'}
+                          </button>
+
+                          <button 
+                            disabled={!order.orderConfirmed}
+                            onClick={() => handleMarkDelivered(order)}
+                            className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
+                              !order.orderConfirmed 
+                                ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
+                                : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'
+                            }`}
+                          >
+                            <CheckCircle size={12} /> Mark Delivered
+                          </button>
+
+                          <button 
+                            disabled={!order.orderConfirmed}
+                            onClick={() => handleCancelOrder(order._id)}
+                            className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
+                              !order.orderConfirmed 
+                                ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
+                                : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
+                            }`}
+                          >
+                            <XCircle size={12} /> Cancel Order
+                          </button>
+
+                          <button 
+                            disabled={!order.orderConfirmed}
+                            onClick={() => handleReturnOrder(order._id)}
+                            className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
+                              !order.orderConfirmed 
+                                ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
+                                : 'bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200'
+                            }`}
+                          >
+                            <RotateCcw size={12} /> Mark Returned
+                          </button>
+                        </div>
+
+                        {/* Bottom side Print Bill Button */}
+                        <button 
+                          onClick={() => handlePrintBill(order)}
+                          disabled={printingOrderId === order._id}
+                          className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-extrabold text-xs rounded-xl transition border border-slate-200 flex items-center justify-center gap-1.5 mt-1"
+                        >
+                          <Printer size={13} />
+                          {printingOrderId === order._id ? 'Generating...' : 'Print Bill / Invoice'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Delivered Confirmation Modal */}
