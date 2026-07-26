@@ -37,7 +37,12 @@ const SeoSetting = ({ token, stores, onLogout }) => {
     customLlmsContent: ''
   });
 
-  
+  const [trackingData, setTrackingData] = useState({
+    googleAnalytics: { measurementId: '', enabled: false },
+    googleTagManager: { containerId: '', enabled: false },
+    googleSearchConsole: { verificationCode: '', enabled: false },
+    facebookPixel: { pixelId: '', enabled: false }
+  });
 
   useEffect(() => {
     const fetchSeoSettings = async () => {
@@ -79,38 +84,92 @@ const SeoSetting = ({ token, stores, onLogout }) => {
         setFetching(false);
       }
     };
+
+    const fetchTrackingSettings = async () => {
+      if (!currentStore._id) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/tracking-settings/${currentStore._id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTrackingData({
+            googleAnalytics: {
+              measurementId: data.googleAnalytics?.measurementId || '',
+              enabled: data.googleAnalytics?.enabled ?? false
+            },
+            googleTagManager: {
+              containerId: data.googleTagManager?.containerId || '',
+              enabled: data.googleTagManager?.enabled ?? false
+            },
+            googleSearchConsole: {
+              verificationCode: data.googleSearchConsole?.verificationCode || '',
+              enabled: data.googleSearchConsole?.enabled ?? false
+            },
+            facebookPixel: {
+              pixelId: data.facebookPixel?.pixelId || '',
+              enabled: data.facebookPixel?.enabled ?? false
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load tracking settings", err);
+      }
+    };
+
     fetchSeoSettings();
+    fetchTrackingSettings();
   }, [currentStore._id, token, API_BASE_URL]);
+
 
   const handleSave = async (e) => {
     e.preventDefault();
     setLoading(true);
     setStatus('Saving settings...');
 
-    // Convert keywords string back to array
-    const keywordsArray = formData.metaKeywords
-      ? formData.metaKeywords.split(',').map(k => k.trim()).filter(Boolean)
-      : [];
-
     try {
-      const res = await fetch(`${API_BASE_URL}/api/seo-settings/${currentStore._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...formData,
-          metaKeywords: keywordsArray
-        })
-      });
+      if (activeSection === 'tracking') {
+        const res = await fetch(`${API_BASE_URL}/api/tracking-settings/${currentStore._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(trackingData)
+        });
 
-      if (res.ok) {
-        setStatus('SEO and AI settings saved successfully!');
-        setTimeout(() => setStatus(''), 3000);
+        if (res.ok) {
+          setStatus('Google and Tracking settings saved successfully!');
+          setTimeout(() => setStatus(''), 3000);
+        } else {
+          const errData = await res.json();
+          setStatus(`Error saving tracking settings: ${errData.message || 'Server error'}`);
+        }
       } else {
-        const errData = await res.json();
-        setStatus(`Error saving settings: ${errData.message || 'Server error'}`);
+        // Convert keywords string back to array
+        const keywordsArray = formData.metaKeywords
+          ? formData.metaKeywords.split(',').map(k => k.trim()).filter(Boolean)
+          : [];
+
+        const res = await fetch(`${API_BASE_URL}/api/seo-settings/${currentStore._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            ...formData,
+            metaKeywords: keywordsArray
+          })
+        });
+
+        if (res.ok) {
+          setStatus('SEO and AI settings saved successfully!');
+          setTimeout(() => setStatus(''), 3000);
+        } else {
+          const errData = await res.json();
+          setStatus(`Error saving settings: ${errData.message || 'Server error'}`);
+        }
       }
     } catch (err) {
       setStatus(`Error saving settings: ${err.message}`);
@@ -118,6 +177,7 @@ const SeoSetting = ({ token, stores, onLogout }) => {
       setLoading(false);
     }
   };
+
 
   const handleChange = (field, val) => {
     setFormData(prev => ({
@@ -130,8 +190,10 @@ const SeoSetting = ({ token, stores, onLogout }) => {
     { id: 'seo', label: 'Search Engine (SEO)', icon: <Search size={18} /> },
     { id: 'sitemap', label: 'XML Sitemap', icon: <Globe size={18} /> },
     { id: 'ai', label: 'AI Bots & LLMs', icon: <Cpu size={18} /> },
-    { id: 'custom', label: 'Custom Configs', icon: <FileText size={18} /> }
+    { id: 'custom', label: 'Custom Configs', icon: <FileText size={18} /> },
+    { id: 'tracking', label: 'Google & Tracking Settings', icon: <Settings size={18} /> }
   ];
+
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="SEO & AI Settings">
@@ -507,7 +569,171 @@ const SeoSetting = ({ token, stores, onLogout }) => {
                     </div>
                   </div>
                 )}
+
+                {/* 5. Google & Tracking Settings Tab */}
+                {activeSection === 'tracking' && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-8 animate-fadeIn">
+                    
+                    {/* GA4 */}
+                    <div className="border-b pb-6 border-slate-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-slate-800">Google Analytics 4 (GA4)</h3>
+                          <p className="text-sm text-slate-500 mt-1">Track traffic, page views, and user behavior on your storefront.</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
+                          <input 
+                            type="checkbox" 
+                            checked={trackingData.googleAnalytics.enabled}
+                            onChange={(e) => setTrackingData({
+                              ...trackingData,
+                              googleAnalytics: { ...trackingData.googleAnalytics, enabled: e.target.checked }
+                            })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#76b900]"></div>
+                        </label>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-4 max-w-xl">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Google Analytics Measurement ID</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. G-ABC123XYZ"
+                            value={trackingData.googleAnalytics.measurementId}
+                            onChange={(e) => setTrackingData({
+                              ...trackingData,
+                              googleAnalytics: { ...trackingData.googleAnalytics, measurementId: e.target.value }
+                            })}
+                            disabled={!trackingData.googleAnalytics.enabled}
+                            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* GTM */}
+                    <div className="border-b pb-6 border-slate-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-slate-800">Google Tag Manager (GTM)</h3>
+                          <p className="text-sm text-slate-500 mt-1">Manage marketing tags, tracking pixels, and script injections without code changes.</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
+                          <input 
+                            type="checkbox" 
+                            checked={trackingData.googleTagManager.enabled}
+                            onChange={(e) => setTrackingData({
+                              ...trackingData,
+                              googleTagManager: { ...trackingData.googleTagManager, enabled: e.target.checked }
+                            })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#76b900]"></div>
+                        </label>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-4 max-w-xl">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">GTM Container ID</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. GTM-XXXXXXX"
+                            value={trackingData.googleTagManager.containerId}
+                            onChange={(e) => setTrackingData({
+                              ...trackingData,
+                              googleTagManager: { ...trackingData.googleTagManager, containerId: e.target.value }
+                            })}
+                            disabled={!trackingData.googleTagManager.enabled}
+                            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Google Search Console */}
+                    <div className="border-b pb-6 border-slate-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-slate-800">Google Search Console</h3>
+                          <p className="text-sm text-slate-500 mt-1">Verify site ownership and monitor indexing status, search visibility, and queries.</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
+                          <input 
+                            type="checkbox" 
+                            checked={trackingData.googleSearchConsole.enabled}
+                            onChange={(e) => setTrackingData({
+                              ...trackingData,
+                              googleSearchConsole: { ...trackingData.googleSearchConsole, enabled: e.target.checked }
+                            })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#76b900]"></div>
+                        </label>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-4 max-w-xl">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Google Site Verification Code</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. google-site-verification=xxxxxxxx"
+                            value={trackingData.googleSearchConsole.verificationCode}
+                            onChange={(e) => setTrackingData({
+                              ...trackingData,
+                              googleSearchConsole: { ...trackingData.googleSearchConsole, verificationCode: e.target.value }
+                            })}
+                            disabled={!trackingData.googleSearchConsole.enabled}
+                            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Meta / Facebook Pixel */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-slate-800">Meta Pixel (Facebook Pixel)</h3>
+                          <p className="text-sm text-slate-500 mt-1">Track conversions, build target audiences, and run personalized Facebook & Instagram ads.</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
+                          <input 
+                            type="checkbox" 
+                            checked={trackingData.facebookPixel.enabled}
+                            onChange={(e) => setTrackingData({
+                              ...trackingData,
+                              facebookPixel: { ...trackingData.facebookPixel, enabled: e.target.checked }
+                            })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#76b900]"></div>
+                        </label>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-4 max-w-xl">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Meta Pixel ID</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. 123456789012345"
+                            value={trackingData.facebookPixel.pixelId}
+                            onChange={(e) => setTrackingData({
+                              ...trackingData,
+                              facebookPixel: { ...trackingData.facebookPixel, pixelId: e.target.value }
+                            })}
+                            disabled={!trackingData.facebookPixel.enabled}
+                            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
               </form>
+
             </div>
           </div>
         )}
