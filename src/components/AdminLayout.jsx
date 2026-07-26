@@ -176,6 +176,11 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
         ] : []),
         // Conditionally show domains if plan permits
         ...((currentStoreInfo?.planDetails?.features?.customDomain === true || 
+             (Array.isArray(currentStoreInfo?.planDetails?.features) && currentStoreInfo.planDetails.features.some(f => 
+               f.name?.toLowerCase().includes("custom domain") || 
+               f.feature?.slug === "custom-domain" ||
+               f.feature?.name?.toLowerCase().includes("custom domain")
+             )) ||
              (currentStoreInfo?.planId && typeof currentStoreInfo.planId === 'object' && (
                currentStoreInfo.planId.features?.customDomain === true ||
                (Array.isArray(currentStoreInfo.planId.features) && currentStoreInfo.planId.features.some(f => 

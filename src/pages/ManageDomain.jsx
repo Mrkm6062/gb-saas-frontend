@@ -145,6 +145,11 @@ const ManageDomain = ({ token, stores, onLogout }) => {
 
   // Updated permission checker that resolves array structure of features from new Plan schema
   const hasCustomDomain = currentStore?.planDetails?.features?.customDomain === true || 
+                          (Array.isArray(currentStore?.planDetails?.features) && currentStore.planDetails.features.some(f => 
+                            f.name?.toLowerCase().includes("custom domain") || 
+                            f.feature?.slug === "custom-domain" ||
+                            f.feature?.name?.toLowerCase().includes("custom domain")
+                          )) ||
                           (currentStore?.planId && typeof currentStore.planId === 'object' && (
                             currentStore.planId.features?.customDomain === true ||
                             (Array.isArray(currentStore.planId.features) && currentStore.planId.features.some(f => 
