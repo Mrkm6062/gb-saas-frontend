@@ -17,7 +17,9 @@ import {
   XCircle,
   RotateCcw,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 const LiveOrderManage = ({ token, stores, onLogout }) => {
@@ -103,6 +105,14 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
     setSoundTheme(newTheme);
     localStorage.setItem('live_order_sound_theme', newTheme);
     playNotificationSound(newTheme);
+  };
+
+  // Cycles through sound themes on mobile click
+  const cycleSoundTheme = () => {
+    const themes = ['chime', 'doorbell', 'beep', 'arcade', 'mute'];
+    const currentIndex = themes.indexOf(soundTheme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    handleSoundThemeChange(themes[nextIndex]);
   };
 
   // Fetch orders from backend
@@ -364,18 +374,21 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
         ref={fullscreenRef}
         className="w-full bg-slate-50 text-slate-900 h-screen overflow-hidden"
       >
-        <div className="flex flex-col md:flex-row gap-6 p-6 h-full overflow-hidden">
+        {/* Mobile: Row container. Left is w-14 icon-only bar, Right is flex-1 main panel */}
+        <div className="flex flex-row gap-4 p-4 h-full overflow-hidden">
+          
           {/* Left Column: Sound Alert, Fullscreen Controls & Queue Selector */}
-          <div className="w-full md:w-80 shrink-0 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-5 h-fit md:h-full md:overflow-y-auto">
-            <div>
+          <div className="w-14 md:w-80 shrink-0 bg-white p-2 md:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center md:items-stretch gap-4 md:gap-5 h-full md:overflow-y-auto">
+            {/* Header Title (Hidden on Mobile) */}
+            <div className="hidden md:block">
               <h2 className="text-xl font-black text-slate-800">Live order Feed</h2>
               <p className="text-xs text-slate-500 mt-1">
                 Monitoring incoming sales for <span className="font-bold text-slate-700">{currentStore.storeName}</span>
               </p>
             </div>
 
-            {/* Sound Selector widget */}
-            <div className="flex flex-col gap-2 p-3.5 bg-slate-50 border border-slate-200 rounded-xl shadow-sm text-sm">
+            {/* Sound Selector widget (Desktop View) */}
+            <div className="hidden md:flex flex-col gap-2 p-3.5 bg-slate-50 border border-slate-200 rounded-xl shadow-sm text-sm">
               <span className="text-xs text-slate-500 font-bold">🔊 Sound Alert</span>
               <select 
                 value={soundTheme} 
@@ -390,10 +403,19 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
               </select>
             </div>
 
-            {/* Fullscreen control button */}
+            {/* Sound Cycling Button (Mobile View - Icon Only) */}
+            <button 
+              onClick={cycleSoundTheme}
+              title={`Cycle Sound (Current: ${soundTheme})`}
+              className="md:hidden p-2 rounded-xl border border-slate-100 hover:bg-slate-50 text-slate-600 cursor-pointer"
+            >
+              {soundTheme === 'mute' ? <VolumeX size={20} className="text-red-500" /> : <Volume2 size={20} className="text-blue-500" />}
+            </button>
+
+            {/* Fullscreen control button (Desktop View) */}
             <button 
               onClick={handleToggleFullscreen}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-950 font-bold rounded-xl transition shadow-sm text-xs"
+              className="hidden md:flex w-full items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-950 font-bold rounded-xl transition shadow-sm text-xs"
             >
               {isFullscreen ? (
                 <><Minimize2 size={15} /> Exit Fullscreen</>
@@ -402,32 +424,47 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
               )}
             </button>
 
+            {/* Fullscreen control button (Mobile View - Icon Only) */}
+            <button 
+              onClick={handleToggleFullscreen}
+              title="Toggle Fullscreen"
+              className="md:hidden p-2 rounded-xl border border-slate-100 hover:bg-slate-50 text-slate-600 cursor-pointer"
+            >
+              {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+            </button>
+
             {/* Order status queues */}
-            <div className="flex flex-col gap-2 border-t border-slate-100 pt-4">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Queue Selector</span>
+            <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 w-full">
+              {!isSidebarCollapsed && (
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 hidden md:block">Queue Selector</span>
+              )}
               
+              {/* Placed Queue Button */}
               <button 
                 onClick={() => setActiveTab('placed')}
-                className={`w-full py-2.5 px-4 text-xs font-bold transition-all rounded-xl flex items-center justify-between border ${activeTab === 'placed' ? 'bg-blue-50 text-blue-700 border-blue-200 font-extrabold' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'}`}
+                title="Order Placed (Live)"
+                className={`w-full py-2.5 px-2 md:px-4 text-xs font-bold transition-all rounded-xl flex flex-col md:flex-row items-center justify-center md:justify-between gap-1.5 md:gap-2 border ${activeTab === 'placed' ? 'bg-blue-50 text-blue-700 border-blue-200 font-extrabold' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'}`}
               >
                 <div className="flex items-center gap-2">
-                  <Clock size={16} className={activeTab === 'placed' ? 'text-blue-600 animate-pulse' : 'text-slate-400'} />
-                  <span>Order Placed (Live)</span>
+                  <Clock size={18} className={activeTab === 'placed' ? 'text-blue-600 animate-pulse' : 'text-slate-400'} />
+                  <span className="hidden md:inline">Placed (Live)</span>
                 </div>
-                <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 font-bold rounded-full">
+                <span className="px-1.5 py-0.5 text-[9px] md:text-xs bg-blue-100 text-blue-700 font-bold rounded-full">
                   {orders.filter(o => o.orderStatus === 'placed').length}
                 </span>
               </button>
               
+              {/* Shipped Queue Button */}
               <button 
                 onClick={() => setActiveTab('shipped')}
-                className={`w-full py-2.5 px-4 text-xs font-bold transition-all rounded-xl flex items-center justify-between border ${activeTab === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-extrabold' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'}`}
+                title="Shipped Orders"
+                className={`w-full py-2.5 px-2 md:px-4 text-xs font-bold transition-all rounded-xl flex flex-col md:flex-row items-center justify-center md:justify-between gap-1.5 md:gap-2 border ${activeTab === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-extrabold' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'}`}
               >
                 <div className="flex items-center gap-2">
-                  <Truck size={16} className={activeTab === 'shipped' ? 'text-indigo-600' : 'text-slate-400'} />
-                  <span>Shipped Orders</span>
+                  <Truck size={18} className={activeTab === 'shipped' ? 'text-indigo-600' : 'text-slate-400'} />
+                  <span className="hidden md:inline">Shipped Orders</span>
                 </div>
-                <span className="px-2 py-0.5 text-xs bg-indigo-100 text-indigo-700 font-bold rounded-full">
+                <span className="px-1.5 py-0.5 text-[9px] md:text-xs bg-indigo-100 text-indigo-700 font-bold rounded-full">
                   {orders.filter(o => o.orderStatus === 'shipped').length}
                 </span>
               </button>
@@ -445,7 +482,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                 <p className="text-sm text-slate-400 mt-1">New incoming orders will appear here automatically.</p>
               </div>
             ) : (
-              /* Tablets: 2 columns, Desktops: 4 columns */
+              /* Mobile: 1 col, Tablets: 2 cols, Desktops: 4 cols */
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 {filteredOrders.map(order => {
                   const fullAddress = order.address 
