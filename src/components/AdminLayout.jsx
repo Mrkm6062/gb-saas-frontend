@@ -50,7 +50,8 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       Orders: location.pathname.includes('/orders') || location.pathname.includes('/live-orders'),
       Settings: location.pathname.includes('/alerts') || location.pathname.includes('/delivery') || location.pathname.includes('/checkout') || location.pathname.includes('/policies') || location.pathname.includes('/seo'),
       Themes: location.pathname.includes('/themes') || location.pathname.includes('/theme-customization'),
-      'Website Builder': location.pathname.includes('/custom-pages') || location.pathname.includes('/navigation-menus') || location.pathname.includes('/assets')
+      'Website Builder': location.pathname.includes('/custom-pages') || location.pathname.includes('/navigation-menus') || location.pathname.includes('/assets'),
+      'Store Configurations': location.pathname.includes('/alerts') || location.pathname.includes('/delivery') || location.pathname.includes('/checkout') || location.pathname.includes('/policies') || location.pathname.includes('/seo')
     };
   });
 
@@ -61,7 +62,6 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        
         const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
         if (res.ok) {
           const data = await res.json();
@@ -72,7 +72,6 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     };
     fetchSettings();
   }, []);
-
 
   // Fallback to first store if localStorage has invalid/old ID format
   const isValidStore = stores?.some(s => s.storeId === activeStoreId);
@@ -107,6 +106,18 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     }
   }, [isExpired, activeStoreId, location.pathname, navigate]);
 
+  const isCustomWebsite = currentStoreInfo?.storeType && (
+    currentStoreInfo.storeType === "Custom Website(HTML,CSS,JS)" ||
+    currentStoreInfo.storeType.toLowerCase().includes("custom website")
+  );
+
+  // Redirect custom website to newsletter page when landing on the root Overview page
+  useEffect(() => {
+    if (isCustomWebsite && activeStoreId && location.pathname === '/') {
+      navigate(`/store/${activeStoreId}/newsletter`);
+    }
+  }, [isCustomWebsite, activeStoreId, location.pathname, navigate]);
+
   const toggleMenu = (menuName) => {
     if (isSidebarCollapsed) {
       setIsSidebarCollapsed(false);
@@ -114,103 +125,98 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     setOpenMenus(prev => ({ ...prev, [menuName]: !prev[menuName] }));
   };
 
-  const isCustomWebsite = currentStoreInfo?.storeType && (
-    currentStoreInfo.storeType === "Custom Website(HTML,CSS,JS)" ||
-    currentStoreInfo.storeType.toLowerCase().includes("custom website")
-  );
-
-  const menuItems = [
-    { 
-      name: 'Overview', icon: <LayoutGrid size={20} />, 
-      subItems: isCustomWebsite ? [
-        { name: 'Manage Store', path: activeStoreId ? `/store/${activeStoreId}` : '#' }
-      ] : [
-        { name: 'Live Dashboard', path: '/' },
-        { name: 'Manage Store', path: activeStoreId ? `/store/${activeStoreId}` : '#' }
-      ]
-    },
-    // Hide Inventory if Custom Website
-    ...(!isCustomWebsite ? [{ 
-      name: 'Inventory', icon: <Package size={20} />, 
-      subItems: [
-        { name: 'Categories', path: activeStoreId ? `/store/${activeStoreId}/categories` : '#' },
-        { name: 'Products', path: activeStoreId ? `/store/${activeStoreId}/products` : '#' }
-      ]
-    }] : []),
-    // Hide Orders if Custom Website
-    ...(!isCustomWebsite ? [{ 
-      name: 'Orders', icon: <ClipboardList size={20} />, 
-      subItems: [
-        { name: 'Manage Orders', path: activeStoreId ? `/store/${activeStoreId}/orders` : '#' },
-        { name: 'Live Orders Monitor', path: activeStoreId ? `/store/${activeStoreId}/live-orders` : '#' }
-      ]
-    }] : []),
-    // Hide Customers if Custom Website
-    ...(!isCustomWebsite ? [{ name: 'Customers', icon: <Users size={20} />, path: activeStoreId ? `/store/${activeStoreId}/customers` : '#' }] : []),
-    // Hide Coupons if Custom Website
-    ...(!isCustomWebsite ? [{ name: 'Coupons & Offers', icon: <Ticket size={20} />, path: activeStoreId ? `/store/${activeStoreId}/coupons` : '#' }] : []),
-    
-    // Always show Newsletter
-    { name: 'Newsletter', icon: <Bell size={20} />, path: activeStoreId ? `/store/${activeStoreId}/newsletter` : '#' },
-    
-    // Conditionally show domains if plan permits
-    ...((currentStoreInfo?.planDetails?.features?.customDomain === true || 
-         (currentStoreInfo?.planId && typeof currentStoreInfo.planId === 'object' && (
-           currentStoreInfo.planId.features?.customDomain === true ||
-           (Array.isArray(currentStoreInfo.planId.features) && currentStoreInfo.planId.features.some(f => 
-             f.name?.toLowerCase().includes("custom domain") || 
-             f.feature?.slug === "custom-domain" ||
-             f.feature?.name?.toLowerCase().includes("custom domain")
-           ))
-         ))) ? [
-      { name: 'Domains', icon: <Globe size={20} />, path: activeStoreId ? `/store/${activeStoreId}/domains` : '#' }
-    ] : []),
-    
-    // Always show Storage
-    { name: 'Storage', icon: <HardDrive size={20} />, path: activeStoreId ? `/store/${activeStoreId}/storage` : '#' },
-    
-    // Hide Themes if Custom Website (since themes are predefined ecommerce templates)
-    ...(!isCustomWebsite ? [{ 
-      name: 'Themes', icon: <Layers size={20} />, 
-      subItems: [
-        { name: 'Theme Gallery', path: activeStoreId ? `/store/${activeStoreId}/themes` : '#' },
-        { name: 'Customize Theme', path: activeStoreId ? `/store/${activeStoreId}/theme-customization` : '#' }
-      ]
-    }] : []),
-    
-    // Always show Website Builder for Custom Websites
+  // Reorganized Shopify-style logical menus structure grouped by departments
+  const menuGroups = [
     {
-      name: 'Website Builder', icon: <Globe size={20} />,
-      subItems: [
-        { name: 'Custom Pages', path: activeStoreId ? `/store/${activeStoreId}/custom-pages` : '#' },
-        { name: 'Menu Builder', path: activeStoreId ? `/store/${activeStoreId}/navigation-menus` : '#' },
-        { name: 'Asset Manager', path: activeStoreId ? `/store/${activeStoreId}/assets` : '#' }
+      group: 'Dashboard',
+      items: [
+        { name: 'Overview', icon: <Store size={18} />, path: activeStoreId ? `/store/${activeStoreId}` : '#' },
+        ...(!isCustomWebsite ? [{ name: 'Live Dashboard', icon: <LayoutGrid size={18} />, path: '/' }] : [])
       ]
     },
-    
-    // Always show Analytics
-    { name: 'Analytics', icon: <BarChart3 size={20} />, path: '#' },
-    
-    // Hide Reviews if Custom Website
-    ...(!isCustomWebsite ? [{ name: 'Reviews', icon: <MessageSquare size={20} />, path: activeStoreId ? `/store/${activeStoreId}/reviews` : '#' }] : []),
-    
-    // Filter Settings Sub-items conditionally (only Alerts & Emails and SEO & AI Settings for Custom Websites)
-    { 
-      name: 'Settings', icon: <Settings size={20} />, 
-      subItems: isCustomWebsite ? [
-        { name: 'Alerts & Emails', path: activeStoreId ? `/store/${activeStoreId}/alerts` : '#' },
-        { name: 'SEO & AI Settings', path: activeStoreId ? `/store/${activeStoreId}/seo` : '#' }
-      ] : [
-        { name: 'Alerts & Emails', path: activeStoreId ? `/store/${activeStoreId}/alerts` : '#' },
-        { name: 'Delivery', path: activeStoreId ? `/store/${activeStoreId}/delivery` : '#' },
-        { name: 'Checkout & Payment', path: activeStoreId ? `/store/${activeStoreId}/checkout` : '#' },
-        { name: 'Store Policy', path: activeStoreId ? `/store/${activeStoreId}/policies` : '#' },
-        { name: 'SEO & AI Settings', path: activeStoreId ? `/store/${activeStoreId}/seo` : '#' }
+    ...(!isCustomWebsite ? [{
+      group: 'Catalog',
+      items: [
+        { name: 'Products', icon: <Package size={18} />, path: activeStoreId ? `/store/${activeStoreId}/products` : '#' },
+        { name: 'Categories', icon: <Layers size={18} />, path: activeStoreId ? `/store/${activeStoreId}/categories` : '#' }
+      ]
+    }] : []),
+    ...(!isCustomWebsite ? [{
+      group: 'Sales & Orders',
+      items: [
+        { name: 'Manage Orders', icon: <ClipboardList size={18} />, path: activeStoreId ? `/store/${activeStoreId}/orders` : '#' },
+        { name: 'Live Monitor', icon: <Bell size={18} />, path: activeStoreId ? `/store/${activeStoreId}/live-orders` : '#' }
+      ]
+    }] : []),
+    ...(!isCustomWebsite ? [{
+      group: 'Customers',
+      items: [
+        { name: 'Customers List', icon: <Users size={18} />, path: activeStoreId ? `/store/${activeStoreId}/customers` : '#' },
+        { name: 'Reviews', icon: <MessageSquare size={18} />, path: activeStoreId ? `/store/${activeStoreId}/reviews` : '#' }
+      ]
+    }] : []),
+    {
+      group: 'Marketing',
+      items: [
+        ...(!isCustomWebsite ? [{ name: 'Coupons & Offers', icon: <Ticket size={18} />, path: activeStoreId ? `/store/${activeStoreId}/coupons` : '#' }] : []),
+        { name: 'Newsletter & Leads', icon: <Bell size={18} />, path: activeStoreId ? `/store/${activeStoreId}/newsletter` : '#' }
       ]
     },
-    
-    // Always show Plan & Billing
-    { name: 'Plan & Billing', icon: <CreditCard size={20} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' }
+    {
+      group: 'Online Store',
+      items: [
+        ...(!isCustomWebsite ? [
+          { name: 'Theme Gallery', icon: <Layers size={18} />, path: activeStoreId ? `/store/${activeStoreId}/themes` : '#' },
+          { name: 'Customize Theme', icon: <Settings size={18} />, path: activeStoreId ? `/store/${activeStoreId}/theme-customization` : '#' }
+        ] : []),
+        { name: 'Custom Pages', icon: <Globe size={18} />, path: activeStoreId ? `/store/${activeStoreId}/custom-pages` : '#' },
+        { name: 'Menu Builder', icon: <Layers size={18} />, path: activeStoreId ? `/store/${activeStoreId}/navigation-menus` : '#' },
+        { name: 'Asset Manager', icon: <HardDrive size={18} />, path: activeStoreId ? `/store/${activeStoreId}/assets` : '#' },
+        // Conditionally show domains if plan permits
+        ...((currentStoreInfo?.planDetails?.features?.customDomain === true || 
+             (currentStoreInfo?.planId && typeof currentStoreInfo.planId === 'object' && (
+               currentStoreInfo.planId.features?.customDomain === true ||
+               (Array.isArray(currentStoreInfo.planId.features) && currentStoreInfo.planId.features.some(f => 
+                 f.name?.toLowerCase().includes("custom domain") || 
+                 f.feature?.slug === "custom-domain" ||
+                 f.feature?.name?.toLowerCase().includes("custom domain")
+               ))
+             ))) ? [
+          { name: 'Domains', icon: <Globe size={18} />, path: activeStoreId ? `/store/${activeStoreId}/domains` : '#' }
+        ] : []),
+        { name: 'Storage / Media', icon: <HardDrive size={18} />, path: activeStoreId ? `/store/${activeStoreId}/storage` : '#' }
+      ]
+    },
+    {
+      group: 'Analytics',
+      items: [
+        { name: 'Store Analytics', icon: <BarChart3 size={18} />, path: '#' }
+      ]
+    },
+    {
+      group: 'Settings',
+      items: [
+        { 
+          name: 'Configurations', icon: <Settings size={18} />, 
+          subItems: isCustomWebsite ? [
+            { name: 'Alerts & Emails', path: activeStoreId ? `/store/${activeStoreId}/alerts` : '#' },
+            { name: 'SEO & AI Settings', path: activeStoreId ? `/store/${activeStoreId}/seo` : '#' }
+          ] : [
+            { name: 'Alerts & Emails', path: activeStoreId ? `/store/${activeStoreId}/alerts` : '#' },
+            { name: 'Delivery Settings', path: activeStoreId ? `/store/${activeStoreId}/delivery` : '#' },
+            { name: 'Checkout & Payments', path: activeStoreId ? `/store/${activeStoreId}/checkout` : '#' },
+            { name: 'Legal Policies', path: activeStoreId ? `/store/${activeStoreId}/policies` : '#' },
+            { name: 'SEO & AI Settings', path: activeStoreId ? `/store/${activeStoreId}/seo` : '#' }
+          ]
+        }
+      ]
+    },
+    {
+      group: 'Billing',
+      items: [
+        { name: 'Plan & Billing', icon: <CreditCard size={18} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' }
+      ]
+    }
   ];
 
   return (
@@ -225,20 +231,20 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
 
       {/* Sidebar */}
       <div className={`fixed md:relative inset-y-0 left-0 z-50 w-64 ${isSidebarCollapsed ? 'md:w-20' : 'md:w-64'} min-h-screen bg-white border-r border-gray-100 flex flex-col p-4 shrink-0 transform transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className={`mb-10 px-2 flex items-center ${isSidebarCollapsed ? 'md:justify-center' : 'justify-between'}`}>
+        <div className={`mb-6 px-2 flex items-center ${isSidebarCollapsed ? 'md:justify-center' : 'justify-between'}`}>
           <img 
             src={platformLogo} 
             alt="GB Galibrand Logo" 
-            className={`h-12 w-auto transition-opacity ${isSidebarCollapsed ? 'md:hidden' : ''}`}
+            className={`h-10 w-auto transition-opacity ${isSidebarCollapsed ? 'md:hidden' : ''}`}
           />
           {platformMiniLogo ? (
             <img 
               src={platformMiniLogo} 
               alt="GB Mini Logo" 
-              className={`hidden h-10 w-auto object-contain shrink-0 ${isSidebarCollapsed ? 'md:block' : ''}`}
+              className={`hidden h-8 w-auto object-contain shrink-0 ${isSidebarCollapsed ? 'md:block' : ''}`}
             />
           ) : (
-            <div className={`hidden h-10 w-10 bg-gradient-to-br from-[#76b900] to-[#5a8d00] text-white rounded-xl items-center justify-center font-black text-xl shadow-md shrink-0 ${isSidebarCollapsed ? 'md:flex' : ''}`}>
+            <div className={`hidden h-8 w-8 bg-gradient-to-br from-[#76b900] to-[#5a8d00] text-white rounded-xl items-center justify-center font-black text-lg shadow-md shrink-0 ${isSidebarCollapsed ? 'md:flex' : ''}`}>
               GB
             </div>
           )}
@@ -246,98 +252,108 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
             <X size={24} />
           </button>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto pb-4 custom-scrollbar">
-          {menuItems.map((item) => {
-            if (item.subItems) {
-              const isSubMenuOpen = openMenus[item.name];
-              const isAnyChildActive = item.subItems.some(sub => sub.path !== '#' && location.pathname === sub.path);
-              
-              return (
-                <div key={item.name} className="px-2 pb-1">
-                  <button
-                    onClick={() => toggleMenu(item.name)}
-                    title={isSidebarCollapsed ? item.name : undefined}
-                    className={`w-full flex items-center justify-between py-2.5 rounded-xl transition-all duration-200 ${isSidebarCollapsed ? 'md:justify-center px-2 md:px-0' : 'px-3'} ${
-                      isAnyChildActive && !isSubMenuOpen
-                        ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
-                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`${isAnyChildActive ? "text-[#76b900]" : "text-gray-400"} shrink-0`}>
+
+        <nav className="flex-1 space-y-3.5 overflow-y-auto pb-4 custom-scrollbar">
+          {menuGroups.map((group) => (
+            <div key={group.group} className="space-y-1">
+              {!isSidebarCollapsed && (
+                <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider px-3 mb-1 mt-1">
+                  {group.group}
+                </div>
+              )}
+              {group.items.map((item) => {
+                if (item.subItems) {
+                  const isSubMenuOpen = openMenus[item.name];
+                  const isAnyChildActive = item.subItems.some(sub => sub.path !== '#' && location.pathname === sub.path);
+                  
+                  return (
+                    <div key={item.name} className="px-1">
+                      <button
+                        onClick={() => toggleMenu(item.name)}
+                        title={isSidebarCollapsed ? item.name : undefined}
+                        className={`w-full flex items-center justify-between py-1.5 rounded-lg transition-all duration-200 ${isSidebarCollapsed ? 'md:justify-center px-1 md:px-0' : 'px-2.5'} ${
+                          isAnyChildActive && !isSubMenuOpen
+                            ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
+                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className={`${isAnyChildActive ? "text-[#76b900]" : "text-gray-400"} shrink-0`}>
+                            {item.icon}
+                          </span>
+                          <span className={`text-[12px] tracking-wide truncate ${isSidebarCollapsed ? 'md:hidden' : ''}`}>{item.name}</span>
+                        </div>
+                        {!isSidebarCollapsed && (
+                          <span className={`text-gray-400 transition-transform duration-300 ${isSubMenuOpen ? 'rotate-90' : ''}`}>
+                            <ChevronRight size={14} />
+                          </span>
+                        )}
+                      </button>
+                      
+                      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSubMenuOpen && !isSidebarCollapsed ? 'max-h-64 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
+                        <div className="space-y-1 pl-8 pr-1 pb-1">
+                          {item.subItems.map(subItem => {
+                            const isActive = subItem.path !== '#' && location.pathname === subItem.path;
+                            return (
+                              <button
+                                key={subItem.name}
+                                onClick={() => {
+                                  if (subItem.path !== '#') {
+                                    navigate(subItem.path);
+                                    setIsMobileMenuOpen(false);
+                                  }
+                                }}
+                                className={`w-full text-left py-1 px-2.5 rounded-md text-[11px] transition-all duration-200 ${
+                                  isActive 
+                                    ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
+                                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                                }`}
+                              >
+                                {subItem.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const isActive = item.path !== '#' && location.pathname === item.path;
+                
+                return (
+                  <div key={item.name} className="px-1">
+                    <button
+                      onClick={() => {
+                        if (item.path !== '#') {
+                          navigate(item.path);
+                          setIsMobileMenuOpen(false);
+                        }
+                      }}
+                      title={isSidebarCollapsed ? item.name : undefined}
+                      className={`w-full flex items-center gap-2.5 py-1.5 rounded-lg transition-all duration-200 ${isSidebarCollapsed ? 'md:justify-center px-1 md:px-0' : 'px-2.5'} ${
+                        isActive 
+                          ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
+                          : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <span className={`${isActive ? "text-[#76b900]" : "text-gray-400"} shrink-0`}>
                         {item.icon}
                       </span>
-                      <span className={`text-sm tracking-wide truncate ${isSidebarCollapsed ? 'md:hidden' : ''}`}>{item.name}</span>
-                    </div>
-                    {!isSidebarCollapsed && (
-                      <span className={`text-gray-400 transition-transform duration-300 ${isSubMenuOpen ? 'rotate-90' : ''}`}>
-                        <ChevronRight size={16} />
-                      </span>
-                    )}
-                  </button>
-                  
-                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSubMenuOpen && !isSidebarCollapsed ? 'max-h-64 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-                    <div className="space-y-1 pl-9 pr-2 pb-1">
-                      {item.subItems.map(subItem => {
-                        const isActive = subItem.path !== '#' && location.pathname === subItem.path;
-                        return (
-                          <button
-                            key={subItem.name}
-                            onClick={() => {
-                              if (subItem.path !== '#') {
-                                navigate(subItem.path);
-                                setIsMobileMenuOpen(false);
-                              }
-                            }}
-                            className={`w-full text-left py-2 px-3 rounded-lg text-sm transition-all duration-200 ${
-                              isActive 
-                                ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
-                                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                            }`}
-                          >
-                            {subItem.name}
-                          </button>
-                        );
-                      })}
-                    </div>
+                      <span className={`text-[12px] tracking-wide truncate ${isSidebarCollapsed ? 'md:hidden' : ''}`}>{item.name}</span>
+                    </button>
                   </div>
-                </div>
-              );
-            }
-
-            const isActive = item.path !== '#' && location.pathname === item.path;
-            
-            return (
-              <div key={item.name} className="px-2 pb-1">
-                <button
-                  onClick={() => {
-                    if (item.path !== '#') {
-                      navigate(item.path);
-                      setIsMobileMenuOpen(false);
-                    }
-                  }}
-                  title={isSidebarCollapsed ? item.name : undefined}
-                  className={`w-full flex items-center gap-3 py-2.5 rounded-xl transition-all duration-200 ${isSidebarCollapsed ? 'md:justify-center px-2 md:px-0' : 'px-3'} ${
-                    isActive 
-                      ? "bg-[#f1f8e9] text-[#76b900] font-semibold" 
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-                >
-                  <span className={`${isActive ? "text-[#76b900]" : "text-gray-400"} shrink-0`}>
-                    {item.icon}
-                  </span>
-                  <span className={`text-sm tracking-wide truncate ${isSidebarCollapsed ? 'md:hidden' : ''}`}>{item.name}</span>
-                </button>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Desktop Collapse Button */}
-        <div className="mt-4 pt-4 border-t border-slate-100 hidden md:block">
+        <div className="mt-2 pt-2 border-t border-slate-100 hidden md:block">
           <button 
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="w-full flex items-center justify-center py-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
+            className="w-full flex items-center justify-center py-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
           >
             {isSidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </button>
