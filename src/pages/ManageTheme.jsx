@@ -294,7 +294,7 @@ const ManageTheme = ({ token, stores, onLogout }) => {
                 <img 
                   src={selectedThemeDetails.previewImage || 'https://placehold.co/600x400/f8fafc/475569?text=No+Preview'} 
                   alt={`${selectedThemeDetails.name} Preview`} 
-                  className="w-full h-full object-cover" 
+                  className="w-full h-full object-contain p-4 bg-slate-50" 
                 />
               </div>
 
