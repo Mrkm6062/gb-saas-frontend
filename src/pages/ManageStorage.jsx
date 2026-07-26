@@ -213,7 +213,7 @@ const ManageStorage = ({ token, stores, onLogout }) => {
 
   // Determine Active Plan & Storage Limit
   const activePlan = plans.find(p => p._id === currentStore.planId) || plans.find(p => p.name === 'Free');
-  const limitMB = activePlan?.features?.storageLimit || 500; // Default 500MB
+  const limitMB = activePlan?.limits?.storageLimit || activePlan?.features?.storageLimit || 500; // Default 500MB
   const limitBytes = limitMB * 1024 * 1024;
   
   // Calculate Used Storage
