@@ -173,11 +173,6 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Plan & Billing">
       <div className="p-6 mx-auto mt-6">
-        <div className="mb-8 text-center">
-          <h2 className="text-3xl font-extrabold text-slate-800 mb-2">Choose the Right Plan for Your Store</h2>
-          <p className="text-slate-500">Unlock more products, custom domains, and premium features.</p>
-        </div>
-
         {/* 1️⃣ Monthly Changing Header / Billing Toggle Switch */}
         <div className="flex justify-center mb-10">
           <div className="inline-flex flex-wrap justify-center gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-full">
