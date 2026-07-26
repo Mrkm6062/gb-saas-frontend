@@ -38,6 +38,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
 
   // Modals state
   const [confirmDeliveredModal, setConfirmDeliveredModal] = useState({ isOpen: false, order: null });
+  const [confirmCancelModal, setConfirmCancelModal] = useState({ isOpen: false, orderId: null });
   const [trackingModal, setTrackingModal] = useState({
     isOpen: false,
     orderId: null,
@@ -254,9 +255,14 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
 
   // Other status shortcuts
   const handleCancelOrder = (orderId) => {
-    if (window.confirm("Are you sure you want to cancel this order?")) {
-      updateOrder(orderId, { orderStatus: 'canceled' });
+    setConfirmCancelModal({ isOpen: true, orderId });
+  };
+
+  const submitCancel = () => {
+    if (confirmCancelModal.orderId) {
+      updateOrder(confirmCancelModal.orderId, { orderStatus: 'canceled' });
     }
+    setConfirmCancelModal({ isOpen: false, orderId: null });
   };
 
   const handleReturnOrder = (orderId) => {
@@ -606,13 +612,8 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                           </button>
 
                           <button 
-                            disabled={!order.orderConfirmed}
                             onClick={() => handleCancelOrder(order._id)}
-                            className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
-                              !order.orderConfirmed 
-                                ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
-                                : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
-                            }`}
+                            className="py-2 rounded-xl border flex items-center justify-center gap-1 transition bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
                           >
                             <XCircle size={12} /> Cancel Order
                           </button>
@@ -673,6 +674,37 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                   className="flex-1 px-4 py-2.5 font-bold text-white bg-[#76b900] hover:bg-[#659e00] rounded-xl transition-colors shadow-lg shadow-green-100"
                 >
                   Yes, Delivered
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {confirmCancelModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="p-6 pt-8 text-center flex flex-col items-center">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 border-2 border-red-100">
+                <AlertCircle size={28} className="text-red-600 animate-pulse" />
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-800 mb-2">Cancel Order?</h3>
+              <p className="text-sm text-slate-500 mb-6 px-2">
+                Do you really want to cancel this order? This action cannot be undone.
+              </p>
+              <div className="flex w-full gap-3">
+                <button 
+                  onClick={() => setConfirmCancelModal({ isOpen: false, orderId: null })}
+                  className="flex-1 px-4 py-2.5 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                >
+                  No, Keep
+                </button>
+                <button 
+                  onClick={submitCancel}
+                  className="flex-1 px-4 py-2.5 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-lg shadow-red-100"
+                >
+                  Yes, Cancel
                 </button>
               </div>
             </div>
