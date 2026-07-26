@@ -477,6 +477,7 @@ const ManageOrders = ({ token, stores, onLogout }) => {
               <option value="all">All Payments</option>
               <option value="pending">Pending</option>
               <option value="paid">Paid</option>
+              <option value="refunded">Refunded</option>
             </select>
           </div>
         </div>
@@ -526,14 +527,33 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                             <span className="text-[#76b900] bg-green-50 px-2 py-0.5 rounded border border-green-100">WhatsApp Order</span>
                           ) : order.paymentMethod === 'razorpay' ? 'Online' : 'COD'}
                         </div>
-                        <select value={order.paymentStatus} onChange={(e) => handleStatusChange(order._id, 'payment', e.target.value, order)} className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.paymentStatus === 'paid' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
-                          <option value="pending">Pending</option>
-                          <option value="paid">Paid</option>
+                        <select 
+                          value={order.paymentStatus} 
+                          onChange={(e) => handleStatusChange(order._id, 'payment', e.target.value, order)} 
+                          disabled={['canceled', 'returned'].includes(order.orderStatus) && order.paymentStatus !== 'paid'}
+                          className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${
+                            order.paymentStatus === 'paid' 
+                              ? 'bg-green-50 text-green-700 border-green-200' 
+                              : order.paymentStatus === 'refunded'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-orange-50 text-orange-700 border-orange-200'
+                          }`}
+                        >
+                          <option value="pending" disabled={['canceled', 'returned'].includes(order.orderStatus)}>Pending</option>
+                          <option value="paid" disabled={['canceled', 'returned'].includes(order.orderStatus) && order.paymentStatus === 'paid'}>Paid</option>
+                          {(order.paymentStatus === 'refunded' || (['canceled', 'returned'].includes(order.orderStatus) && order.paymentStatus === 'paid')) && (
+                            <option value="refunded">Refunded</option>
+                          )}
                         </select>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <select value={order.orderStatus} onChange={(e) => handleStatusChange(order._id, 'order', e.target.value, order)} className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.orderStatus === 'delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' : order.orderStatus === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : order.orderStatus === 'canceled' ? 'bg-red-50 text-red-700 border-red-200' : order.orderStatus === 'returned' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                          <select 
+                            value={order.orderStatus} 
+                            onChange={(e) => handleStatusChange(order._id, 'order', e.target.value, order)} 
+                            disabled={['canceled', 'returned'].includes(order.orderStatus)}
+                            className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.orderStatus === 'delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' : order.orderStatus === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : order.orderStatus === 'canceled' ? 'bg-red-50 text-red-700 border-red-200' : order.orderStatus === 'returned' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}
+                          >
                             <option value="placed" disabled={order.orderStatus !== 'placed'}>Placed</option>
                             <option value="shipped" disabled={order.orderStatus !== 'placed'}>Shipped</option>
                             <option value="delivered">Delivered</option>
