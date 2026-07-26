@@ -2,7 +2,7 @@ import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { Check, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
@@ -50,6 +50,18 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
       discountEnabled: bill.discountEnabled,
       discount: bill.discountValue
     };
+  };
+
+  // Helper to get max discount percentage for a cycle duration to show next to toggle selector
+  const getMaxDiscountForCycle = (duration) => {
+    let maxDisc = 0;
+    plans.forEach(p => {
+      const bill = p.billing?.find(b => b.durationMonths === duration);
+      if (bill && bill.discountEnabled && bill.discountValue > maxDisc) {
+        maxDisc = bill.discountValue;
+      }
+    });
+    return maxDisc;
   };
 
   // Fetch available plans on component load
@@ -147,7 +159,7 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
           }
         },
         prefill: { name: currentStore.storeName },
-        theme: { color: "#76b900" }
+        theme: { color: "#FB8C00" }
       };
 
       const paymentObject = new window.Razorpay(options);
@@ -166,26 +178,38 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
           <p className="text-slate-500">Unlock more products, custom domains, and premium features.</p>
         </div>
 
-        {/* Billing Period Selector */}
-        <div className="flex justify-center items-center gap-2 mb-10 bg-slate-100 p-1.5 rounded-xl max-w-xs mx-auto border border-slate-200">
-          <button 
-            onClick={() => setBillingCycle(1)} 
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${billingCycle === 1 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-          >
-            Monthly
-          </button>
-          <button 
-            onClick={() => setBillingCycle(6)} 
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${billingCycle === 6 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-          >
-            6 Months
-          </button>
-          <button 
-            onClick={() => setBillingCycle(12)} 
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${billingCycle === 12 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-          >
-            12 Months
-          </button>
+        {/* 1️⃣ Monthly Changing Header / Billing Toggle Switch */}
+        <div className="flex justify-center mb-10">
+          <div className="inline-flex flex-wrap justify-center gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-full">
+            <button 
+              onClick={() => setBillingCycle(1)} 
+              className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ease-in-out cursor-pointer border-0 ${billingCycle === 1 ? 'bg-white text-[#7CB342] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              1 Month
+            </button>
+            <button 
+              onClick={() => setBillingCycle(6)} 
+              className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ease-in-out cursor-pointer border-0 ${billingCycle === 6 ? 'bg-white text-[#7CB342] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              6 Months
+              {getMaxDiscountForCycle(6) > 0 && (
+                <span className="bg-[#FB8C00] text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                  -{getMaxDiscountForCycle(6)}%
+                </span>
+              )}
+            </button>
+            <button 
+              onClick={() => setBillingCycle(12)} 
+              className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ease-in-out cursor-pointer border-0 ${billingCycle === 12 ? 'bg-white text-[#7CB342] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              12 Months
+              {getMaxDiscountForCycle(12) > 0 && (
+                <span className="bg-[#FB8C00] text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                  -{getMaxDiscountForCycle(12)}%
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {status && (
@@ -197,7 +221,8 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
         {loading ? (
           <div className="flex justify-center py-20 text-slate-400 font-bold animate-pulse">Loading plans...</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          /* 2️⃣ Plan Cards Grid */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto items-stretch">
             {(() => {
               const currentPlanId = typeof currentStore.planId === 'object' && currentStore.planId !== null ? currentStore.planId._id : currentStore.planId;
               const currentPlanIdStr = currentPlanId ? String(currentPlanId) : null;
@@ -229,7 +254,7 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
                 const rate = getPlanBilling(plan, billingCycle);
                 const planPrice = rate.price;
                 const isCurrentPlan = currentPlanIdStr === String(plan._id) || (!currentPlanIdStr && planPrice === 0);
-                const isProPlan = plan.name === 'Pro';
+                const isProPlan = plan.popular || plan.name === 'Pro';
                 const isDowngrade = !isCurrentPlan && planPrice < currentPrice;
                 const isFreePlan = planPrice === 0;
                 const preventDowngrade = isDowngrade && !canRenew;
@@ -244,77 +269,87 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
                 } else if (isDowngrade && canRenew) {
                   buttonText = 'Downgrade Plan';
                 }
-                
+
                 return (
-                  <div key={plan._id} className={`relative rounded-2xl shadow-sm border-2 flex flex-col p-6 transition-all ${isCurrentPlan ? 'bg-white border-[#76b900] ring-4 ring-green-50' : (isProPlan && !isCurrentPlanPremium) ? 'bg-gradient-to-br from-blue-50 to-white border-blue-500 ring-4 ring-blue-50' : 'bg-white border-slate-100 hover:border-slate-300'}`}>
+                  <div 
+                    key={plan._id} 
+                    className={
+                      isProPlan 
+                        ? "relative bg-white p-7 rounded-xl shadow-lg border border-slate-200 border-t-[5px] border-t-[#FB8C00] flex flex-col text-center transition-all duration-300 ease-in-out hover:shadow-2xl md:scale-105 z-10 my-5 md:my-0"
+                        : "relative bg-white p-7 rounded-xl shadow-md border border-slate-200 border-t-[5px] border-[#7CB342] flex flex-col text-center transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1"
+                    }
+                  >
                     {isCurrentPlan && (
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#76b900] text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap z-10">
+                      <span className="absolute -top-3.5 left-1/2 transform -translate-x-1/2 bg-[#7CB342] text-white text-[10px] uppercase tracking-wider font-extrabold px-3 py-1 rounded-full shadow-md whitespace-nowrap z-20">
                         Current Plan
-                      </div>
+                      </span>
                     )}
-                    {isProPlan && !isCurrentPlan && !isCurrentPlanPremium && (
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                        <span className="absolute w-full h-full rounded-full bg-blue-400 animate-ping opacity-75"></span>
-                        <div className="relative bg-blue-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
-                          Recommended
-                        </div>
-                      </div>
+
+                    {isProPlan && (
+                      <span className="self-center inline-block bg-[#FB8C00] text-white px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase mb-3">
+                        MOST POPULAR
+                      </span>
                     )}
-                    <div className="mb-5">
-                      <h3 className="text-xl font-bold text-slate-800 mb-1">{plan.name}</h3>
+
+                    <div className="mb-2">
+                      <h3 className={`text-xl font-bold mb-1 ${isProPlan ? 'text-slate-800' : 'text-[#7CB342]'}`}>
+                        {plan.name}
+                      </h3>
                       {plan.description && <p className="text-xs text-slate-400 italic mb-2">"{plan.description}"</p>}
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-3xl font-extrabold text-slate-900">₹{rate.price}</span>
-                        <span className="text-slate-500 text-sm font-medium">/month</span>
-                      </div>
-                      {rate.discountEnabled && (
-                        <div className="mt-1 flex items-center gap-1.5">
-                          <span className="line-through text-slate-400 text-xs">₹{rate.originalPrice}</span>
-                          <span className="text-green-600 text-xs font-extrabold bg-green-50 px-2 py-0.5 rounded-full">
-                            Save {rate.discount}%
+                      
+                      {/* Price Section */}
+                      <div className="text-4xl font-bold text-slate-800 my-4">
+                        {rate.discountEnabled && (
+                          <span className="line-through text-slate-400 text-lg mr-2 font-normal">
+                            ₹{rate.originalPrice}
                           </span>
-                        </div>
+                        )}
+                        ₹{rate.price}
+                        <span className="text-base font-normal text-slate-500">/month</span>
+                      </div>
+
+                      {rate.discountEnabled && (
+                        <span className="self-center inline-block bg-green-50 text-green-800 border border-green-300 px-2.5 py-0.5 rounded-full text-xs font-semibold mb-2.5">
+                          Save {rate.discount}%
+                        </span>
                       )}
+
                       {billingCycle > 1 && (
-                        <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase">
+                        <p className="text-xs text-slate-500 mb-5">
                           Billed ₹{rate.price * billingCycle} every {billingCycle} months
                         </p>
                       )}
                     </div>
                     
-                    <div className="flex-1 space-y-3 mb-6 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Check size={18} className="text-[#76b900] shrink-0" />
-                        <span className="text-slate-600 font-medium">Up to {plan.limits?.maxProducts || 0} Products</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Check size={18} className="text-[#76b900] shrink-0" />
-                        <span className="text-slate-600 font-medium">
-                          {plan.limits?.storageLimit ? (plan.limits.storageLimit >= 1000 ? `${plan.limits.storageLimit / 1000}GB` : `${plan.limits.storageLimit}MB`) : '500MB'} Storage
-                        </span>
-                      </div>
-
-                      {/* Display Features List */}
-                      <div className="border-t border-slate-100 pt-3 mt-3">
-                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Included Features</h4>
-                        <div className="space-y-2">
-                          {plan.features?.map((f, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <Check size={18} className="text-[#76b900] shrink-0" />
-                              <span className="text-slate-600 font-medium">{f.name}</span>
-                            </div>
-                          ))}
-                          {(!plan.features || plan.features.length === 0) && (
-                            <div className="text-slate-400 text-xs italic">No special features bundled.</div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    {/* Features checklist container */}
+                    <ul className="text-left my-5 flex-grow space-y-2.5">
+                      <li className="relative pl-6 text-sm text-slate-700">
+                        <Check size={16} className="text-[#FB8C00] absolute left-0 top-0.5 shrink-0" />
+                        Up to {plan.limits?.maxProducts || 0} Products
+                      </li>
+                      <li className="relative pl-6 text-sm text-slate-700">
+                        <Check size={16} className="text-[#FB8C00] absolute left-0 top-0.5 shrink-0" />
+                        {plan.limits?.storageLimit ? (plan.limits.storageLimit >= 1000 ? `${plan.limits.storageLimit / 1000}GB` : `${plan.limits.storageLimit}MB`) : '500MB'} Storage
+                      </li>
+                      {plan.features?.map((f, i) => (
+                        <li key={i} className="relative pl-6 text-sm text-slate-700">
+                          <Check size={16} className="text-[#FB8C00] absolute left-0 top-0.5 shrink-0" />
+                          {f.name}
+                        </li>
+                      ))}
+                    </ul>
   
+                    {/* Brand Styled Actions button */}
                     <button 
                       onClick={() => handleUpgrade(plan)}
                       disabled={buttonDisabled}
-                      className={`w-full py-3.5 rounded-xl font-bold transition-all ${buttonDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : (isProPlan && !isCurrentPlanPremium) ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
+                      className={
+                        buttonDisabled
+                          ? "w-full py-3 bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed border border-slate-200"
+                          : isProPlan
+                            ? "w-full inline-block px-6 py-3 bg-[#FB8C00] text-white font-semibold rounded-lg text-center hover:bg-[#ef6c00] transition-all duration-200 cursor-pointer border-0 shadow-sm"
+                            : "w-full inline-block px-6 py-3 border-2 border-[#7CB342] text-[#7CB342] font-semibold rounded-lg text-center hover:bg-[#7CB342] hover:text-white transition-all duration-200 cursor-pointer bg-transparent"
+                      }
                     >
                       {buttonText}
                     </button>
