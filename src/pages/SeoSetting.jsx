@@ -2,7 +2,7 @@ import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { Search, Globe, Cpu, FileText, Settings, ShieldAlert, Save, HelpCircle } from 'lucide-react';
+import { Search, Globe, Cpu, FileText, Settings, ShieldAlert, Save, HelpCircle, Smartphone, UploadCloud } from 'lucide-react';
 
 const SeoSetting = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
@@ -43,6 +43,19 @@ const SeoSetting = ({ token, stores, onLogout }) => {
     googleSearchConsole: { verificationCode: '', enabled: false },
     facebookPixel: { pixelId: '', enabled: false }
   });
+
+  const [pwaData, setPwaData] = useState({
+    enabled: false,
+    appName: '',
+    shortName: '',
+    themeColor: '#16A34A',
+    backgroundColor: '#FFFFFF',
+    icon192: '',
+    icon512: ''
+  });
+
+  const [pwaErrors, setPwaErrors] = useState({});
+
 
   useEffect(() => {
     const fetchSeoSettings = async () => {
@@ -117,9 +130,69 @@ const SeoSetting = ({ token, stores, onLogout }) => {
       }
     };
 
+    const fetchPwaSettings = async () => {
+      if (!currentStore._id) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/pwa/${currentStore._id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPwaData({
+            enabled: data.enabled ?? false,
+            appName: data.appName || '',
+            shortName: data.shortName || '',
+            themeColor: data.themeColor || '#16A34A',
+            backgroundColor: data.backgroundColor || '#FFFFFF',
+            icon192: data.icon192 || '',
+            icon512: data.icon512 || ''
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load PWA settings", err);
+      }
+    };
+
     fetchSeoSettings();
     fetchTrackingSettings();
+    fetchPwaSettings();
   }, [currentStore._id, token, API_BASE_URL]);
+
+
+  const handleIconUpload = async (e, field) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const uploadFormData = new FormData();
+    uploadFormData.append('image', file);
+
+    setStatus('Uploading icon...');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: uploadFormData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPwaData(prev => ({
+          ...prev,
+          [field]: data.url
+        }));
+        setPwaErrors(prev => ({ ...prev, [field]: null }));
+        setStatus('Icon uploaded successfully!');
+        setTimeout(() => setStatus(''), 2000);
+      } else {
+        const errData = await res.json();
+        setStatus(`Upload failed: ${errData.message || 'Server error'}`);
+      }
+    } catch (err) {
+      setStatus(`Upload error: ${err.message}`);
+    }
+  };
+
 
 
   const handleSave = async (e) => {
@@ -144,6 +217,40 @@ const SeoSetting = ({ token, stores, onLogout }) => {
         } else {
           const errData = await res.json();
           setStatus(`Error saving tracking settings: ${errData.message || 'Server error'}`);
+        }
+      } else if (activeSection === 'pwa') {
+        // Validation check before saving
+        if (pwaData.enabled) {
+          const errors = {};
+          if (!pwaData.appName) errors.appName = 'App Name is required when PWA is enabled.';
+          if (!pwaData.shortName) errors.shortName = 'Short Name is required when PWA is enabled.';
+          if (!pwaData.icon192) errors.icon192 = 'Icon 192x192 is required when PWA is enabled.';
+          if (!pwaData.icon512) errors.icon512 = 'Icon 512x512 is required when PWA is enabled.';
+          if (Object.keys(errors).length > 0) {
+            setPwaErrors(errors);
+            setStatus('Error: Please fill in all required PWA fields.');
+            setTimeout(() => setStatus(''), 4000);
+            setLoading(false);
+            return;
+          }
+        }
+        setPwaErrors({});
+
+        const res = await fetch(`${API_BASE_URL}/api/pwa/${currentStore._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(pwaData)
+        });
+
+        if (res.ok) {
+          setStatus('PWA settings saved successfully!');
+          setTimeout(() => setStatus(''), 3000);
+        } else {
+          const errData = await res.json();
+          setStatus(`Error saving PWA settings: ${errData.message || 'Server error'}`);
         }
       } else {
         // Convert keywords string back to array
@@ -179,6 +286,7 @@ const SeoSetting = ({ token, stores, onLogout }) => {
   };
 
 
+
   const handleChange = (field, val) => {
     setFormData(prev => ({
       ...prev,
@@ -191,8 +299,10 @@ const SeoSetting = ({ token, stores, onLogout }) => {
     { id: 'sitemap', label: 'XML Sitemap', icon: <Globe size={18} /> },
     { id: 'ai', label: 'AI Bots & LLMs', icon: <Cpu size={18} /> },
     { id: 'custom', label: 'Custom Configs', icon: <FileText size={18} /> },
-    { id: 'tracking', label: 'Google & Tracking Settings', icon: <Settings size={18} /> }
+    { id: 'tracking', label: 'Google & Tracking Settings', icon: <Settings size={18} /> },
+    { id: 'pwa', label: 'PWA Settings', icon: <Smartphone size={18} /> }
   ];
+
 
 
   return (
@@ -732,7 +842,211 @@ const SeoSetting = ({ token, stores, onLogout }) => {
 
                   </div>
                 )}
+
+                {/* 6. PWA Settings Tab */}
+                {activeSection === 'pwa' && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-8 animate-fadeIn">
+                    
+                    {/* General Settings */}
+                    <div className="border-b pb-6 border-slate-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-slate-800">Progressive Web App (PWA)</h3>
+                          <p className="text-sm text-slate-500 mt-1">Enable users to install your storefront as an app on their phones and desktops.</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
+                          <input 
+                            type="checkbox" 
+                            checked={pwaData.enabled}
+                            onChange={(e) => setPwaData({ ...pwaData, enabled: e.target.checked })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#76b900]"></div>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* App Configurations */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b pb-6 border-slate-100">
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">App Name</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. My Awesome Shop"
+                          value={pwaData.appName}
+                          onChange={(e) => {
+                            setPwaData({ ...pwaData, appName: e.target.value });
+                            if (pwaErrors.appName) setPwaErrors({ ...pwaErrors, appName: null });
+                          }}
+                          disabled={!pwaData.enabled}
+                          className={`w-full px-4 py-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400 ${pwaErrors.appName ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
+                        />
+                        {pwaErrors.appName && <p className="text-xs text-red-500 font-semibold mt-1">{pwaErrors.appName}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Short Name (Max 12 chars)</label>
+                        <input 
+                          type="text" 
+                          maxLength={12}
+                          placeholder="e.g. MyShop"
+                          value={pwaData.shortName}
+                          onChange={(e) => {
+                            setPwaData({ ...pwaData, shortName: e.target.value });
+                            if (pwaErrors.shortName) setPwaErrors({ ...pwaErrors, shortName: null });
+                          }}
+                          disabled={!pwaData.enabled}
+                          className={`w-full px-4 py-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400 ${pwaErrors.shortName ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'}`}
+                        />
+                        {pwaErrors.shortName && <p className="text-xs text-red-500 font-semibold mt-1">{pwaErrors.shortName}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Theme Color</label>
+                        <div className="flex gap-3">
+                          <input 
+                            type="color" 
+                            value={pwaData.themeColor}
+                            onChange={(e) => setPwaData({ ...pwaData, themeColor: e.target.value })}
+                            disabled={!pwaData.enabled}
+                            className="w-12 h-10 border border-slate-200 rounded-xl cursor-pointer bg-transparent"
+                          />
+                          <input 
+                            type="text" 
+                            value={pwaData.themeColor}
+                            onChange={(e) => setPwaData({ ...pwaData, themeColor: e.target.value })}
+                            disabled={!pwaData.enabled}
+                            className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Background Color</label>
+                        <div className="flex gap-3">
+                          <input 
+                            type="color" 
+                            value={pwaData.backgroundColor}
+                            onChange={(e) => setPwaData({ ...pwaData, backgroundColor: e.target.value })}
+                            disabled={!pwaData.enabled}
+                            className="w-12 h-10 border border-slate-200 rounded-xl cursor-pointer bg-transparent"
+                          />
+                          <input 
+                            type="text" 
+                            value={pwaData.backgroundColor}
+                            onChange={(e) => setPwaData({ ...pwaData, backgroundColor: e.target.value })}
+                            disabled={!pwaData.enabled}
+                            className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* App Icons */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Icon 192 */}
+                      <div>
+                        <h4 className="text-base font-bold text-slate-800 mb-1">App Icon (192x192)</h4>
+                        <p className="text-xs text-slate-400 mb-4">Upload a square PNG icon matching size 192x192 pixels.</p>
+                        
+                        <div className="flex gap-4 items-center">
+                          {pwaData.icon192 ? (
+                            <div className="relative w-24 h-24 rounded-2xl border border-slate-200 overflow-hidden shrink-0 shadow-sm bg-slate-50 flex items-center justify-center">
+                              <img src={pwaData.icon192} alt="192 Icon" className="w-full h-full object-cover" />
+                              {pwaData.enabled && (
+                                <button 
+                                  type="button"
+                                  onClick={() => setPwaData({ ...pwaData, icon192: '' })}
+                                  className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-[10px] w-5 h-5 flex items-center justify-center font-bold"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <label className={`w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition shrink-0 ${pwaErrors.icon192 ? 'border-red-500 bg-red-50/10' : 'border-slate-300'}`}>
+                              <UploadCloud size={20} className={pwaErrors.icon192 ? 'text-red-400' : 'text-slate-400'} />
+                              <span className="text-[10px] font-bold text-slate-500 mt-1">Upload PNG</span>
+                              <input 
+                                type="file" 
+                                accept="image/png"
+                                onChange={(e) => handleIconUpload(e, 'icon192')}
+                                disabled={!pwaData.enabled}
+                                className="hidden"
+                              />
+                            </label>
+                          )}
+                          <div className="flex-1">
+                            <input 
+                              type="text" 
+                              placeholder="Or paste Icon URL directly..."
+                              value={pwaData.icon192}
+                              onChange={(e) => {
+                                setPwaData({ ...pwaData, icon192: e.target.value });
+                                if (pwaErrors.icon192) setPwaErrors({ ...pwaErrors, icon192: null });
+                              }}
+                              disabled={!pwaData.enabled}
+                              className={`w-full px-4 py-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-xs bg-white disabled:bg-slate-50 disabled:text-slate-400 ${pwaErrors.icon192 ? 'border-red-500' : 'border-slate-200'}`}
+                            />
+                            {pwaErrors.icon192 && <p className="text-xs text-red-500 font-semibold mt-1">{pwaErrors.icon192}</p>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Icon 512 */}
+                      <div>
+                        <h4 className="text-base font-bold text-slate-800 mb-1">App Icon (512x512)</h4>
+                        <p className="text-xs text-slate-400 mb-4">Upload a high-resolution square PNG icon matching size 512x512 pixels.</p>
+                        
+                        <div className="flex gap-4 items-center">
+                          {pwaData.icon512 ? (
+                            <div className="relative w-24 h-24 rounded-2xl border border-slate-200 overflow-hidden shrink-0 shadow-sm bg-slate-50 flex items-center justify-center">
+                              <img src={pwaData.icon512} alt="512 Icon" className="w-full h-full object-cover" />
+                              {pwaData.enabled && (
+                                <button 
+                                  type="button"
+                                  onClick={() => setPwaData({ ...pwaData, icon512: '' })}
+                                  className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-[10px] w-5 h-5 flex items-center justify-center font-bold"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <label className={`w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition shrink-0 ${pwaErrors.icon512 ? 'border-red-500 bg-red-50/10' : 'border-slate-300'}`}>
+                              <UploadCloud size={20} className={pwaErrors.icon512 ? 'text-red-400' : 'text-slate-400'} />
+                              <span className="text-[10px] font-bold text-slate-500 mt-1">Upload PNG</span>
+                              <input 
+                                type="file" 
+                                accept="image/png"
+                                onChange={(e) => handleIconUpload(e, 'icon512')}
+                                disabled={!pwaData.enabled}
+                                className="hidden"
+                              />
+                            </label>
+                          )}
+                          <div className="flex-1">
+                            <input 
+                              type="text" 
+                              placeholder="Or paste Icon URL directly..."
+                              value={pwaData.icon512}
+                              onChange={(e) => {
+                                setPwaData({ ...pwaData, icon512: e.target.value });
+                                if (pwaErrors.icon512) setPwaErrors({ ...pwaErrors, icon512: null });
+                              }}
+                              disabled={!pwaData.enabled}
+                              className={`w-full px-4 py-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-xs bg-white disabled:bg-slate-50 disabled:text-slate-400 ${pwaErrors.icon512 ? 'border-red-500' : 'border-slate-200'}`}
+                            />
+                            {pwaErrors.icon512 && <p className="text-xs text-red-500 font-semibold mt-1">{pwaErrors.icon512}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
               </form>
+
 
             </div>
           </div>
