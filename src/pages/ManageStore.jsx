@@ -674,7 +674,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
           <style>
             @page { size: A4; margin: 0; }
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; }
-            .container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 20mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; }
+            .container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 20mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; transform: scale(0.90); transform-origin: top center; }
             .logo { max-width: 250px; max-height: 100px; margin-bottom: 20px; object-fit: contain; }
             .store-name { font-size: 36px; font-weight: 800; color: #111827; margin: 0 0 10px 0; }
             .qr-main-container { margin: 40px 0; padding: 20px; border: 4px solid #76b900; border-radius: 24px; background: #fff; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
