@@ -41,7 +41,7 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
     if (!bill) return { price: 0, originalPrice: 0, discountEnabled: false, discount: 0 };
     
     const finalPrice = bill.discountEnabled
-      ? bill.price - (bill.price * bill.discountValue / 100)
+      ? Math.round(bill.price - (bill.price * bill.discountValue / 100))
       : bill.price;
       
     return {
@@ -292,10 +292,6 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
                         <span className="text-slate-600 font-medium">
                           {plan.limits?.storageLimit ? (plan.limits.storageLimit >= 1000 ? `${plan.limits.storageLimit / 1000}GB` : `${plan.limits.storageLimit}MB`) : '500MB'} Storage
                         </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Check size={18} className="text-[#76b900] shrink-0" />
-                        <span className="text-slate-600 font-medium">Up to {plan.limits?.storeLimit || 1} Store(s)</span>
                       </div>
 
                       {/* Display Features List */}
