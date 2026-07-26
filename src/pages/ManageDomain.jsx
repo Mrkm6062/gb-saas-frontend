@@ -18,8 +18,6 @@ const ManageDomain = ({ token, stores, onLogout }) => {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [fixingSslFor, setFixingSslFor] = useState(null);
 
-  
-
   const fetchDomains = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/domains`, {
@@ -145,8 +143,16 @@ const ManageDomain = ({ token, stores, onLogout }) => {
   // Filter domains specifically belonging to the active store being managed
   const storeDomains = domains.filter(d => d.storeId && (d.storeId._id === currentStore._id || d.storeId === currentStore._id));
 
+  // Updated permission checker that resolves array structure of features from new Plan schema
   const hasCustomDomain = currentStore?.planDetails?.features?.customDomain === true || 
-                          (currentStore?.planId && typeof currentStore.planId === 'object' && currentStore.planId?.features?.customDomain === true);
+                          (currentStore?.planId && typeof currentStore.planId === 'object' && (
+                            currentStore.planId.features?.customDomain === true ||
+                            (Array.isArray(currentStore.planId.features) && currentStore.planId.features.some(f => 
+                              f.name?.toLowerCase().includes("custom domain") || 
+                              f.feature?.slug === "custom-domain" ||
+                              f.feature?.name?.toLowerCase().includes("custom domain")
+                            ))
+                          ));
 
   if (!loading && !hasCustomDomain) {
     return (

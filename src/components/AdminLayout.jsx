@@ -169,9 +169,11 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
           { name: 'Theme Gallery', icon: <Layers size={18} />, path: activeStoreId ? `/store/${activeStoreId}/themes` : '#' },
           { name: 'Customize Theme', icon: <Settings size={18} />, path: activeStoreId ? `/store/${activeStoreId}/theme-customization` : '#' }
         ] : []),
-        { name: 'Custom Pages', icon: <Globe size={18} />, path: activeStoreId ? `/store/${activeStoreId}/custom-pages` : '#' },
-        { name: 'Menu Builder', icon: <Layers size={18} />, path: activeStoreId ? `/store/${activeStoreId}/navigation-menus` : '#' },
-        { name: 'Asset Manager', icon: <HardDrive size={18} />, path: activeStoreId ? `/store/${activeStoreId}/assets` : '#' },
+        ...(isCustomWebsite ? [
+          { name: 'Custom Pages', icon: <Globe size={18} />, path: activeStoreId ? `/store/${activeStoreId}/custom-pages` : '#' },
+          { name: 'Menu Builder', icon: <Layers size={18} />, path: activeStoreId ? `/store/${activeStoreId}/navigation-menus` : '#' },
+          { name: 'Asset Manager', icon: <HardDrive size={18} />, path: activeStoreId ? `/store/${activeStoreId}/assets` : '#' }
+        ] : []),
         // Conditionally show domains if plan permits
         ...((currentStoreInfo?.planDetails?.features?.customDomain === true || 
              (currentStoreInfo?.planId && typeof currentStoreInfo.planId === 'object' && (
