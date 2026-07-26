@@ -232,8 +232,30 @@ const ManageProduct = ({ token, stores, onLogout }) => {
         if (response.ok) {
           const data = await response.json();
           setStoreTypesList(data);
-          if (data.length > 0 && (!importStoreType || importStoreType === 'kirana')) {
-            setImportStoreType(data[0].name);
+          
+          const currentType = (currentStore.storeType || currentStore.category || '').toLowerCase();
+          const allowed = data.filter(st => {
+            const nameLower = st.name.toLowerCase();
+            return nameLower.includes('kirana') ||
+                   nameLower.includes('fruit') ||
+                   nameLower.includes('vegetable') ||
+                   nameLower.includes('nasta') ||
+                   nameLower.includes('nsta') ||
+                   nameLower.includes('restaurant') ||
+                   nameLower.includes('hotel');
+          });
+
+          let filtered = allowed;
+          if (currentType.includes('fruit') || currentType.includes('vegetable')) {
+            filtered = allowed.filter(st => st.name.toLowerCase().includes('fruit') || st.name.toLowerCase().includes('vegetable'));
+          } else if (currentType.includes('kirana')) {
+            filtered = allowed.filter(st => st.name.toLowerCase().includes('kirana'));
+          } else if (currentType.includes('nasta') || currentType.includes('nsta') || currentType.includes('restaurant') || currentType.includes('hotel')) {
+            filtered = allowed.filter(st => st.name.toLowerCase().includes('nasta') || st.name.toLowerCase().includes('nsta') || st.name.toLowerCase().includes('restaurant') || st.name.toLowerCase().includes('hotel'));
+          }
+
+          if (filtered.length > 0) {
+            setImportStoreType(filtered[0].name);
           }
         }
       } catch (err) {
@@ -241,7 +263,32 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       }
     };
     fetchStoreTypes();
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, currentStore.storeType, currentStore.category]);
+
+  const getFilteredImportStoreTypes = () => {
+    const currentType = (currentStore.storeType || currentStore.category || '').toLowerCase();
+    const allowed = storeTypesList.filter(st => {
+      const nameLower = st.name.toLowerCase();
+      return nameLower.includes('kirana') ||
+             nameLower.includes('fruit') ||
+             nameLower.includes('vegetable') ||
+             nameLower.includes('nasta') ||
+             nameLower.includes('nsta') ||
+             nameLower.includes('restaurant') ||
+             nameLower.includes('hotel');
+    });
+
+    if (currentType.includes('fruit') || currentType.includes('vegetable')) {
+      return allowed.filter(st => st.name.toLowerCase().includes('fruit') || st.name.toLowerCase().includes('vegetable'));
+    }
+    if (currentType.includes('kirana')) {
+      return allowed.filter(st => st.name.toLowerCase().includes('kirana'));
+    }
+    if (currentType.includes('nasta') || currentType.includes('nsta') || currentType.includes('restaurant') || currentType.includes('hotel')) {
+      return allowed.filter(st => st.name.toLowerCase().includes('nasta') || st.name.toLowerCase().includes('nsta') || st.name.toLowerCase().includes('restaurant') || st.name.toLowerCase().includes('hotel'));
+    }
+    return allowed;
+  };
 
   // Fetch default products when modal opens or store type changes
   useEffect(() => {
@@ -488,30 +535,48 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
   const handleImportDefaultProducts = async () => {
     setImporting(true);
-    setStatus('Importing products...');
+    let importedCount = 0;
+    const totalToImport = selectedDefaultProducts.length;
+    setStatus(`Importing: 0 of ${totalToImport} products imported...`);
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/api/default-products/import`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          storeId: currentStore._id,
-          storeType: importStoreType,
-          importOnlyMissing: true,
-          productIds: selectedDefaultProducts
-        })
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setStatus(`✅ Successfully imported ${data.count} products!`);
-        setIsImportModalOpen(false);
-        fetchProducts(); // Refresh the grid
-      } else {
-        setStatus(`Error: ${data.message || 'Failed to import products'}`);
+      // Split into batches of 10 to update progress
+      const batchSize = 10;
+      const batches = [];
+      for (let i = 0; i < selectedDefaultProducts.length; i += batchSize) {
+        batches.push(selectedDefaultProducts.slice(i, i + batchSize));
       }
+
+      for (let i = 0; i < batches.length; i++) {
+        const batchIds = batches[i];
+        
+        const response = await fetch(`${API_BASE_URL}/api/default-products/import`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            storeId: currentStore._id,
+            storeType: importStoreType,
+            importOnlyMissing: true,
+            productIds: batchIds
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to import batch');
+        }
+        
+        importedCount += data.count !== undefined ? data.count : batchIds.length;
+        setStatus(`Importing: ${importedCount} of ${totalToImport} products imported...`);
+      }
+
+      setStatus(`✅ Successfully imported ${importedCount} products!`);
+      setSelectedDefaultProducts([]);
+      setIsImportModalOpen(false);
+      fetchProducts(); // Refresh the grid
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     } finally {
@@ -1540,7 +1605,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               <div className="flex-1">
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Select Catalog to Preview:</label>
                 <select value={importStoreType} onChange={(e) => setImportStoreType(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] bg-white font-medium text-slate-700 shadow-sm">
-                  {storeTypesList.length > 0 ? storeTypesList.map(st => (
+                  {getFilteredImportStoreTypes().length > 0 ? getFilteredImportStoreTypes().map(st => (
                     <option key={st._id} value={st.name}>{st.name}</option>
                   )) : (
                     <option value="kirana">Kirana / Grocery</option>
