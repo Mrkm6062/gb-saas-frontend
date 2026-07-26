@@ -189,13 +189,15 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
         },
         body: JSON.stringify(updates)
       });
+      
+      const data = await response.json().catch(() => ({}));
       if (response.ok) {
         fetchOrders();
       } else {
-        alert('Failed to update order.');
+        alert(`Failed to update order: ${data.message || response.statusText || 'Unknown Error'}`);
       }
     } catch (err) {
-      alert('Network error updating order.');
+      alert(`Network error updating order: ${err.message}`);
     }
   };
 
@@ -648,7 +650,6 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
             )}
           </div>
         </div>
-      </div>
 
       {/* Delivered Confirmation Modal */}
       {confirmDeliveredModal.isOpen && (
@@ -805,7 +806,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
             </div>
           </div>
         </div>
-      )}
+      </div>
     </AdminLayout>
   );
 };
