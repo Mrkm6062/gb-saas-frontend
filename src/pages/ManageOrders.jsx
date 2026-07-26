@@ -249,6 +249,14 @@ const ManageOrders = ({ token, stores, onLogout }) => {
     }
   };
 
+  const isDeliveredMoreThan10Days = (order) => {
+    if (order.orderStatus !== 'delivered') return false;
+    const deliveredTime = order.deliveredAt || order.updatedAt;
+    if (!deliveredTime) return false;
+    const diff = new Date() - new Date(deliveredTime);
+    return diff > 10 * 24 * 60 * 60 * 1000;
+  };
+
   const handleCopyText = (text) => {
     navigator.clipboard.writeText(text).then(() => {
         alert('Custom text copied to clipboard!');
@@ -551,14 +559,14 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                           <select 
                             value={order.orderStatus} 
                             onChange={(e) => handleStatusChange(order._id, 'order', e.target.value, order)} 
-                            disabled={['canceled', 'returned'].includes(order.orderStatus)}
+                            disabled={['canceled', 'returned'].includes(order.orderStatus) || isDeliveredMoreThan10Days(order)}
                             className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.orderStatus === 'delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' : order.orderStatus === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : order.orderStatus === 'canceled' ? 'bg-red-50 text-red-700 border-red-200' : order.orderStatus === 'returned' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}
                           >
                             <option value="placed" disabled={order.orderStatus !== 'placed'}>Placed</option>
                             <option value="shipped" disabled={order.orderStatus !== 'placed'}>Shipped</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="canceled">Canceled</option>
-                            <option value="returned">Returned</option>
+                            <option value="delivered" disabled={order.orderStatus !== 'placed' && order.orderStatus !== 'shipped' && order.orderStatus !== 'delivered'}>Delivered</option>
+                            <option value="canceled" disabled={order.orderStatus !== 'placed' && order.orderStatus !== 'shipped'}>Canceled</option>
+                            <option value="returned" disabled={order.orderStatus !== 'delivered' && order.orderStatus !== 'returned'}>Returned</option>
                           </select>
                           {order.orderStatus === 'shipped' && (
                             <button 
