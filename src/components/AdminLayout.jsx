@@ -23,7 +23,8 @@ import {
   Bell,
   ShieldCheck,
   MessageSquare,
-  User
+  User,
+  LogOut
 } from 'lucide-react';
 import PlatformFooter from './PlatformFooter';
 
@@ -36,6 +37,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
   });
   const [platformLogo, setPlatformLogo] = useState("https://storage.googleapis.com/galibrand/superadmin/products/galibrandfullname-logo.png");
   const [platformMiniLogo, setPlatformMiniLogo] = useState("");
+  const [policies, setPolicies] = useState([]);
 
   // Dynamically detect which store we are currently viewing based on the URL
   const pathParts = location.pathname.split('/');
@@ -71,6 +73,22 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       } catch (e) {}
     };
     fetchSettings();
+  }, []);
+
+  // Fetch policies for the mobile-only legal menu dropdown
+  useEffect(() => {
+    const fetchPolicies = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/platform-policies/public`);
+        if (res.ok) {
+          const data = await res.json();
+          setPolicies(data.filter(p => !p.type.toLowerCase().startsWith('salary') && !p.type.toLowerCase().startsWith('commission')));
+        }
+      } catch (err) {
+        console.error('Failed to load policies in sidebar:', err);
+      }
+    };
+    fetchPolicies();
   }, []);
 
   // Fallback to first store if localStorage has invalid/old ID format
@@ -176,11 +194,6 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
         ] : []),
         // Conditionally show domains if plan permits
         ...((currentStoreInfo?.planDetails?.features?.customDomain === true || 
-             (Array.isArray(currentStoreInfo?.planDetails?.features) && currentStoreInfo.planDetails.features.some(f => 
-               f.name?.toLowerCase().includes("custom domain") || 
-               f.feature?.slug === "custom-domain" ||
-               f.feature?.name?.toLowerCase().includes("custom domain")
-             )) ||
              (currentStoreInfo?.planId && typeof currentStoreInfo.planId === 'object' && (
                currentStoreInfo.planId.features?.customDomain === true ||
                (Array.isArray(currentStoreInfo.planId.features) && currentStoreInfo.planId.features.some(f => 
@@ -223,7 +236,22 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       items: [
         { name: 'Plan & Billing', icon: <CreditCard size={18} />, path: activeStoreId ? `/store/${activeStoreId}/plan` : '#' }
       ]
-    }
+    },
+    // Mobile Only Platform Legal Policies
+    ...(policies.length > 0 ? [{
+      group: 'Platform Legal',
+      isMobileOnly: true,
+      items: [
+        {
+          name: 'Legal Policies',
+          icon: <ShieldCheck size={18} />,
+          subItems: policies.map(p => ({
+            name: p.title,
+            path: `/policies/${p.type}`
+          }))
+        }
+      ]
+    }] : [])
   ];
 
   return (
@@ -262,7 +290,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
 
         <nav className="flex-1 space-y-3.5 overflow-y-auto pb-4 custom-scrollbar">
           {menuGroups.map((group) => (
-            <div key={group.group} className="space-y-1">
+            <div key={group.group} className={`space-y-1 ${group.isMobileOnly ? 'md:hidden' : ''}`}>
               {!isSidebarCollapsed && (
                 <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider px-3 mb-1 mt-1">
                   {group.group}
@@ -375,7 +403,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
             <button onClick={() => setIsMobileMenuOpen(true)} className="p-1 -ml-1 text-slate-600 hover:bg-slate-100 rounded-md md:hidden transition-colors">
               <Menu size={24} />
             </button>
-            <span className="text-xl font-bold text-slate-800">{headerTitle}</span>
+            <span className="text-base font-semibold text-slate-700">{headerTitle}</span>
 
             {/* Subscription/Trial Banner */}
             {daysLeft !== null && (currentStoreInfo?.isTrialActive || isExpiringSoon || isExpired) && (
@@ -390,16 +418,20 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button 
               onClick={() => navigate(activeStoreId ? `/store/${activeStoreId}/profile` : '#')} 
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-slate-600 hover:text-[#76b900] hover:bg-[#f1f8e9] rounded-full transition duration-200"
+              title="Profile"
+              className="p-2 text-slate-500 hover:text-[#76b900] hover:bg-slate-100 rounded-full transition duration-200"
             >
               <User size={18} />
-              Profile
             </button>
-            <button onClick={onLogout} className="px-5 py-2 text-sm font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-full transition duration-200">
-              Logout
+            <button 
+              onClick={onLogout} 
+              title="Logout"
+              className="p-2 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded-full transition duration-200"
+            >
+              <LogOut size={18} />
             </button>
           </div>
         </nav>
