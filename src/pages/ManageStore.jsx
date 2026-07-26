@@ -660,10 +660,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
     const phones = (currentStore.supportPhoneNumbers || []).join(', ');
     const contactInfo = (phones || currentStore.supportEmail) ? `
-      <div style="margin-top: 20px; font-size: 14px; color: #555; border-top: 2px dashed #e5e7eb; padding-top: 20px;">
-        <h3 style="font-size: 16px; color: #374151; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Contact Us</h3>
-        ${phones ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${phones}</p>` : ''}
-        ${currentStore.supportEmail ? `<p style="margin: 5px 0;"><strong>Email:</strong> ${currentStore.supportEmail}</p>` : ''}
+      <div style="margin-top: 10px; font-size: 13px; color: #555; border-top: 2px dashed #e5e7eb; padding-top: 10px;">
+        <h3 style="font-size: 15px; color: #374151; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">Contact Us</h3>
+        ${phones ? `<p style="margin: 3px 0;"><strong>Phone:</strong> ${phones}</p>` : ''}
+        ${currentStore.supportEmail ? `<p style="margin: 3px 0;"><strong>Email:</strong> ${currentStore.supportEmail}</p>` : ''}
       </div>
     ` : '';
 
@@ -674,14 +674,14 @@ const ManageStore = ({ token, stores, onLogout }) => {
           <style>
             @page { size: A4; margin: 0; }
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; }
-            .container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 20mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; transform: scale(0.90); transform-origin: top center; }
+            .container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 10mm 20mm 5mm 20mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; transform: scale(0.90); transform-origin: top center; }
             .logo { max-width: 250px; max-height: 100px; margin-bottom: 20px; object-fit: contain; }
             .store-name { font-size: 36px; font-weight: 800; color: #111827; margin: 0 0 10px 0; }
-            .qr-main-container { margin: 40px 0; padding: 20px; border: 4px solid #76b900; border-radius: 24px; background: #fff; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+            .qr-main-container { margin: 20px 0; padding: 15px; border: 4px solid #76b900; border-radius: 24px; background: #fff; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
             .qr-main { width: 350px; height: 350px; display: block; }
             .scan-text { font-size: 24px; font-weight: bold; color: #76b900; margin-top: 15px; text-transform: uppercase; letter-spacing: 2px; }
             .url-text { font-size: 18px; color: #4b5563; margin-top: 10px; font-weight: 600; }
-            .bottom-section { width: 100%; margin-top: 30px; }
+            .bottom-section { width: 100%; margin-top: 15px; }
             .mini-qr-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 15px; }
           </style>
         </head>
