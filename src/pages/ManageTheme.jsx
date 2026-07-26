@@ -2,7 +2,7 @@ import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { CheckCircle, Lock, Eye, ExternalLink, CreditCard } from 'lucide-react';
+import { CheckCircle, Lock, Eye, ExternalLink, CreditCard, X } from 'lucide-react';
 
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
@@ -29,6 +29,7 @@ const ManageTheme = ({ token, stores, onLogout }) => {
   const [plans, setPlans] = useState([]);
   const [themes, setThemes] = useState([]);
   const [showAllThemes, setShowAllThemes] = useState(false);
+  const [selectedThemeDetails, setSelectedThemeDetails] = useState(null);
 
   
   const [purchaseModal, setPurchaseModal] = useState({ isOpen: false, theme: null });
@@ -210,8 +211,12 @@ const ManageTheme = ({ token, stores, onLogout }) => {
             const isLocked = isPremiumTheme && !isPremiumAllowed;
 
             return (
-              <div key={theme._id} className={`bg-white rounded-2xl overflow-hidden border-2 transition-all flex flex-col ${isActive ? 'border-[#76b900] shadow-md ring-4 ring-green-50' : 'border-slate-200 hover:border-slate-300 shadow-sm'}`}>
-                <div className="h-48 bg-slate-100 flex items-center justify-center border-b border-slate-100 relative">
+              <div 
+                key={theme._id} 
+                onClick={() => setSelectedThemeDetails(theme)}
+                className={`bg-white rounded-2xl overflow-hidden border-2 transition-all flex flex-col cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] ${isActive ? 'border-[#76b900] shadow-md ring-4 ring-green-50' : 'border-slate-200 hover:border-slate-300 shadow-sm'}`}
+              >
+                <div className="h-60 bg-slate-100 flex items-center justify-center relative overflow-hidden">
                   <img src={theme.previewImage || 'https://placehold.co/600x400/f8fafc/475569?text=No+Preview'} alt={`${theme.name} Preview`} className="w-full h-full object-cover" />
                   {isActive && (
                     <div className="absolute top-4 right-4 bg-[#76b900] text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-md z-10">
@@ -226,42 +231,15 @@ const ManageTheme = ({ token, stores, onLogout }) => {
                      </div>
                   )}
                 </div>
-                <div className="p-6 flex flex-col flex-1">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-xl font-bold text-slate-800">{theme.name}</h3>
-                    <div className="flex gap-2">
-                      {isPurchased ? (
-                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-lg uppercase tracking-wider">Purchased</span>
-                      ) : (
-                        theme.type === 'premium' ? <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-lg uppercase tracking-wider">Premium</span>
-                        : isPaidTheme ? <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg">₹{theme.price}</span> : null
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-slate-500 text-sm mb-6 flex-1">{theme.description}</p>
-                  <div className="mt-auto flex flex-col gap-2">
-                    <a 
-                      href={`//${currentStore.customDomain || currentStore.subdomain}?preview_theme=${theme.themeFolder || theme.themeId}&preview_id=${theme.themeId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors text-sm"
-                    >
-                      <Eye size={16} /> Live Preview <ExternalLink size={14} className="ml-1 opacity-50" />
-                    </a>
-                    <button 
-                      onClick={() => {
-                        if (isLocked) navigate(`/store/${storeId}/plan`);
-                        else if (isPaidTheme && !isPurchased) setPurchaseModal({ isOpen: true, theme: theme });
-                        else handleApplyTheme(theme.themeId);
-                      }} 
-                      disabled={isActive || (loading && !isLocked)} 
-                      className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${isActive ? 'bg-green-50 text-[#76b900]' : isLocked ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm' : (isPaidTheme && !isPurchased) ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
-                    >
-                      {isActive ? <><CheckCircle size={18} /> Active Theme</> 
-                        : isLocked ? 'Upgrade Plan to Apply' 
-                        : (isPaidTheme && !isPurchased) ? `Purchase for ₹${theme.price}`
-                        : 'Apply Theme'}
-                    </button>
+                <div className="p-4 bg-white border-t border-slate-50 flex justify-between items-center">
+                  <h3 className="text-base font-extrabold text-slate-800">{theme.name}</h3>
+                  <div className="flex gap-2">
+                    {isPurchased ? (
+                      <span className="px-2.5 py-1 bg-green-100 text-green-700 text-[10px] font-extrabold rounded-lg uppercase tracking-wider">Purchased</span>
+                    ) : (
+                      theme.type === 'premium' ? <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-extrabold rounded-lg uppercase tracking-wider">Premium</span>
+                      : isPaidTheme ? <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-[10px] font-extrabold rounded-lg">₹{theme.price}</span> : null
+                    )}
                   </div>
                 </div>
               </div>
@@ -272,7 +250,7 @@ const ManageTheme = ({ token, stores, onLogout }) => {
 
       {purchaseModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-center">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-center animate-fadeIn">
                 <h3 className="text-2xl font-bold text-slate-800 mb-2">Purchase Theme</h3>
                 <p className="text-slate-500 mb-4">You are about to purchase the "<strong>{purchaseModal.theme.name}</strong>" theme.</p>
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
@@ -291,6 +269,107 @@ const ManageTheme = ({ token, stores, onLogout }) => {
             </div>
         </div>
       )}
+
+      {/* Dynamic Theme Details Popup Modal */}
+      {selectedThemeDetails && (() => {
+        const isLocked = selectedThemeDetails.type === 'premium' && !isPremiumAllowed;
+        const isPaidTheme = selectedThemeDetails.type === 'paid';
+        const isPurchased = currentStore.paidThemes?.some(pt => pt.themeId === selectedThemeDetails.themeId);
+        const isActive = activeTheme === selectedThemeDetails.themeId;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col md:flex-row relative animate-slideIn max-h-[90vh]">
+              
+              {/* Close Button */}
+              <button 
+                onClick={() => setSelectedThemeDetails(null)} 
+                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-500 hover:text-red-500 flex items-center justify-center transition shadow"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Left Side: Theme Image */}
+              <div className="md:w-1/2 bg-slate-50 border-r border-slate-100 flex items-center justify-center max-h-[300px] md:max-h-none md:h-auto overflow-hidden">
+                <img 
+                  src={selectedThemeDetails.previewImage || 'https://placehold.co/600x400/f8fafc/475569?text=No+Preview'} 
+                  alt={`${selectedThemeDetails.name} Preview`} 
+                  className="w-full h-full object-cover" 
+                />
+              </div>
+
+              {/* Right Side: Theme Details */}
+              <div className="md:w-1/2 p-8 flex flex-col justify-between overflow-y-auto">
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="text-3xl font-black text-slate-800">{selectedThemeDetails.name}</h3>
+                    <div className="flex gap-2">
+                      {isPurchased ? (
+                        <span className="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-lg uppercase tracking-wider">Purchased</span>
+                      ) : (
+                        selectedThemeDetails.type === 'premium' ? <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-lg uppercase tracking-wider">Premium</span>
+                        : isPaidTheme ? <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg">₹{selectedThemeDetails.price}</span> : null
+                      )}
+                    </div>
+                  </div>
+
+                  {isActive && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-[#76b900] text-xs font-bold rounded-lg border border-green-200">
+                      <CheckCircle size={14} /> Currently Active Theme
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Theme Description</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed">
+                      {selectedThemeDetails.description || "No description provided for this theme."}
+                    </p>
+                  </div>
+
+                  {isPaidTheme && !isPurchased && (
+                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 text-xs text-blue-800 leading-relaxed">
+                      💡 This is a paid theme. Once purchased, you can apply it to your store permanently with free lifetime updates.
+                    </div>
+                  )}
+                  {isLocked && (
+                    <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 text-xs text-amber-800 leading-relaxed">
+                      ⚠️ This premium theme is locked under your current store plan. Please upgrade your plan subscription to activate this theme.
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-3 pt-6 mt-8 border-t border-slate-100">
+                  <a 
+                    href={`//${currentStore.customDomain || currentStore.subdomain}?preview_theme=${selectedThemeDetails.themeFolder || selectedThemeDetails.themeId}&preview_id=${selectedThemeDetails.themeId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors text-sm"
+                  >
+                    <Eye size={16} /> Live Preview <ExternalLink size={14} className="ml-1 opacity-50" />
+                  </a>
+
+                  <button 
+                    onClick={() => {
+                      setSelectedThemeDetails(null);
+                      if (isLocked) navigate(`/store/${storeId}/plan`);
+                      else if (isPaidTheme && !isPurchased) setPurchaseModal({ isOpen: true, theme: selectedThemeDetails });
+                      else handleApplyTheme(selectedThemeDetails.themeId);
+                    }} 
+                    disabled={isActive || (loading && !isLocked)} 
+                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-sm ${isActive ? 'bg-green-50 text-[#76b900]' : isLocked ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm' : (isPaidTheme && !isPurchased) ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                  >
+                    {isActive ? <><CheckCircle size={18} /> Active Theme</> 
+                      : isLocked ? 'Upgrade Plan to Apply' 
+                      : (isPaidTheme && !isPurchased) ? `Purchase Theme`
+                      : 'Apply Theme'}
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
     </AdminLayout>
   );
 };
