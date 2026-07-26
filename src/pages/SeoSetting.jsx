@@ -164,7 +164,8 @@ const SeoSetting = ({ token, stores, onLogout }) => {
     if (!file) return;
 
     const uploadFormData = new FormData();
-    uploadFormData.append('image', file);
+    uploadFormData.append('storeId', currentStore._id);
+    uploadFormData.append('images', file);
 
     setStatus('Uploading icon...');
     try {
@@ -179,7 +180,7 @@ const SeoSetting = ({ token, stores, onLogout }) => {
         const data = await res.json();
         setPwaData(prev => ({
           ...prev,
-          [field]: data.url
+          [field]: data.urls && data.urls[0] ? data.urls[0] : ''
         }));
         setPwaErrors(prev => ({ ...prev, [field]: null }));
         setStatus('Icon uploaded successfully!');
