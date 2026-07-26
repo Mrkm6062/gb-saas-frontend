@@ -7,7 +7,6 @@ import { Check, X } from 'lucide-react';
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
   return new Promise((resolve) => {
-    // Safely check if the Razorpay SDK is already loaded
     if ('Razorpay' in window) {
       resolve(true);
       return;
@@ -16,7 +15,7 @@ const loadRazorpay = () => {
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.onload = () => resolve(true);
     script.onerror = (err) => {
-      console.error("Razorpay script failed to load. You may have an adblocker enabled.", err);
+      console.error("Razorpay script failed to load. Check your internet connection or adblockers.", err);
       resolve(false);
     };
     document.body.appendChild(script);
@@ -31,14 +30,32 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
+  const [billingCycle, setBillingCycle] = useState(1); // 1, 6, or 12 months
+
+  // Helper to extract billing price info dynamically for selected duration
+  const getPlanBilling = (plan, duration) => {
+    if (!plan || !plan.billing || plan.billing.length === 0) {
+      return { price: 0, originalPrice: 0, discountEnabled: false, discount: 0 };
+    }
+    const bill = plan.billing.find(b => b.durationMonths === duration);
+    if (!bill) return { price: 0, originalPrice: 0, discountEnabled: false, discount: 0 };
+    
+    const finalPrice = bill.discountEnabled
+      ? bill.price - (bill.price * bill.discountValue / 100)
+      : bill.price;
+      
+    return {
+      price: finalPrice,
+      originalPrice: bill.price,
+      discountEnabled: bill.discountEnabled,
+      discount: bill.discountValue
+    };
+  };
 
   // Fetch available plans on component load
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        
-        // Note: You will need to expose a public/user-facing route for GET /api/plans 
-        // as the current one is protected under the SuperAdmin middleware
         const response = await fetch(`${API_BASE_URL}/api/plans`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -58,14 +75,16 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
   const handleUpgrade = async (plan) => {
     setStatus('Initializing payment...');
     
+    const rate = getPlanBilling(plan, billingCycle);
+    const totalAmount = rate.price * billingCycle;
 
-    // If plan is free, fallback to the old direct upgrade logic (if applicable)
-    if (plan.price === 0) {
+    // If plan total is free, activate directly via backend assign endpoint
+    if (totalAmount === 0) {
       try {
         const response = await fetch(`${API_BASE_URL}/api/store/${currentStore._id}/plan`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ planId: plan._id })
+          body: JSON.stringify({ planId: plan._id, billingDuration: billingCycle })
         });
 
         if (response.ok) {
@@ -95,7 +114,7 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
       const orderRes = await fetch(`${API_BASE_URL}/api/platform-payments/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ amount: plan.price, storeId: currentStore._id })
+        body: JSON.stringify({ amount: totalAmount, storeId: currentStore._id })
       });
       const orderData = await orderRes.json();
       if (!orderRes.ok) throw new Error(orderData.message || 'Failed to create order');
@@ -105,21 +124,26 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
         amount: orderData.amount,
         currency: orderData.currency,
         name: "Galibrand Cloud",
-        description: `${plan.name} Plan Subscription`,
+        description: `${plan.name} Plan (${billingCycle} Month(s))`,
         order_id: orderData.id,
         handler: async function (response) {
           setStatus('Verifying payment...');
           const verifyRes = await fetch(`${API_BASE_URL}/api/platform-payments/verify-payment`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ ...response, storeId: currentStore._id, planId: plan._id })
+            body: JSON.stringify({ 
+              ...response, 
+              storeId: currentStore._id, 
+              planId: plan._id, 
+              billingDuration: billingCycle 
+            })
           });
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
             setStatus('Payment successful! Plan upgraded. Reloading...');
             setTimeout(() => window.location.reload(), 2000);
           } else {
-            setStatus('Payment verification failed. If money was deducted, please contact support.');
+            setStatus('Payment verification failed. Please contact support.');
           }
         },
         prefill: { name: currentStore.storeName },
@@ -137,9 +161,31 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Plan & Billing">
       <div className="p-6 mx-auto mt-6">
-        <div className="mb-10 text-center">
+        <div className="mb-8 text-center">
           <h2 className="text-3xl font-extrabold text-slate-800 mb-2">Choose the Right Plan for Your Store</h2>
           <p className="text-slate-500">Unlock more products, custom domains, and premium features.</p>
+        </div>
+
+        {/* Billing Period Selector */}
+        <div className="flex justify-center items-center gap-2 mb-10 bg-slate-100 p-1.5 rounded-xl max-w-xs mx-auto border border-slate-200">
+          <button 
+            onClick={() => setBillingCycle(1)} 
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${billingCycle === 1 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            Monthly
+          </button>
+          <button 
+            onClick={() => setBillingCycle(6)} 
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${billingCycle === 6 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            6 Months
+          </button>
+          <button 
+            onClick={() => setBillingCycle(12)} 
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${billingCycle === 12 ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            12 Months
+          </button>
         </div>
 
         {status && (
@@ -151,12 +197,18 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
         {loading ? (
           <div className="flex justify-center py-20 text-slate-400 font-bold animate-pulse">Loading plans...</div>
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4 xl:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {(() => {
               const currentPlanId = typeof currentStore.planId === 'object' && currentStore.planId !== null ? currentStore.planId._id : currentStore.planId;
               const currentPlanIdStr = currentPlanId ? String(currentPlanId) : null;
-              const currentPlanObj = plans.find(p => String(p._id) === currentPlanIdStr) || plans.find(p => Number(p.price) === 0) || { price: 0 };
-              const currentPrice = Number(currentPlanObj.price) || 0;
+              
+              const currentPlanObj = plans.find(p => String(p._id) === currentPlanIdStr) || plans.find(p => {
+                const isFree = p.billing?.every(b => b.price === 0) || p.price === 0;
+                return isFree;
+              }) || { billing: [] };
+
+              const currentRate = getPlanBilling(currentPlanObj, billingCycle);
+              const currentPrice = currentRate.price;
               
               let daysLeft = null;
               let isExpired = false;
@@ -174,73 +226,106 @@ const UpgradePlan = ({ token, stores, onLogout }) => {
               const isCurrentPlanPremium = currentPlanObj.name === 'Premium';
 
               return plans.map(plan => {
-              const planPrice = Number(plan.price) || 0;
-              const isCurrentPlan = currentPlanIdStr === String(plan._id) || (!currentPlanIdStr && planPrice === 0);
-              const isProPlan = plan.name === 'Pro'; // Identify the Pro plan
-              const isDowngrade = !isCurrentPlan && planPrice < currentPrice;
-              const isFreePlan = planPrice === 0;
-              const preventDowngrade = isDowngrade && !canRenew;
-              
-              const buttonDisabled = (isCurrentPlan && (!canRenew || isFreePlan)) || preventDowngrade;
-              
-              let buttonText = 'Upgrade Plan';
-              if (isCurrentPlan) {
-                buttonText = (canRenew && !isFreePlan) ? 'Renew Plan' : 'Current Plan';
-              } else if (preventDowngrade) {
-                buttonText = 'Cannot Downgrade';
-              } else if (isDowngrade && canRenew) {
-                buttonText = 'Downgrade Plan';
-              }
-              
-              return (
-                <div key={plan._id} className={`relative rounded-2xl shadow-sm border-2 flex flex-col p-5 md:p-6 transition-all ${isCurrentPlan ? 'bg-white border-[#76b900] ring-4 ring-green-50' : (isProPlan && !isCurrentPlanPremium) ? 'bg-gradient-to-br from-blue-50 to-white border-blue-500 ring-4 ring-blue-50' : 'bg-white border-slate-100 hover:border-slate-300'}`}>
-                  {isCurrentPlan && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#76b900] text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap z-10">
-                      Current Plan
+                const rate = getPlanBilling(plan, billingCycle);
+                const planPrice = rate.price;
+                const isCurrentPlan = currentPlanIdStr === String(plan._id) || (!currentPlanIdStr && planPrice === 0);
+                const isProPlan = plan.name === 'Pro';
+                const isDowngrade = !isCurrentPlan && planPrice < currentPrice;
+                const isFreePlan = planPrice === 0;
+                const preventDowngrade = isDowngrade && !canRenew;
+                
+                const buttonDisabled = (isCurrentPlan && (!canRenew || isFreePlan)) || preventDowngrade;
+                
+                let buttonText = 'Upgrade Plan';
+                if (isCurrentPlan) {
+                  buttonText = (canRenew && !isFreePlan) ? 'Renew Plan' : 'Current Plan';
+                } else if (preventDowngrade) {
+                  buttonText = 'Cannot Downgrade';
+                } else if (isDowngrade && canRenew) {
+                  buttonText = 'Downgrade Plan';
+                }
+                
+                return (
+                  <div key={plan._id} className={`relative rounded-2xl shadow-sm border-2 flex flex-col p-6 transition-all ${isCurrentPlan ? 'bg-white border-[#76b900] ring-4 ring-green-50' : (isProPlan && !isCurrentPlanPremium) ? 'bg-gradient-to-br from-blue-50 to-white border-blue-500 ring-4 ring-blue-50' : 'bg-white border-slate-100 hover:border-slate-300'}`}>
+                    {isCurrentPlan && (
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#76b900] text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap z-10">
+                        Current Plan
+                      </div>
+                    )}
+                    {isProPlan && !isCurrentPlan && !isCurrentPlanPremium && (
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                        <span className="absolute w-full h-full rounded-full bg-blue-400 animate-ping opacity-75"></span>
+                        <div className="relative bg-blue-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
+                          Recommended
+                        </div>
+                      </div>
+                    )}
+                    <div className="mb-5">
+                      <h3 className="text-xl font-bold text-slate-800 mb-1">{plan.name}</h3>
+                      {plan.description && <p className="text-xs text-slate-400 italic mb-2">"{plan.description}"</p>}
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-3xl font-extrabold text-slate-900">₹{rate.price}</span>
+                        <span className="text-slate-500 text-sm font-medium">/month</span>
+                      </div>
+                      {rate.discountEnabled && (
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span className="line-through text-slate-400 text-xs">₹{rate.originalPrice}</span>
+                          <span className="text-green-600 text-xs font-extrabold bg-green-50 px-2 py-0.5 rounded-full">
+                            Save {rate.discount}%
+                          </span>
+                        </div>
+                      )}
+                      {billingCycle > 1 && (
+                        <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase">
+                          Billed ₹{rate.price * billingCycle} every {billingCycle} months
+                        </p>
+                      )}
                     </div>
-                  )}
-                  {isProPlan && !isCurrentPlan && !isCurrentPlanPremium && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                      <span className="absolute w-full h-full rounded-full bg-blue-400 animate-ping opacity-75"></span>
-                      <div className="relative bg-blue-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
-                        Recommended
+                    
+                    <div className="flex-1 space-y-3 mb-6 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Check size={18} className="text-[#76b900] shrink-0" />
+                        <span className="text-slate-600 font-medium">Up to {plan.limits?.maxProducts || 0} Products</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check size={18} className="text-[#76b900] shrink-0" />
+                        <span className="text-slate-600 font-medium">
+                          {plan.limits?.storageLimit ? (plan.limits.storageLimit >= 1000 ? `${plan.limits.storageLimit / 1000}GB` : `${plan.limits.storageLimit}MB`) : '500MB'} Storage
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check size={18} className="text-[#76b900] shrink-0" />
+                        <span className="text-slate-600 font-medium">Up to {plan.limits?.storeLimit || 1} Store(s)</span>
+                      </div>
+
+                      {/* Display Features List */}
+                      <div className="border-t border-slate-100 pt-3 mt-3">
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Included Features</h4>
+                        <div className="space-y-2">
+                          {plan.features?.map((f, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <Check size={18} className="text-[#76b900] shrink-0" />
+                              <span className="text-slate-600 font-medium">{f.name}</span>
+                            </div>
+                          ))}
+                          {(!plan.features || plan.features.length === 0) && (
+                            <div className="text-slate-400 text-xs italic">No special features bundled.</div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  )}
-                  <div className="mb-5">
-                    <h3 className="text-xl font-bold text-slate-800 mb-1">{plan.name}</h3>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-extrabold text-slate-900">₹{plan.price}</span>
-                      <span className="text-slate-500 text-sm font-medium">/month</span>
-                    </div>
+  
+                    <button 
+                      onClick={() => handleUpgrade(plan)}
+                      disabled={buttonDisabled}
+                      className={`w-full py-3.5 rounded-xl font-bold transition-all ${buttonDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : (isProPlan && !isCurrentPlanPremium) ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
+                    >
+                      {buttonText}
+                    </button>
                   </div>
-                  
-                  <div className="flex-1 space-y-3 mb-6 text-sm">
-                    <div className="flex items-center gap-2"><Check size={18} className="text-[#76b900] shrink-0" /><span className="text-slate-600 font-medium">Up to {plan.features.maxProducts} Products</span></div>
-                    <div className="flex items-center gap-2"><Check size={18} className="text-[#76b900] shrink-0" /><span className="text-slate-600 font-medium">{plan.features.storageLimit ? (plan.features.storageLimit >= 1000 ? `${plan.features.storageLimit / 1000}GB` : `${plan.features.storageLimit}MB`) : '500MB'} Storage</span></div>
-                    <div className="flex items-center gap-2">{plan.features.customDomain ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.customDomain ? 'text-slate-600' : 'text-slate-400'}`}>Custom Domain</span></div>
-                    <div className="flex items-center gap-2">{plan.features.freeSsl ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.freeSsl ? 'text-slate-600' : 'text-slate-400'}`}>Free SSL/TLS HTTPS</span></div>
-                    <div className="flex items-center gap-2">{plan.features.securityHeaders ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.securityHeaders ? 'text-slate-600' : 'text-slate-400'}`}>Free Security Headers</span></div>
-                    <div className="flex items-center gap-2">{plan.features.basicAnalytics ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.basicAnalytics ? 'text-slate-600' : 'text-slate-400'}`}>Basic Analytics</span></div>
-                    <div className="flex items-center gap-2">{plan.features.advanceAnalytics ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.advanceAnalytics ? 'text-slate-600' : 'text-slate-400'}`}>Advance Analytics</span></div>
-                    <div className="flex items-center gap-2">{plan.features.whatsappOrderButton ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.whatsappOrderButton ? 'text-slate-600' : 'text-slate-400'}`}>WhatsApp Order Button</span></div>
-                    {!hasPurchasedBefore && (
-                      <div className="flex items-center gap-2">{plan.features.sevenDaysTrial !== false ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.sevenDaysTrial !== false ? 'text-slate-600' : 'text-slate-400'}`}>7-Days Trial</span></div>
-                    )}
-                    <div className="flex items-center gap-2">{plan.features.themes ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.themes ? 'text-slate-600' : 'text-slate-400'}`}>Premium Themes</span></div>
-                    <div className="flex items-center gap-2">{plan.features.prioritySupport ? <Check size={18} className="text-[#76b900] shrink-0" /> : <X size={18} className="text-slate-300 shrink-0" />}<span className={`font-medium ${plan.features.prioritySupport ? 'text-slate-600' : 'text-slate-400'}`}>Priority Support</span></div>
-                  </div>
-
-                  <button 
-                    onClick={() => handleUpgrade(plan)}
-                    disabled={buttonDisabled}
-                    className={`w-full py-3.5 rounded-xl font-bold transition-all ${buttonDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : (isProPlan && !isCurrentPlanPremium) ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200' : 'bg-[#76b900] text-white hover:bg-[#659e00] shadow-lg shadow-green-100'}`}
-                  >
-                    {buttonText}
-                  </button>
-                </div>
-              );
-            })})()}
+                );
+              });
+            })()}
           </div>
         )}
       </div>
