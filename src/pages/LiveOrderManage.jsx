@@ -607,6 +607,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                   </div>
                 </div>
               );
+            })}
           </div>
         )}
         </div>
