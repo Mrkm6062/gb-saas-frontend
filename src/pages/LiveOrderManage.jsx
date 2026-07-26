@@ -378,7 +378,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
         <div className="flex flex-row gap-4 p-4 h-full overflow-hidden">
           
           {/* Left Column: Sound Alert, Fullscreen Controls & Queue Selector */}
-          <div className="w-14 md:w-80 shrink-0 bg-white p-2 md:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center md:items-stretch gap-4 md:gap-5 h-full md:overflow-y-auto">
+          <div className="w-14 md:w-60 shrink-0 bg-white p-2 md:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center md:items-stretch gap-4 h-full md:overflow-y-auto">
             {/* Header Title (Hidden on Mobile) */}
             <div className="hidden md:block">
               <h2 className="text-xl font-black text-slate-800">Live order Feed</h2>
@@ -480,8 +480,8 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                 <p className="text-sm text-slate-400 mt-1">New incoming orders will appear here automatically.</p>
               </div>
             ) : (
-              /* Mobile: 1 col, Tablets: 2 cols, Desktops: 4 cols */
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+              /* Mobile: 1 col, Tablets: 3 cols, Desktops: 4 cols */
+              <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredOrders.map(order => {
                   const fullAddress = order.address 
                     ? `${order.address.addressLine1 || ''}, ${order.address.city || ''}, ${order.address.state || ''} - ${order.address.pincode || ''}`
