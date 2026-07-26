@@ -435,9 +435,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
 
             {/* Order status queues */}
             <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 w-full">
-              {!isSidebarCollapsed && (
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 hidden md:block">Queue Selector</span>
-              )}
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 hidden md:block">Queue Selector</span>
               
               {/* Placed Queue Button */}
               <button 
