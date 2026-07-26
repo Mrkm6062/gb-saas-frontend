@@ -483,22 +483,25 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                     <div className="border-t border-dashed border-slate-200 pt-3">
                       <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Order Items</h5>
                       <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                        {order.orderItems?.map((item, idx) => (
-                          <div key={idx} className="flex gap-2 items-center text-xs">
-                            {item.customImage ? (
-                              <img src={item.customImage} alt="thumbnail" className="h-8 w-8 object-cover rounded border border-slate-200 shadow-sm" />
-                            ) : (
-                              <div className="h-8 w-8 bg-slate-100 text-slate-400 flex items-center justify-center rounded font-bold uppercase text-[10px]">
-                                item
+                        {order.orderItems?.map((item, idx) => {
+                          const imgUrl = item.customImage || (item.product?.images && item.product.images[0]);
+                          return (
+                            <div key={idx} className="flex gap-2 items-center text-xs">
+                              {imgUrl ? (
+                                <img src={imgUrl} alt={item.name} className="h-8 w-8 object-cover rounded border border-slate-200 shadow-sm" />
+                              ) : (
+                                <div className="h-8 w-8 bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center rounded font-bold uppercase text-[10px]" title={item.name}>
+                                  {item.name ? item.name.charAt(0) : 'P'}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-slate-700 truncate" title={item.name}>{item.name}</p>
+                                <p className="text-[10px] text-slate-400">Qty: {item.qty} × ₹{item.price}</p>
                               </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-slate-700 truncate" title={item.name}>{item.name}</p>
-                              <p className="text-[10px] text-slate-400">Qty: {item.qty} × ₹{item.price}</p>
+                              <span className="font-bold text-slate-700 text-right">₹{item.price * item.qty}</span>
                             </div>
-                            <span className="font-bold text-slate-700 text-right">₹{item.price * item.qty}</span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
