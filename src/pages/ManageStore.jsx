@@ -578,7 +578,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
       setCreateStatus(`Error: ${err.message}`);
     }
   };
-  };
 
   const closeForm = () => {
     setIsCreatingStore(false);
