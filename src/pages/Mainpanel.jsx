@@ -619,11 +619,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
               {currentStep === 1 ? (
                 /* STEP 1: Choose Your Plan (Full Width, side-by-side) */
                 <div className="space-y-6 w-full">
-                  <div className="text-center max-w-xl mx-auto mb-6">
-                    <h4 className="text-lg font-bold text-slate-800">Select a Subscription Tier</h4>
-                    <p className="text-xs text-slate-500">Choose a plan that fits your business catalog capacity. You can change your plan or cancel at any time.</p>
-                  </div>
-                  
                   {plans.length === 0 ? (
                     <div className="text-center py-8 text-slate-400 font-bold animate-pulse">Loading plans...</div>
                   ) : (
