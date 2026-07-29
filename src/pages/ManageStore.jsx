@@ -79,6 +79,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [newStoreEmpId, setNewStoreEmpId] = useState('');
   const [newStoreMeta, setNewStoreMeta] = useState('');
   const [newStoreSlug, setNewStoreSlug] = useState('');
+  const [subdomainStatus, setSubdomainStatus] = useState('idle');
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
   const [contactPerson, setContactPerson] = useState('');
   const [address, setAddress] = useState('');
@@ -169,6 +170,35 @@ const ManageStore = ({ token, stores, onLogout }) => {
     }
   };
   useEffect(() => { fetchSocialLinks(); }, [currentStore._id]);
+
+  useEffect(() => {
+    if (!newStoreSlug) {
+      setSubdomainStatus('idle');
+      return;
+    }
+    if (newStoreSlug.length < 3) {
+      setSubdomainStatus('invalid');
+      return;
+    }
+    setSubdomainStatus('checking');
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/store/${newStoreSlug}`);
+        if (res.status === 404) {
+          setSubdomainStatus('available');
+        } else if (res.status === 200) {
+          setSubdomainStatus('taken');
+        } else {
+          setSubdomainStatus('idle');
+        }
+      } catch (err) {
+        setSubdomainStatus('idle');
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [newStoreSlug]);
 
   const handleUpdateStore = async (e) => {
     e.preventDefault();
@@ -1361,6 +1391,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
                             />
                             <span className="absolute right-3 text-xs font-bold text-slate-400 select-none">.galibrand.cloud</span>
                           </div>
+                          {subdomainStatus === 'checking' && <p className="text-[10px] text-slate-400 font-bold mt-1 animate-pulse">Checking availability...</p>}
+                          {subdomainStatus === 'available' && <p className="text-[10px] text-green-600 font-bold mt-1">✓ Subdomain is available!</p>}
+                          {subdomainStatus === 'taken' && <p className="text-[10px] text-red-500 font-bold mt-1">✗ Subdomain is already taken.</p>}
+                          {subdomainStatus === 'invalid' && <p className="text-[10px] text-amber-500 font-bold mt-1">⚠ Subdomain must be at least 3 characters.</p>}
                         </div>
                       </div>
 
@@ -1459,7 +1493,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
                 <button 
                   type="submit" 
                   form="createStoreForm"
-                  disabled={!newStoreName || !newStoreSlug}
+                  disabled={!newStoreName || !newStoreSlug || subdomainStatus === 'taken' || subdomainStatus === 'checking' || subdomainStatus === 'invalid'}
                   className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
                 >
                   {plans.find(p => p._id === newStorePlan)?.price > 0 ? (
