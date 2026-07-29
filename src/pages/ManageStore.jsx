@@ -1558,7 +1558,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
           </div>
         </div>
       )}
-    )}
 
     {/* Custom Toast Notification */}
     {toast && (
