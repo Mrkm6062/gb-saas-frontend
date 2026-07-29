@@ -64,6 +64,20 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     status.startsWith('Waiting')
   );
 
+  const getPlanPrice = (plan) => {
+    if (!plan) return 0;
+    if (plan.price !== undefined) return plan.price;
+    if (plan.billing && plan.billing.length > 0) {
+      const bill = plan.billing.find(b => b.durationMonths === 1);
+      if (bill) {
+        return bill.discountEnabled
+          ? Math.round(bill.price - (bill.price * bill.discountValue / 100))
+          : bill.price;
+      }
+    }
+    return 0;
+  };
+
   useEffect(() => {
     const fetchPlans = async () => {
       try {
@@ -148,7 +162,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     setStatus('Processing...');
 
     const selectedPlanObj = plans.find(p => p._id === newStorePlan);
-    const planPrice = selectedPlanObj ? selectedPlanObj.price : 0;
+    const planPrice = getPlanPrice(selectedPlanObj);
 
     // Pre-check subdomain slug availability
     try {
@@ -719,7 +733,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                               </div>
                               {plan.description && <p className="text-[10px] text-slate-400 italic mb-2">"{plan.description}"</p>}
                               <div className="flex items-baseline mb-3">
-                                <span className="text-2xl font-black text-slate-900">₹{plan.price}</span>
+                                <span className="text-2xl font-black text-slate-900">₹{getPlanPrice(plan)}</span>
                                 <span className="text-xs text-slate-500 font-medium ml-1">/month</span>
                               </div>
                               
@@ -762,7 +776,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                           {plans.find(p => p._id === newStorePlan)?.name || 'Selected Plan'}
                         </div>
                         <div className="text-right">
-                          <div className="font-black text-xl text-slate-900">₹{plans.find(p => p._id === newStorePlan)?.price || 0}</div>
+                          <div className="font-black text-xl text-slate-900">₹{getPlanPrice(plans.find(p => p._id === newStorePlan))}</div>
                           <div className="text-[10px] text-slate-500 font-bold uppercase">/month</div>
                         </div>
                       </div>
@@ -770,7 +784,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                     </div>
 
                     {/* Choose Payment Method */}
-                    {plans.find(p => p._id === newStorePlan)?.price > 0 && (
+                    {getPlanPrice(plans.find(p => p._id === newStorePlan)) > 0 && (
                       <div className="space-y-3">
                         <h4 className="text-sm font-bold text-slate-800">Choose Payment Method</h4>
                         <div className="grid grid-cols-2 gap-3">
@@ -946,7 +960,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                       disabled={!newStoreName || !newStoreSlug || subdomainStatus === 'taken' || subdomainStatus === 'checking' || subdomainStatus === 'invalid'}
                       className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
                     >
-                      {plans.find(p => p._id === newStorePlan)?.price > 0 ? (
+                      {getPlanPrice(plans.find(p => p._id === newStorePlan)) > 0 ? (
                         <>Proceed for Payment <ArrowRight size={16} /></>
                       ) : (
                         <>Confirm & Create <CheckCircle size={16} /></>
