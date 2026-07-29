@@ -892,9 +892,38 @@ const ManageProduct = ({ token, stores, onLogout }) => {
         ) : (
           paginatedProducts.map(p => (
             <div key={p._id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 items-center hover:bg-slate-50 transition">
-              <div className="col-span-3">
-                <div className="font-semibold text-slate-800">{p.name}</div>
-                {p.Brand && <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block">{p.Brand}</span>}
+              <div className="col-span-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] text-slate-400 font-semibold">
+                  {p.images && p.images.length > 0 ? (
+                    <img 
+                      src={p.images[0]} 
+                      alt={p.name} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = 'No image';
+                      }}
+                    />
+                  ) : p.image ? (
+                    <img 
+                      src={p.image} 
+                      alt={p.name} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = 'No image';
+                      }}
+                    />
+                  ) : (
+                    "No image"
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-slate-800 truncate" title={p.name}>{p.name}</div>
+                  {p.Brand && <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block">{p.Brand}</span>}
+                </div>
               </div>
               <div className="col-span-2 text-slate-600 text-sm font-medium">
                 {categories.find(c => c._id === p.category)?.name || <span className="text-slate-400 italic">None</span>}
