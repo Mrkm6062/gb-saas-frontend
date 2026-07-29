@@ -614,61 +614,77 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
               </div>
             </div>
 
-            {/* Two-Column Content Body */}
-            <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* LEFT COLUMN (45%) */}
-              <div className="lg:col-span-5 space-y-6">
-                {currentStep === 1 ? (
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-bold text-slate-800">Step 1: Choose Your Plan</h4>
-                    <div className="space-y-4">
-                      {[starterPlan, proPlan, premiumPlan].map((plan, idx) => {
-                        const isSelected = newStorePlan === plan._id || (plans.length > idx && newStorePlan === plans[idx]._id);
-                        const isPro = idx === 1;
+            {/* Modal Content Body */}
+            <div className="flex-1 overflow-y-auto p-8">
+              {currentStep === 1 ? (
+                /* STEP 1: Choose Your Plan (Full Width, side-by-side) */
+                <div className="space-y-6 w-full">
+                  <div className="text-center max-w-xl mx-auto mb-6">
+                    <h4 className="text-lg font-bold text-slate-800">Select a Subscription Tier</h4>
+                    <p className="text-xs text-slate-500">Choose a plan that fits your business catalog capacity. You can change your plan or cancel at any time.</p>
+                  </div>
+                  
+                  {plans.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 font-bold animate-pulse">Loading plans...</div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                      {plans.map((plan, idx) => {
+                        const isSelected = newStorePlan === plan._id;
+                        const isPro = plan.popular || plan.name === 'Pro';
                         return (
                           <div 
-                            key={idx}
-                            onClick={() => {
-                              if (plans.length > idx) setNewStorePlan(plans[idx]._id);
-                              else setNewStorePlan(plan._id);
-                            }}
-                            className={`rounded-2xl border p-5 cursor-pointer transition-all duration-300 ${isSelected ? 'border-green-600 bg-green-50/20 ring-2 ring-green-100 shadow-xl scale-[1.02]' : 'border-slate-200 hover:border-slate-300 hover:shadow-lg bg-white opacity-80'}`}
+                            key={plan._id}
+                            onClick={() => setNewStorePlan(plan._id)}
+                            className={`rounded-2xl border p-5 cursor-pointer flex flex-col justify-between transition-all duration-300 ${isSelected ? 'border-green-600 bg-green-50/20 ring-2 ring-green-100 shadow-xl scale-[1.02]' : 'border-slate-200 hover:border-slate-300 hover:shadow-lg bg-white opacity-80'}`}
                           >
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="font-bold text-slate-800 text-base flex items-center gap-2">
-                                {plan.name}
-                                {isPro && <span className="bg-green-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">Most Popular</span>}
+                            <div>
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="font-bold text-slate-800 text-base flex items-center gap-2">
+                                  {plan.name}
+                                  {isPro && <span className="bg-green-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">Most Popular</span>}
+                                </div>
+                                <input 
+                                  type="radio" 
+                                  name="planSelect" 
+                                  checked={isSelected}
+                                  onChange={() => setNewStorePlan(plan._id)}
+                                  className="w-4 h-4 text-green-600 focus:ring-green-500 cursor-pointer"
+                                />
                               </div>
-                              <input 
-                                type="radio" 
-                                name="planSelect" 
-                                checked={isSelected}
-                                onChange={() => {
-                                  if (plans.length > idx) setNewStorePlan(plans[idx]._id);
-                                  else setNewStorePlan(plan._id);
-                                }}
-                                className="w-4 h-4 text-green-600 focus:ring-green-500 cursor-pointer"
-                              />
-                            </div>
-                            <div className="flex items-baseline mb-3">
-                              <span className="text-2xl font-black text-slate-900">₹{plan.price}</span>
-                              <span className="text-xs text-slate-500 font-medium ml-1">/month</span>
-                            </div>
-                            <ul className="space-y-1.5">
-                              {(plan.features || []).map((feat, fIdx) => (
-                                <li key={fIdx} className="text-xs text-slate-500 flex items-center gap-1.5">
+                              {plan.description && <p className="text-[10px] text-slate-400 italic mb-2">"{plan.description}"</p>}
+                              <div className="flex items-baseline mb-3">
+                                <span className="text-2xl font-black text-slate-900">₹{plan.price}</span>
+                                <span className="text-xs text-slate-500 font-medium ml-1">/month</span>
+                              </div>
+                              
+                              <ul className="space-y-1.5 my-3 text-left border-t border-slate-100 pt-3">
+                                <li className="text-xs text-slate-600 flex items-center gap-1.5">
                                   <CheckCircle size={12} className="text-green-600 shrink-0" />
-                                  <span>{typeof feat === 'object' ? feat.name || feat.feature || JSON.stringify(feat) : feat}</span>
+                                  <span>Up to {plan.limits?.maxProducts || 0} Products</span>
                                 </li>
-                              ))}
-                            </ul>
+                                <li className="text-xs text-slate-600 flex items-center gap-1.5">
+                                  <CheckCircle size={12} className="text-green-600 shrink-0" />
+                                  <span>{plan.limits?.storageLimit ? (plan.limits.storageLimit >= 1000 ? `${plan.limits.storageLimit / 1000}GB` : `${plan.limits.storageLimit}MB`) : '500MB'} Storage</span>
+                                </li>
+                                {(plan.features || []).map((feat, fIdx) => (
+                                  <li key={fIdx} className="text-xs text-slate-500 flex items-center gap-1.5">
+                                    <CheckCircle size={12} className="text-green-600 shrink-0" />
+                                    <span>{typeof feat === 'object' ? feat.name || feat.feature || JSON.stringify(feat) : feat}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
+                  )}
+                </div>
+              ) : (
+                /* STEP 2: Two-Column Form and Payment checkout details */
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+                  {/* LEFT COLUMN: Summary & Payment (45%) */}
+                  <div className="lg:col-span-5 space-y-6">
                     <h4 className="text-lg font-bold text-slate-800">Confirmed Plan Summary</h4>
                     <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl">
                       <div className="flex justify-between items-center mb-2">
@@ -709,133 +725,108 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                       </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* RIGHT COLUMN (55%) */}
-              <div className="lg:col-span-7 flex flex-col h-full">
-                {currentStep === 1 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50 rounded-2xl border border-slate-100">
-                    <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-4 border border-green-100">
-                      <Package size={32} />
-                    </div>
-                    <h4 className="font-bold text-slate-800 text-lg mb-1">Select a Subscription Tier</h4>
-                    <p className="text-xs text-slate-500 max-w-sm mb-6">Choose a plan that fits your business catalog capacity. You can change your plan or cancel at any time.</p>
-                    <div className="w-full space-y-3 text-left max-w-xs">
-                      <div className="flex gap-2 text-xs text-slate-600">
-                        <CheckCircle size={16} className="text-green-600 shrink-0" />
-                        <span>Zero setup fees, activate instantly.</span>
-                      </div>
-                      <div className="flex gap-2 text-xs text-slate-600">
-                        <CheckCircle size={16} className="text-green-600 shrink-0" />
-                        <span>Includes a 7-day risk-free free trial.</span>
-                      </div>
-                      <div className="flex gap-2 text-xs text-slate-600">
-                        <CheckCircle size={16} className="text-green-600 shrink-0" />
-                        <span>SSL certificate and basic SEO ready.</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <form id="createStoreForm" onSubmit={handleCreateStore} className="space-y-4 pr-1">
-                    <h4 className="text-lg font-bold text-slate-800">Step 2: Store Details & Billing</h4>
-                    
-                    {status && (
-                      <div className={`p-4 rounded-xl text-xs font-semibold border ${status.includes('Error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                        {status}
-                      </div>
-                    )}
+                  {/* RIGHT COLUMN: Store Details Form (55%) */}
+                  <div className="lg:col-span-7 flex flex-col h-full">
+                    <form id="createStoreForm" onSubmit={handleCreateStore} className="space-y-4 pr-1">
+                      <h4 className="text-lg font-bold text-slate-800">Step 2: Store Details & Billing</h4>
+                      
+                      {status && (
+                        <div className={`p-4 rounded-xl text-xs font-semibold border ${status.includes('Error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                          {status}
+                        </div>
+                      )}
 
-                    {/* Row 1: Store Name & Subdomain */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-600 mb-1">Store Name <span className="text-red-500">*</span></label>
-                        <input 
-                          type="text" 
-                          value={newStoreName} 
-                          onChange={handleStoreNameChange}
-                          placeholder="e.g. Fresh Veggies Mart" 
-                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
-                          required 
-                          autoFocus 
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-600 mb-1">Store Subdomain URL <span className="text-red-500">*</span></label>
-                        <div className="relative flex items-center">
+                      {/* Row 1: Store Name & Subdomain */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-600 mb-1">Store Name <span className="text-red-500">*</span></label>
                           <input 
                             type="text" 
-                            value={newStoreSlug} 
-                            onChange={(e) => setNewStoreSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                            placeholder="my-store" 
-                            className="w-full h-11 pl-4 pr-32 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                            value={newStoreName} 
+                            onChange={handleStoreNameChange}
+                            placeholder="e.g. Fresh Veggies Mart" 
+                            className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
                             required 
+                            autoFocus 
                           />
-                          <span className="absolute right-3 text-xs font-bold text-slate-400 select-none">.galibrand.cloud</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-600 mb-1">Store Subdomain URL <span className="text-red-500">*</span></label>
+                          <div className="relative flex items-center">
+                            <input 
+                              type="text" 
+                              value={newStoreSlug} 
+                              onChange={(e) => setNewStoreSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                              placeholder="my-store" 
+                              className="w-full h-11 pl-4 pr-32 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                              required 
+                            />
+                            <span className="absolute right-3 text-xs font-bold text-slate-400 select-none">.galibrand.cloud</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Business Category / Store Type */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-1">Business Category / Store Type <span className="text-red-500">*</span></label>
-                      <select 
-                        value={newStoreType} 
-                        onChange={(e) => setNewStoreType(e.target.value)} 
-                        className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 bg-white transition" 
-                        required
-                      >
-                        {storeTypes.length > 0 ? (
-                          storeTypes.map(cat => (
-                            <option key={cat._id} value={cat.name}>{cat.name}</option>
-                          ))
-                        ) : (
-                          <option value="Kirana Stores">Kirana Stores</option>
-                        )}
-                      </select>
-                    </div>
-
-                    {/* Row 2.5: Assisted By EmpID (Verified Employee ID) */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-1">Assisted By (Employee ID) <span className="text-slate-400 font-normal">(Optional)</span></label>
-                      <div className="flex gap-2">
-                        <input 
-                          type="text" 
-                          value={newStoreEmpId} 
-                          onChange={(e) => { setNewStoreEmpId(e.target.value); setEmpName(''); }} 
-                          placeholder="e.g. GBE0001" 
-                          className="flex-1 h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
-                        />
-                        <button 
-                          type="button" 
-                          onClick={handleVerifyEmpId} 
-                          disabled={verifyingEmp || !newStoreEmpId} 
-                          className="px-4 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition disabled:opacity-50 text-sm whitespace-nowrap"
+                      {/* Business Category / Store Type */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Business Category / Store Type <span className="text-red-500">*</span></label>
+                        <select 
+                          value={newStoreType} 
+                          onChange={(e) => setNewStoreType(e.target.value)} 
+                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 bg-white transition" 
+                          required
                         >
-                          {verifyingEmp ? 'Verifying...' : 'Verify'}
-                        </button>
+                          {storeTypes.length > 0 ? (
+                            storeTypes.map(cat => (
+                              <option key={cat._id} value={cat.name}>{cat.name}</option>
+                            ))
+                          ) : (
+                            <option value="Kirana Stores">Kirana Stores</option>
+                          )}
+                        </select>
                       </div>
-                      {empName && (
-                        <p className={`text-[10px] font-bold mt-1 ${empName.includes('Invalid') || empName.includes('Error') ? 'text-red-500' : 'text-green-600'}`}>
-                          {empName.includes('Invalid') || empName.includes('Error') ? empName : `Verified Agent: ${empName}`}
-                        </p>
-                      )}
-                    </div>
 
-                    {/* Row 3: Store Description (Meta) */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-1">Store Description <span className="text-slate-400 font-normal">(Meta SEO Description)</span></label>
-                      <textarea 
-                        value={newStoreMeta} 
-                        onChange={(e) => setNewStoreMeta(e.target.value)} 
-                        placeholder="Describe your shop..." 
-                        className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 resize-none h-16 transition" 
-                      />
-                    </div>
-                  </form>
-                )}
-              </div>
-            </div>
+                      {/* Assisted By EmpID */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Assisted By (Employee ID) <span className="text-slate-400 font-normal">(Optional)</span></label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            value={newStoreEmpId} 
+                            onChange={(e) => { setNewStoreEmpId(e.target.value); setEmpName(''); }} 
+                            placeholder="e.g. GBE0001" 
+                            className="flex-1 h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                          />
+                          <button 
+                            type="button" 
+                            onClick={handleVerifyEmpId} 
+                            disabled={verifyingEmp || !newStoreEmpId} 
+                            className="px-4 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition disabled:opacity-50 text-sm whitespace-nowrap"
+                          >
+                            {verifyingEmp ? 'Verifying...' : 'Verify'}
+                          </button>
+                        </div>
+                        {empName && (
+                          <p className={`text-[10px] font-bold mt-1 ${empName.includes('Invalid') || empName.includes('Error') ? 'text-red-500' : 'text-green-600'}`}>
+                            {empName.includes('Invalid') || empName.includes('Error') ? empName : `Verified Agent: ${empName}`}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Store Description */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Store Description <span className="text-slate-400 font-normal">(Meta SEO Description)</span></label>
+                        <textarea 
+                          value={newStoreMeta} 
+                          onChange={(e) => setNewStoreMeta(e.target.value)} 
+                          placeholder="Describe your shop..." 
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 resize-none h-16 transition" 
+                        />
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
 
             {/* Footer Control Panel */}
             <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center rounded-b-3xl">
