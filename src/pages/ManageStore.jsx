@@ -114,7 +114,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/plans`);
         if (res.ok) {
           const data = await res.json();
@@ -131,7 +130,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
   useEffect(() => {
     const fetchStoreTypes = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/store-types/active`);
         if (res.ok) {
           const data = await res.json();
@@ -148,7 +146,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
         if (res.ok) {
           setPlatformSettings(await res.json());
@@ -163,7 +160,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const fetchSocialLinks = async () => {
     if (!currentStore._id) return;
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const res = await fetch(`${API_BASE_URL}/api/social-media?storeId=${currentStore._id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -179,8 +175,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setStatus('Updating...');
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
-      
       const response = await fetch(`${API_BASE_URL}/api/store/${storeId}`, {
         method: 'PUT',
         headers: {
@@ -232,7 +226,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setUploadProgress(0);
     setUploadSpeed('Calculating...');
 
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
     const startTime = Date.now();
     let lastLoaded = 0;
     let lastTime = startTime;
@@ -309,7 +302,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
     if (!newUrl) return;
     setSocialStatus('Adding...');
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const res = await fetch(`${API_BASE_URL}/api/social-media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -329,7 +321,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
   const handleDeleteSocial = async (id) => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const res = await fetch(`${API_BASE_URL}/api/social-media/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -346,7 +337,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setEmpName('');
     
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const res = await fetch(`${API_BASE_URL}/api/store/verify-employee`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -422,8 +412,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
     const planPrice = selectedPlanObj ? selectedPlanObj.price : 0;
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
-
       let keyData = null;
       if (planPrice > 0) {
         const keyRes = await fetch(`${API_BASE_URL}/api/platform-payments/public-key`, {
@@ -535,7 +523,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
   const handleRestoreStore = async (storeObjId) => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const response = await fetch(`${API_BASE_URL}/api/store/${storeObjId}/restore`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }

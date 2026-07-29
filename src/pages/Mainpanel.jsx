@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../api';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { CreditCard, TrendingUp, ShoppingBag, Users, IndianRupee, Mail } from 'lucide-react';
+import { CreditCard, TrendingUp, ShoppingBag, Users, IndianRupee, Mail, Store, Package, Wallet, Building, MapPin, Upload, ArrowRight, CheckCircle, X } from 'lucide-react';
 
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
@@ -57,7 +58,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/plans`);
         if (res.ok) {
           const data = await res.json();
@@ -75,7 +75,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     const fetchOrders = async () => {
       if (!activeStoreObjId) return;
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const response = await fetch(`${API_BASE_URL}/api/orders?storeId=${activeStoreObjId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -93,7 +92,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   useEffect(() => {
     const fetchStoreTypes = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/store-types/active`);
         if (res.ok) {
           const data = await res.json();
@@ -115,8 +113,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     const planPrice = selectedPlanObj ? selectedPlanObj.price : 0;
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
-
       let keyData = null;
       if (planPrice > 0) {
         const keyRes = await fetch(`${API_BASE_URL}/api/platform-payments/public-key`, {
@@ -250,7 +246,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     setEmpName('');
     
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const res = await fetch(`${API_BASE_URL}/api/store/verify-employee`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -277,7 +272,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     
     setResendingOrderId(order._id);
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const response = await fetch(`${API_BASE_URL}/api/orders/${order._id}/status`, {
         method: 'PUT',
         headers: {
