@@ -2,7 +2,7 @@ import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { Link as LinkIcon, Trash2, Plus, CreditCard, Download } from 'lucide-react';
+import { Link as LinkIcon, Trash2, Plus, CreditCard, Download, Store, Package, Wallet, Building, MapPin, Upload, ArrowRight, CheckCircle, X, ChevronRight, ChevronLeft } from 'lucide-react';
 
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
@@ -85,6 +85,13 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [newStoreType, setNewStoreType] = useState('');
   const [newStoreEmpId, setNewStoreEmpId] = useState('');
   const [newStoreMeta, setNewStoreMeta] = useState('');
+  const [newStoreSlug, setNewStoreSlug] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('razorpay');
+  const [contactPerson, setContactPerson] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [stateName, setStateName] = useState('');
+  const [pincode, setPincode] = useState('');
   const [plans, setPlans] = useState([]);
   const [newStorePlan, setNewStorePlan] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
@@ -510,7 +517,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
           storeType: newStoreType,
           empId: newStoreEmpId,
           metaDescription: newStoreMeta,
-          planId: newStorePlan
+          planId: newStorePlan,
+          storeSlug: newStoreSlug
         })
       });
 
@@ -1605,161 +1613,407 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
       </div>
       </div>
-    
-    {/* Modal Overlay for Store Creation */}
-    {isCreatingStore && (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
-          
-          {/* Modal Header */}
-          <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <h3 className="text-2xl font-extrabold text-slate-800">Launch New Store</h3>
-            <button onClick={closeForm} className="text-slate-400 hover:text-red-500 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+  const handleStoreNameChange = (e) => {
+    const val = e.target.value;
+    setNewStoreName(val);
+    const slug = val.toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .substring(0, 30);
+    setNewStoreSlug(slug);
+  };
 
-          {/* Stepper Header */}
-          <div className="px-8 pt-6">
-            <div className="flex items-center justify-between relative">
-              <div className="absolute left-0 top-1/2 w-full h-1 bg-slate-100 -z-10 transform -translate-y-1/2"></div>
-              <div className="absolute left-0 top-1/2 h-1 bg-[#76b900] -z-10 transform -translate-y-1/2 transition-all duration-500" style={{ width: currentStep === 1 ? '0%' : currentStep === 2 ? '50%' : '100%' }}></div>
-              
-              {[1, 2, 3].map(step => (
-                <div key={step} className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-colors ${currentStep >= step ? 'bg-[#76b900] border-[#76b900] text-white' : 'bg-white border-slate-300 text-slate-400'}`}>
-                  {step}
+  const starterPlan = plans[0] || { _id: 'free', name: 'Starter', price: 0, limits: { maxProducts: 20 }, features: ['Up to 20 products', 'Basic shop themes', 'Standard subdomain hosting'] };
+  const proPlan = plans[1] || { _id: 'pro', name: 'Pro', price: 999, limits: { maxProducts: 100 }, features: ['Up to 100 products', 'WhatsApp support integration', 'Custom store slug option'] };
+  const premiumPlan = plans[2] || { _id: 'premium', name: 'Premium', price: 2999, limits: { maxProducts: 1000 }, features: ['Up to 1000 products', 'Dedicated subdomain & external domain support', 'Priority 24/7 client support'] };
+
+  return (
+    <>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.95) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
+
+      {/* Modal Overlay for Store Creation */}
+      {isCreatingStore && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[95vh] animate-fadeIn">
+            {/* Modal Header */}
+            <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 border border-green-100">
+                  <Store size={20} />
                 </div>
-              ))}
-            </div>
-            <div className="flex justify-between text-xs font-bold text-slate-500 mt-2 uppercase tracking-wider">
-              <span>Details</span>
-              <span>Plan</span>
-              <span>Payment</span>
-            </div>
-          </div>
-
-          {/* Modal Body & Form */}
-          <div className="p-8 overflow-y-auto flex-1">
-            {createStatus && (
-              <div className={`mb-6 p-4 rounded-xl text-sm font-medium ${createStatus.startsWith('Error') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
-                {createStatus}
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800">Create New Store</h3>
+                  <p className="text-xs text-slate-500 font-medium">Launch your business in just two simple steps.</p>
+                </div>
               </div>
-            )}
-            <form id="createStoreForm" onSubmit={handleCreateStore} className="space-y-6">
-              
-              {/* STEP 1: Store Details */}
-              {currentStep === 1 && (
-                <div className="space-y-5 animate-fadeIn">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Store Name <span className="text-red-500">*</span></label>
-                    <input type="text" value={newStoreName} onChange={(e) => setNewStoreName(e.target.value)} placeholder="e.g. Fresh Veggies Mart" className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900" required autoFocus />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Store Type <span className="text-red-500">*</span></label>
-                    <select value={newStoreType} onChange={(e) => setNewStoreType(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900 bg-white" required>
-                      {storeTypes.length > 0 ? (
-                        storeTypes.map(cat => (
-                          <option key={cat._id} value={cat.name}>{cat.name}</option>
-                        ))
-                      ) : (
-                        <option value="Kirana Stores">Kirana Stores (Default)</option>
-                      )}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Assisted By (Employee ID) <span className="text-slate-400 font-normal">(Optional)</span></label>
-                    <div className="flex gap-2">
-                      <input type="text" value={newStoreEmpId} onChange={(e) => { setNewStoreEmpId(e.target.value); setEmpName(''); }} placeholder="e.g. GBE0001" className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900" />
-                      <button type="button" onClick={handleVerifyEmpId} disabled={verifyingEmp || !newStoreEmpId} className="px-4 py-3 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition disabled:opacity-50 whitespace-nowrap">
-                        {verifyingEmp ? 'Verifying...' : 'Verify'}
-                      </button>
+              <button onClick={closeForm} className="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Horizontal Progress Stepper */}
+            <div className="px-8 py-4 border-b border-slate-100 bg-slate-50/30 flex justify-center">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 1 ? 'bg-green-600 text-white border-green-600' : 'bg-slate-200 text-slate-500 border-slate-200'}`}>1</div>
+                  <span className={`text-xs font-bold uppercase tracking-wider ${currentStep >= 1 ? 'text-green-600' : 'text-slate-400'}`}>Select Plan</span>
+                </div>
+                <div className={`w-16 h-0.5 rounded-full ${currentStep >= 2 ? 'bg-green-600' : 'bg-slate-200'}`} />
+                <div className="flex items-center gap-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 2 ? 'bg-green-600 text-white border-green-600' : 'bg-slate-200 text-slate-500 border-slate-200'}`}>2</div>
+                  <span className={`text-xs font-bold uppercase tracking-wider ${currentStep >= 2 ? 'text-green-600' : 'text-slate-400'}`}>Store Details & Payment</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Two-Column Content Body */}
+            <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* LEFT COLUMN (45%) */}
+              <div className="lg:col-span-5 space-y-6">
+                {currentStep === 1 ? (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-bold text-slate-800">Step 1: Choose Your Plan</h4>
+                    <div className="space-y-4">
+                      {[starterPlan, proPlan, premiumPlan].map((plan, idx) => {
+                        const isSelected = newStorePlan === plan._id || (plans.length > idx && newStorePlan === plans[idx]._id);
+                        const isPro = idx === 1;
+                        return (
+                          <div 
+                            key={idx}
+                            onClick={() => {
+                              if (plans.length > idx) setNewStorePlan(plans[idx]._id);
+                              else setNewStorePlan(plan._id);
+                            }}
+                            className={`rounded-2xl border p-5 cursor-pointer transition-all duration-300 ${isSelected ? 'border-green-600 bg-green-50/20 ring-2 ring-green-100 shadow-xl scale-[1.02]' : 'border-slate-200 hover:border-slate-300 hover:shadow-lg bg-white opacity-80'}`}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="font-bold text-slate-800 text-base flex items-center gap-2">
+                                {plan.name}
+                                {isPro && <span className="bg-green-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">Most Popular</span>}
+                              </div>
+                              <input 
+                                type="radio" 
+                                name="planSelect" 
+                                checked={isSelected}
+                                onChange={() => {
+                                  if (plans.length > idx) setNewStorePlan(plans[idx]._id);
+                                  else setNewStorePlan(plan._id);
+                                }}
+                                className="w-4 h-4 text-green-600 focus:ring-green-500 cursor-pointer"
+                              />
+                            </div>
+                            <div className="flex items-baseline mb-3">
+                              <span className="text-2xl font-black text-slate-900">₹{plan.price}</span>
+                              <span className="text-xs text-slate-500 font-medium ml-1">/month</span>
+                            </div>
+                            <ul className="space-y-1.5">
+                              {(plan.features || []).map((feat, fIdx) => (
+                                <li key={fIdx} className="text-xs text-slate-500 flex items-center gap-1.5">
+                                  <CheckCircle size={12} className="text-green-600 shrink-0" />
+                                  <span>{feat.name || feat}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      })}
                     </div>
-                    {empName && (
-                      <p className={`text-xs font-bold mt-2 ${empName.includes('Invalid') || empName.includes('Error') ? 'text-red-500' : 'text-green-600'}`}>
-                        {empName.includes('Invalid') || empName.includes('Error') ? empName : `Verified: ${empName}`}
-                      </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <h4 className="text-lg font-bold text-slate-800">Confirmed Plan Summary</h4>
+                    <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="font-bold text-slate-800 text-lg">
+                          {plans.find(p => p._id === newStorePlan)?.name || 'Selected Plan'}
+                        </div>
+                        <div className="text-right">
+                          <div className="font-black text-xl text-slate-900">₹{plans.find(p => p._id === newStorePlan)?.price || 0}</div>
+                          <div className="text-[10px] text-slate-500 font-bold uppercase">/month</div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500">Includes 7 days free trial. Start date: {new Date(new Date().setDate(new Date().getDate() + 7)).toLocaleDateString()}</p>
+                    </div>
+
+                    {/* Choose Payment Method */}
+                    {plans.find(p => p._id === newStorePlan)?.price > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-bold text-slate-800">Choose Payment Method</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div 
+                            onClick={() => setPaymentMethod('razorpay')}
+                            className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${paymentMethod === 'razorpay' ? 'border-green-600 bg-green-50/40 ring-1 ring-green-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                          >
+                            <CreditCard size={20} className={paymentMethod === 'razorpay' ? 'text-green-600' : 'text-slate-500'} />
+                            <span className="text-xs font-bold text-slate-700">Razorpay Pay</span>
+                          </div>
+                          <div 
+                            onClick={() => setPaymentMethod('razorpay')}
+                            className="p-4 rounded-xl border flex flex-col items-center justify-center gap-2 cursor-pointer border-slate-200 opacity-60 bg-white"
+                          >
+                            <Wallet size={20} className="text-slate-400" />
+                            <span className="text-xs font-bold text-slate-400">UPI / Wallets</span>
+                          </div>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-medium text-center bg-slate-50/50 p-2 rounded-lg border border-slate-100">
+                          Secure transaction powered by Razorpay. Supports Credit/Debit Cards, UPI, Net Banking, and major Wallets.
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Meta Description</label>
-                    <textarea value={newStoreMeta} onChange={(e) => setNewStoreMeta(e.target.value)} placeholder="Brief description for SEO..." className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none transition text-slate-900 resize-none h-24" />
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* STEP 2: Select Plan */}
-              {currentStep === 2 && (
-                <div className="space-y-4 animate-fadeIn">
-                  <p className="text-sm font-semibold text-slate-700 mb-2">Select a Subscription Plan <span className="text-red-500">*</span></p>
-                  {plans.length === 0 ? (
-                    <div className="p-4 bg-amber-50 text-amber-700 rounded-xl border border-amber-200">No plans configured. Please contact support.</div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                      {plans.map(plan => (
-                        <label key={plan._id} className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${newStorePlan === plan._id ? 'border-[#76b900] bg-green-50/50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}>
-                          <div className="flex items-center gap-4">
-                            <input type="radio" name="planSelection" value={plan._id} checked={newStorePlan === plan._id} onChange={() => setNewStorePlan(plan._id)} className="w-5 h-5 text-[#76b900] focus:ring-[#76b900] cursor-pointer" />
-                            <div>
-                              <div className="font-bold text-slate-800 text-lg">{plan.name}</div>
-                              <div className="text-sm text-slate-500">Up to {plan.features?.maxProducts || 0} products</div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-extrabold text-xl text-slate-900">₹{plan.price}</div>
-                            <div className="text-xs text-slate-500 font-medium">/month</div>
-                          </div>
-                        </label>
-                      ))}
+              {/* RIGHT COLUMN (55%) */}
+              <div className="lg:col-span-7 flex flex-col h-full">
+                {currentStep === 1 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-4 border border-green-100">
+                      <Package size={32} />
                     </div>
+                    <h4 className="font-bold text-slate-800 text-lg mb-1">Select a Subscription Tier</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mb-6">Choose a plan that fits your business catalog capacity. You can change your plan or cancel at any time.</p>
+                    <div className="w-full space-y-3 text-left max-w-xs">
+                      <div className="flex gap-2 text-xs text-slate-600">
+                        <CheckCircle size={16} className="text-green-600 shrink-0" />
+                        <span>Zero setup fees, activate instantly.</span>
+                      </div>
+                      <div className="flex gap-2 text-xs text-slate-600">
+                        <CheckCircle size={16} className="text-green-600 shrink-0" />
+                        <span>Includes a 7-day risk-free free trial.</span>
+                      </div>
+                      <div className="flex gap-2 text-xs text-slate-600">
+                        <CheckCircle size={16} className="text-green-600 shrink-0" />
+                        <span>SSL certificate and basic SEO ready.</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <form id="createStoreForm" onSubmit={handleCreateStore} className="space-y-4 pr-1">
+                    <h4 className="text-lg font-bold text-slate-800">Step 2: Store Details & Billing</h4>
+                    
+                    {createStatus && (
+                      <div className={`p-4 rounded-xl text-xs font-semibold border ${createStatus.includes('Error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                        {createStatus}
+                      </div>
+                    )}
+
+                    {/* Row 1: Store Name & Subdomain */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Store Name <span className="text-red-500">*</span></label>
+                        <input 
+                          type="text" 
+                          value={newStoreName} 
+                          onChange={handleStoreNameChange}
+                          placeholder="e.g. Fresh Veggies Mart" 
+                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                          required 
+                          autoFocus 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Store Subdomain URL <span className="text-red-500">*</span></label>
+                        <div className="relative flex items-center">
+                          <input 
+                            type="text" 
+                            value={newStoreSlug} 
+                            onChange={(e) => setNewStoreSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                            placeholder="my-store" 
+                            className="w-full h-11 pl-4 pr-32 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                            required 
+                          />
+                          <span className="absolute right-3 text-xs font-bold text-slate-400 select-none">.galibrand.cloud</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 2: Contact Person & Business Category */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Contact Person <span className="text-slate-400 font-normal">(Optional)</span></label>
+                        <input 
+                          type="text" 
+                          value={contactPerson} 
+                          onChange={(e) => setContactPerson(e.target.value)}
+                          placeholder="John Doe" 
+                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Business Category / Store Type <span className="text-red-500">*</span></label>
+                        <select 
+                          value={newStoreType} 
+                          onChange={(e) => setNewStoreType(e.target.value)} 
+                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 bg-white transition" 
+                          required
+                        >
+                          {storeTypes.length > 0 ? (
+                            storeTypes.map(cat => (
+                              <option key={cat._id} value={cat.name}>{cat.name}</option>
+                            ))
+                          ) : (
+                            <option value="Kirana Stores">Kirana Stores</option>
+                          )}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Row 2.5: Assisted By EmpID (Verified Employee ID) */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">Assisted By (Employee ID) <span className="text-slate-400 font-normal">(Optional)</span></label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={newStoreEmpId} 
+                          onChange={(e) => { setNewStoreEmpId(e.target.value); setEmpName(''); }} 
+                          placeholder="e.g. GBE0001" 
+                          className="flex-1 h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                        />
+                        <button 
+                          type="button" 
+                          onClick={handleVerifyEmpId} 
+                          disabled={verifyingEmp || !newStoreEmpId} 
+                          className="px-4 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition disabled:opacity-50 text-sm whitespace-nowrap"
+                        >
+                          {verifyingEmp ? 'Verifying...' : 'Verify'}
+                        </button>
+                      </div>
+                      {empName && (
+                        <p className={`text-[10px] font-bold mt-1 ${empName.includes('Invalid') || empName.includes('Error') ? 'text-red-500' : 'text-green-600'}`}>
+                          {empName.includes('Invalid') || empName.includes('Error') ? empName : `Verified Agent: ${empName}`}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Row 3: Store Description (Meta) */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">Store Description <span className="text-slate-400 font-normal">(Meta SEO Description)</span></label>
+                      <textarea 
+                        value={newStoreMeta} 
+                        onChange={(e) => setNewStoreMeta(e.target.value)} 
+                        placeholder="Describe your shop..." 
+                        className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 resize-none h-16 transition" 
+                      />
+                    </div>
+
+                    {/* Row 4: Logo Upload visual area */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">Store Logo</label>
+                      <div className="border-2 border-dashed border-slate-200 hover:border-green-500 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors bg-slate-50/50 hover:bg-green-50/10">
+                        <Upload size={20} className="text-slate-400 mb-1" />
+                        <span className="text-xs font-bold text-slate-700">Drag & Drop Store Logo here</span>
+                        <span className="text-[10px] text-slate-400">PNG, JPG, SVG up to 2MB (Optional)</span>
+                      </div>
+                    </div>
+
+                    {/* Row 5: Address */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">Business Address</label>
+                      <input 
+                        type="text" 
+                        value={address} 
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="123 Shop Street" 
+                        className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                      />
+                    </div>
+
+                    {/* Row 6: City, State, Pincode */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">City</label>
+                        <input 
+                          type="text" 
+                          value={city} 
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="Mumbai" 
+                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">State</label>
+                        <input 
+                          type="text" 
+                          value={stateName} 
+                          onChange={(e) => setStateName(e.target.value)}
+                          placeholder="MH" 
+                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Pincode</label>
+                        <input 
+                          type="text" 
+                          value={pincode} 
+                          onChange={(e) => setPincode(e.target.value)}
+                          placeholder="400001" 
+                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
+                        />
+                      </div>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Control Panel */}
+            <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center rounded-b-3xl">
+              {currentStep > 1 ? (
+                <button 
+                  type="button" 
+                  onClick={() => setCurrentStep(prev => prev - 1)} 
+                  className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
+                >
+                  &larr; Back
+                </button>
+              ) : (
+                <button 
+                  type="button" 
+                  onClick={closeForm} 
+                  className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+
+              {currentStep === 1 ? (
+                <button 
+                  type="button" 
+                  onClick={() => setCurrentStep(2)} 
+                  disabled={!newStorePlan} 
+                  className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
+                >
+                  Continue <ArrowRight size={16} />
+                </button>
+              ) : (
+                <button 
+                  type="submit" 
+                  form="createStoreForm"
+                  disabled={!newStoreName || !newStoreSlug}
+                  className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
+                >
+                  {plans.find(p => p._id === newStorePlan)?.price > 0 ? (
+                    <>Proceed for Payment <ArrowRight size={16} /></>
+                  ) : (
+                    <>Confirm & Create <CheckCircle size={16} /></>
                   )}
-                </div>
+                </button>
               )}
-
-              {/* STEP 3: Payment Checkout Placeholder */}
-              {currentStep === 3 && (
-                <div className="text-center py-6 animate-fadeIn">
-                  <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <CreditCard size={40} />
-                  </div>
-                  <h4 className="text-2xl font-bold text-slate-800 mb-2">Complete Payment</h4>
-                  <p className="text-slate-500 mb-6">You have selected the <span className="font-bold text-slate-700">{plans.find(p => p._id === newStorePlan)?.name}</span> plan for <span className="font-bold text-slate-700">₹{plans.find(p => p._id === newStorePlan)?.price}/mo</span>.</p>
-                  
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm text-slate-600 mb-4">
-                    * Payment gateway integration placeholder. Clicking "Confirm & Create" will activate your store immediately.
-                  </div>
-                </div>
-              )}
-            </form>
-          </div>
-
-          {/* Modal Footer Controls */}
-          <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center rounded-b-3xl">
-            {currentStep > 1 ? (
-              <button type="button" onClick={() => setCurrentStep(prev => prev - 1)} className="px-6 py-2.5 font-bold text-slate-500 hover:text-slate-800 transition-colors">
-                &larr; Back
-              </button>
-            ) : (
-              <button type="button" onClick={closeForm} className="px-6 py-2.5 font-bold text-slate-500 hover:text-slate-800 transition-colors">
-                Cancel
-              </button>
-            )}
-            
-            {currentStep < 3 ? (
-              <button type="button" onClick={() => setCurrentStep(prev => prev + 1)} disabled={(currentStep === 1 && !newStoreName) || (currentStep === 2 && !newStorePlan)} className="px-8 py-2.5 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition-colors shadow-lg shadow-green-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                Next Step &rarr;
-              </button>
-            ) : (
-              <button type="submit" form="createStoreForm" className="px-8 py-2.5 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition-colors shadow-lg shadow-green-100">
-                Confirm & Create
-              </button>
-            )}
+            </div>
           </div>
         </div>
-      </div>
-    )}
-
+      )}
+    </>
+    
     {/* Custom Toast Notification */}
     {toast && (
       <div className={`fixed top-10 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl font-bold flex items-center gap-3 transition-all animate-fadeIn ${toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-[#76b900] text-white'}`}>

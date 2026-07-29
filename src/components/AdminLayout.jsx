@@ -243,10 +243,12 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     }] : [])
   ];
 
+  const hasStore = stores && stores.length > 0;
+
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 w-full overflow-hidden text-left">
       {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
+      {hasStore && isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
@@ -254,7 +256,8 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       )}
 
       {/* Sidebar */}
-      <div className={`fixed md:relative inset-y-0 left-0 z-50 w-64 ${isSidebarCollapsed ? 'md:w-20' : 'md:w-64'} min-h-screen bg-white border-r border-gray-100 flex flex-col p-4 shrink-0 transform transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      {hasStore && (
+        <div className={`fixed md:relative inset-y-0 left-0 z-50 w-64 ${isSidebarCollapsed ? 'md:w-20' : 'md:w-64'} min-h-screen bg-white border-r border-gray-100 flex flex-col p-4 shrink-0 transform transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className={`mb-6 px-2 flex items-center ${isSidebarCollapsed ? 'md:justify-center' : 'justify-between'}`}>
           <img 
             src={platformLogo} 
@@ -383,15 +386,18 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
           </button>
         </div>
       </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Top Navigation Bar */}
         <nav className="bg-white shadow-sm border-b border-slate-200 px-4 sm:px-6 py-4 flex justify-between items-center sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-3 sm:gap-4">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-1 -ml-1 text-slate-600 hover:bg-slate-100 rounded-md md:hidden transition-colors">
-              <Menu size={24} />
-            </button>
+            {hasStore && (
+              <button onClick={() => setIsMobileMenuOpen(true)} className="p-1 -ml-1 text-slate-600 hover:bg-slate-100 rounded-md md:hidden transition-colors">
+                <Menu size={24} />
+              </button>
+            )}
             <span className="text-base font-semibold text-slate-700">{headerTitle}</span>
 
             {/* Subscription/Trial Banner */}
