@@ -56,6 +56,14 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const activeStoreObjId = currentStore._id;
   const activeStoreStringId = currentStore.storeId;
 
+  const isCreatingStoreLoader = status && (
+    status.startsWith('Creating store') || 
+    status.startsWith('Verifying payment') || 
+    status.startsWith('Initializing') || 
+    status.startsWith('Processing') || 
+    status.startsWith('Waiting')
+  );
+
   useEffect(() => {
     const fetchPlans = async () => {
       try {
@@ -137,128 +145,155 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
 
   const handleCreateStore = async (e) => {
     e.preventDefault();
-    setStatus('Creating store...');
+    setStatus('Processing...');
 
     const selectedPlanObj = plans.find(p => p._id === newStorePlan);
     const planPrice = selectedPlanObj ? selectedPlanObj.price : 0;
 
+    // Pre-check subdomain slug availability
     try {
-      let keyData = null;
-      if (planPrice > 0) {
-        const keyRes = await fetch(`${API_BASE_URL}/api/platform-payments/public-key`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        keyData = await keyRes.json();
-        if (!keyData.razorpayEnabled) {
-          return setStatus('Error: Platform payments are currently disabled. Cannot purchase paid plans.');
-        }
+      const checkSlugRes = await fetch(`${API_BASE_URL}/api/store/${newStoreSlug}`);
+      if (checkSlugRes.status === 200) {
+        setStatus('Error: Store Subdomain URL is already taken. Please choose another.');
+        return;
       }
+    } catch (err) {
+      console.error('Slug verification failed', err);
+    }
 
-      const response = await fetch(`${API_BASE_URL}/api/store`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          name: newStoreName,
-          storeType: newStoreType,
-          empId: newStoreEmpId,
-          metaDescription: newStoreMeta,
-          planId: newStorePlan,
-          storeSlug: newStoreSlug
-        })
-      });
+    try {
+      if (planPrice === 0) {
+        // Free plan: Create store immediately
+        setStatus('Creating store...');
+        const response = await fetch(`${API_BASE_URL}/api/store`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            name: newStoreName,
+            storeType: newStoreType,
+            empId: newStoreEmpId,
+            metaDescription: newStoreMeta,
+            planId: newStorePlan,
+            storeSlug: newStoreSlug
+          })
+        });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        const createdStore = data.store || { storeId: 'GBS-NEW', storeName: newStoreName, status: 'active', storeType: newStoreType };
-
-        if (planPrice === 0) {
+        const data = await response.json();
+        if (response.ok) {
+          const createdStore = data.store || { storeId: 'GBS-NEW', storeName: newStoreName, status: 'active', storeType: newStoreType };
           setStatus('');
           setIsCreatingStore(false);
           setNewStoreName('');
           setNewStoreType('Kirana Stores');
           setNewStoreMeta('');
           setNewStoreEmpId('');
+          setNewStoreSlug('');
+          setSubdomainStatus('idle');
           setCurrentStep(1);
           setStores([...stores, createdStore]);
           showToast('Store created successfully!', 'success');
         } else {
-          setStatus('Initializing payment...');
-          const isLoaded = await loadRazorpay();
-          if (!isLoaded) return setStatus('Error: Failed to load Razorpay SDK. Check your internet connection.');
-
-          const orderRes = await fetch(`${API_BASE_URL}/api/platform-payments/create-order`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ amount: planPrice, storeId: createdStore._id })
-          });
-          const orderData = await orderRes.json();
-          if (!orderRes.ok) throw new Error(orderData.message || 'Failed to create order');
-
-          const options = {
-            key: keyData.razorpayKeyId,
-            amount: orderData.amount,
-            currency: orderData.currency,
-            name: "Galibrand Cloud",
-            description: `${selectedPlanObj.name} Plan Subscription`,
-            order_id: orderData.id,
-            handler: async function (paymentResponse) {
-              setStatus('Verifying payment...');
-              const verifyRes = await fetch(`${API_BASE_URL}/api/platform-payments/verify-payment`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ ...paymentResponse, storeId: createdStore._id, planId: newStorePlan })
-              });
-              const verifyData = await verifyRes.json();
-              if (verifyData.success) {
-                setStatus('');
-                setIsCreatingStore(false);
-                setNewStoreName('');
-                setNewStoreType('Kirana Stores');
-                setNewStoreMeta('');
-                setNewStoreEmpId('');
-                setCurrentStep(1);
-                setStores([...stores, createdStore]);
-                showToast('Store created & payment successful!', 'success');
-              } else {
-                setStatus('Payment verification failed. If money was deducted, please contact support.');
-              }
-            },
-            modal: {
-              ondismiss: async function() {
-                setStatus('Payment canceled. Cleaning up...');
-                try {
-                  await fetch(`${API_BASE_URL}/api/store/${createdStore._id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                  });
-                } catch (e) {
-                  console.error("Cleanup failed", e);
-                }
-                setStatus('');
-                setIsCreatingStore(false);
-                setNewStoreName('');
-                setNewStoreType('Kirana Stores');
-                setNewStoreMeta('');
-          setNewStoreEmpId('');
-                setCurrentStep(1);
-                showToast('Payment canceled. Store creation aborted.', 'error');
-              }
-            },
-            prefill: { name: newStoreName },
-            theme: { color: "#76b900" }
-          };
-
-          const paymentObject = new window.Razorpay(options);
-          paymentObject.open();
-          setStatus('');
+          setStatus(`Error: ${data.message || 'Failed to create store'}`);
         }
-      } else {
-        setStatus(`Error: ${data.message || 'Failed to create store'}`);
+        return;
       }
+
+      // Paid plan: Load Razorpay, create order, check out, and then create store & verify payment
+      setStatus('Initializing payment...');
+      const keyRes = await fetch(`${API_BASE_URL}/api/platform-payments/public-key`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const keyData = await keyRes.json();
+      if (!keyData.razorpayEnabled) {
+        return setStatus('Error: Platform payments are currently disabled. Cannot purchase paid plans.');
+      }
+
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) return setStatus('Error: Failed to load Razorpay SDK. Check your internet connection.');
+
+      const orderRes = await fetch(`${API_BASE_URL}/api/platform-payments/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ amount: planPrice })
+      });
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) throw new Error(orderData.message || 'Failed to create order');
+
+      const options = {
+        key: keyData.razorpayKeyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Galibrand Cloud",
+        description: `${selectedPlanObj.name} Plan Subscription`,
+        order_id: orderData.id,
+        handler: async function (paymentResponse) {
+          setStatus('Creating store...');
+          try {
+            const storeRes = await fetch(`${API_BASE_URL}/api/store`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ 
+                name: newStoreName,
+                storeType: newStoreType,
+                empId: newStoreEmpId,
+                metaDescription: newStoreMeta,
+                planId: newStorePlan,
+                storeSlug: newStoreSlug
+              })
+            });
+
+            const storeData = await storeRes.json();
+            if (!storeRes.ok) {
+              setStatus(`Error: ${storeData.message || 'Failed to create store after payment'}`);
+              return;
+            }
+
+            const createdStore = storeData.store;
+
+            setStatus('Verifying payment...');
+            const verifyRes = await fetch(`${API_BASE_URL}/api/platform-payments/verify-payment`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ ...paymentResponse, storeId: createdStore._id, planId: newStorePlan })
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              setStatus('');
+              setIsCreatingStore(false);
+              setNewStoreName('');
+              setNewStoreType('Kirana Stores');
+              setNewStoreMeta('');
+              setNewStoreEmpId('');
+              setNewStoreSlug('');
+              setSubdomainStatus('idle');
+              setCurrentStep(1);
+              setStores([...stores, createdStore]);
+              showToast('Store created & payment successful!', 'success');
+            } else {
+              setStatus('Payment verification failed. If money was deducted, please contact support.');
+            }
+          } catch (createErr) {
+            setStatus(`Error during store creation: ${createErr.message}`);
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            setStatus('Payment canceled.');
+            setTimeout(() => setStatus(''), 3000);
+          }
+        },
+        theme: { color: "#16a34a" }
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+      setStatus('Waiting for payment confirmation...');
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     }
@@ -646,7 +681,13 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
 
             {/* Modal Content Body */}
             <div className="flex-1 overflow-y-auto p-8">
-              {currentStep === 1 ? (
+              {isCreatingStoreLoader ? (
+                <div className="flex flex-col items-center justify-center py-12 px-8 text-center animate-fadeIn">
+                  <div className="w-16 h-16 border-4 border-slate-100 border-t-green-600 rounded-full animate-spin mb-4"></div>
+                  <h4 className="font-bold text-slate-800 text-lg mb-1">{status}</h4>
+                  <p className="text-xs text-slate-400">Please do not close this window or refresh the page.</p>
+                </div>
+              ) : currentStep === 1 ? (
                 /* STEP 1: Choose Your Plan (Full Width, side-by-side) */
                 <div className="space-y-6 w-full">
                   {plans.length === 0 ? (
@@ -760,7 +801,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                     <form id="createStoreForm" onSubmit={handleCreateStore} className="space-y-4 pr-1">
                       <h4 className="text-lg font-bold text-slate-800">Step 2: Store Details & Billing</h4>
                       
-                      {status && (
+                      {status && !isCreatingStoreLoader && (
                         <div className={`p-4 rounded-xl text-xs font-semibold border ${status.includes('Error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
                           {status}
                         </div>
@@ -864,46 +905,55 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
 
             {/* Footer Control Panel */}
             <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center rounded-b-3xl">
-              {currentStep > 1 ? (
-                <button 
-                  type="button" 
-                  onClick={() => setCurrentStep(prev => prev - 1)} 
-                  className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
-                >
-                  &larr; Back
-                </button>
+              {isCreatingStoreLoader ? (
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                  <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-400 rounded-full animate-spin"></div>
+                  Processing your request...
+                </div>
               ) : (
-                <button 
-                  type="button" 
-                  onClick={closeForm} 
-                  className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
-                >
-                  Cancel
-                </button>
-              )}
-
-              {currentStep === 1 ? (
-                <button 
-                  type="button" 
-                  onClick={() => setCurrentStep(2)} 
-                  disabled={!newStorePlan} 
-                  className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
-                >
-                  Continue <ArrowRight size={16} />
-                </button>
-              ) : (
-                <button 
-                  type="submit" 
-                  form="createStoreForm"
-                  disabled={!newStoreName || !newStoreSlug || subdomainStatus === 'taken' || subdomainStatus === 'checking' || subdomainStatus === 'invalid'}
-                  className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
-                >
-                  {plans.find(p => p._id === newStorePlan)?.price > 0 ? (
-                    <>Proceed for Payment <ArrowRight size={16} /></>
+                <>
+                  {currentStep > 1 ? (
+                    <button 
+                      type="button" 
+                      onClick={() => setCurrentStep(prev => prev - 1)} 
+                      className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
+                    >
+                      &larr; Back
+                    </button>
                   ) : (
-                    <>Confirm & Create <CheckCircle size={16} /></>
+                    <button 
+                      type="button" 
+                      onClick={closeForm} 
+                      className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
+                    >
+                      Cancel
+                    </button>
                   )}
-                </button>
+
+                  {currentStep === 1 ? (
+                    <button 
+                      type="button" 
+                      onClick={() => setCurrentStep(2)} 
+                      disabled={!newStorePlan} 
+                      className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
+                    >
+                      Continue <ArrowRight size={16} />
+                    </button>
+                  ) : (
+                    <button 
+                      type="submit" 
+                      form="createStoreForm"
+                      disabled={!newStoreName || !newStoreSlug || subdomainStatus === 'taken' || subdomainStatus === 'checking' || subdomainStatus === 'invalid'}
+                      className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
+                    >
+                      {plans.find(p => p._id === newStorePlan)?.price > 0 ? (
+                        <>Proceed for Payment <ArrowRight size={16} /></>
+                      ) : (
+                        <>Confirm & Create <CheckCircle size={16} /></>
+                      )}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
