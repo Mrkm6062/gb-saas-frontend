@@ -1259,12 +1259,16 @@ const ManageStore = ({ token, stores, onLogout }) => {
                                   <CheckCircle size={12} className="text-green-600 shrink-0" />
                                   <span>{plan.limits?.storageLimit ? (plan.limits.storageLimit >= 1000 ? `${plan.limits.storageLimit / 1000}GB` : `${plan.limits.storageLimit}MB`) : '500MB'} Storage</span>
                                 </li>
-                                {(plan.features || []).map((feat, fIdx) => (
-                                  <li key={fIdx} className="text-xs text-slate-500 flex items-center gap-1.5">
-                                    <CheckCircle size={12} className="text-green-600 shrink-0" />
-                                    <span>{typeof feat === 'object' ? feat.name || feat.feature || JSON.stringify(feat) : feat}</span>
-                                  </li>
-                                ))}
+                                {(plan.features || []).map((feat, fIdx) => {
+                                  const featName = typeof feat === 'object' ? feat.name || feat.feature : feat;
+                                  if (!featName || typeof featName !== 'string' || featName.trim() === '') return null;
+                                  return (
+                                    <li key={fIdx} className="text-xs text-slate-500 flex items-center gap-1.5">
+                                      <CheckCircle size={12} className="text-green-600 shrink-0" />
+                                      <span>{featName}</span>
+                                    </li>
+                                  );
+                                })}
                               </ul>
                             </div>
                           </div>
