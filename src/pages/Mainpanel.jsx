@@ -827,6 +827,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                   </div>
                 </div>
               )}
+            </div>
 
             {/* Footer Control Panel */}
             <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center rounded-b-3xl">
