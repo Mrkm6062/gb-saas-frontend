@@ -365,8 +365,19 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     .slice(0, 5);
   const maxProductQty = Math.max(...topProducts.map(p => p.qty), 1); // Avoid division by zero
 
-  // Recent Orders (Top 5)
-  const recentOrders = orders.slice(0, 5);
+  const handleStoreNameChange = (e) => {
+    const val = e.target.value;
+    setNewStoreName(val);
+    const slug = val.toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .substring(0, 30);
+    setNewStoreSlug(slug);
+  };
+
+  const starterPlan = plans[0] || { _id: 'free', name: 'Starter', price: 0, limits: { maxProducts: 20 }, features: ['Up to 20 products', 'Basic shop themes', 'Standard subdomain hosting'] };
+  const proPlan = plans[1] || { _id: 'pro', name: 'Pro', price: 999, limits: { maxProducts: 100 }, features: ['Up to 100 products', 'WhatsApp support integration', 'Custom store slug option'] };
+  const premiumPlan = plans[2] || { _id: 'premium', name: 'Premium', price: 2999, limits: { maxProducts: 1000 }, features: ['Up to 1000 products', 'Dedicated subdomain & external domain support', 'Priority 24/7 client support'] };
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Overview Dashboard">
@@ -564,22 +575,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
         ) : null}
       </main>
 
-  const handleStoreNameChange = (e) => {
-    const val = e.target.value;
-    setNewStoreName(val);
-    const slug = val.toLowerCase()
-      .replace(/[^a-z0-9-]/g, '')
-      .replace(/-+/g, '-')
-      .substring(0, 30);
-    setNewStoreSlug(slug);
-  };
-
-  const starterPlan = plans[0] || { _id: 'free', name: 'Starter', price: 0, limits: { maxProducts: 20 }, features: ['Up to 20 products', 'Basic shop themes', 'Standard subdomain hosting'] };
-  const proPlan = plans[1] || { _id: 'pro', name: 'Pro', price: 999, limits: { maxProducts: 100 }, features: ['Up to 100 products', 'WhatsApp support integration', 'Custom store slug option'] };
-  const premiumPlan = plans[2] || { _id: 'premium', name: 'Premium', price: 2999, limits: { maxProducts: 1000 }, features: ['Up to 1000 products', 'Dedicated subdomain & external domain support', 'Priority 24/7 client support'] };
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: scale(0.95) translateY(10px); }
@@ -787,35 +782,23 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                       </div>
                     </div>
 
-                    {/* Row 2: Contact Person & Business Category */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-600 mb-1">Contact Person <span className="text-slate-400 font-normal">(Optional)</span></label>
-                        <input 
-                          type="text" 
-                          value={contactPerson} 
-                          onChange={(e) => setContactPerson(e.target.value)}
-                          placeholder="John Doe" 
-                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-600 mb-1">Business Category / Store Type <span className="text-red-500">*</span></label>
-                        <select 
-                          value={newStoreType} 
-                          onChange={(e) => setNewStoreType(e.target.value)} 
-                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 bg-white transition" 
-                          required
-                        >
-                          {storeTypes.length > 0 ? (
-                            storeTypes.map(cat => (
-                              <option key={cat._id} value={cat.name}>{cat.name}</option>
-                            ))
-                          ) : (
-                            <option value="Kirana Stores">Kirana Stores</option>
-                          )}
-                        </select>
-                      </div>
+                    {/* Business Category / Store Type */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">Business Category / Store Type <span className="text-red-500">*</span></label>
+                      <select 
+                        value={newStoreType} 
+                        onChange={(e) => setNewStoreType(e.target.value)} 
+                        className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 bg-white transition" 
+                        required
+                      >
+                        {storeTypes.length > 0 ? (
+                          storeTypes.map(cat => (
+                            <option key={cat._id} value={cat.name}>{cat.name}</option>
+                          ))
+                        ) : (
+                          <option value="Kirana Stores">Kirana Stores</option>
+                        )}
+                      </select>
                     </div>
 
                     {/* Row 2.5: Assisted By EmpID (Verified Employee ID) */}
@@ -854,62 +837,6 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                         placeholder="Describe your shop..." 
                         className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 resize-none h-16 transition" 
                       />
-                    </div>
-
-                    {/* Row 4: Logo Upload visual area */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-1">Store Logo</label>
-                      <div className="border-2 border-dashed border-slate-200 hover:border-green-500 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors bg-slate-50/50 hover:bg-green-50/10">
-                        <Upload size={20} className="text-slate-400 mb-1" />
-                        <span className="text-xs font-bold text-slate-700">Drag & Drop Store Logo here</span>
-                        <span className="text-[10px] text-slate-400">PNG, JPG, SVG up to 2MB (Optional)</span>
-                      </div>
-                    </div>
-
-                    {/* Row 5: Address */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-1">Business Address</label>
-                      <input 
-                        type="text" 
-                        value={address} 
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="123 Shop Street" 
-                        className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
-                      />
-                    </div>
-
-                    {/* Row 6: City, State, Pincode */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-600 mb-1">City</label>
-                        <input 
-                          type="text" 
-                          value={city} 
-                          onChange={(e) => setCity(e.target.value)}
-                          placeholder="Mumbai" 
-                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-600 mb-1">State</label>
-                        <input 
-                          type="text" 
-                          value={stateName} 
-                          onChange={(e) => setStateName(e.target.value)}
-                          placeholder="MH" 
-                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-600 mb-1">Pincode</label>
-                        <input 
-                          type="text" 
-                          value={pincode} 
-                          onChange={(e) => setPincode(e.target.value)}
-                          placeholder="400001" 
-                          className="w-full h-11 px-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm text-slate-700 transition" 
-                        />
-                      </div>
                     </div>
                   </form>
                 )}

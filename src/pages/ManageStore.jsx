@@ -1,4 +1,3 @@
-import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -58,8 +57,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [favicon, setFavicon] = useState(currentStore.favicon || '');
   const [banner, setBanner] = useState(Array.isArray(currentStore.banner) ? currentStore.banner : (currentStore.banner ? [currentStore.banner] : []));
   const [supportPhoneNumbers, setSupportPhoneNumbers] = useState(Array.isArray(currentStore.supportPhoneNumbers) ? currentStore.supportPhoneNumbers : []);
-  const [whatsappNumber, setWhatsappNumber] = useState(currentStore.whatsappNumber || '');
-  const [whatsappSupportEnabled, setWhatsappSupportEnabled] = useState(currentStore.whatsappSupportEnabled || false);
   const [supportEmail, setSupportEmail] = useState(currentStore.supportEmail || '');
   const [locationAddress, setLocationAddress] = useState(currentStore.locationAddress || '');
   const [mapLocation, setMapLocation] = useState(currentStore.mapLocation || '');
@@ -68,10 +65,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSpeed, setUploadSpeed] = useState('');
   const [activeXhr, setActiveXhr] = useState(null);
-  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
-  const [mediaImages, setMediaImages] = useState([]);
-  const [loadingMedia, setLoadingMedia] = useState(false);
-  const [activeMediaTarget, setActiveMediaTarget] = useState(null); // 'logo', 'favicon', or 'banner'
   
   // Social Media states
   const [socialLinks, setSocialLinks] = useState([]);
@@ -98,9 +91,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [createStatus, setCreateStatus] = useState('');
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('settings');
-  const [storeHours, setStoreHours] = useState(null);
-  const [loadingHours, setLoadingHours] = useState(false);
-  const [savingHours, setSavingHours] = useState(false);
   const [storeTypes, setStoreTypes] = useState([]);
   const [empName, setEmpName] = useState('');
   const [verifyingEmp, setVerifyingEmp] = useState(false);
@@ -115,18 +105,16 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setFavicon(currentStore.favicon || '');
     setBanner(Array.isArray(currentStore.banner) ? currentStore.banner : (currentStore.banner ? [currentStore.banner] : []));
     setSupportPhoneNumbers(Array.isArray(currentStore.supportPhoneNumbers) ? currentStore.supportPhoneNumbers : []);
-    setWhatsappNumber(currentStore.whatsappNumber || '');
-    setWhatsappSupportEnabled(currentStore.whatsappSupportEnabled || false);
     setSupportEmail(currentStore.supportEmail || '');
     setLocationAddress(currentStore.locationAddress || '');
     setMapLocation(currentStore.mapLocation || '');
     setStatus('');
-  }, [storeId, currentStore.storeName, currentStore.storeType, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.whatsappNumber, currentStore.whatsappSupportEnabled, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation]);
+  }, [storeId, currentStore.storeName, currentStore.storeType, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation]);
 
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/plans`);
         if (res.ok) {
           const data = await res.json();
@@ -143,7 +131,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   useEffect(() => {
     const fetchStoreTypes = async () => {
       try {
-        
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/store-types/active`);
         if (res.ok) {
           const data = await res.json();
@@ -160,7 +148,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
         const res = await fetch(`${API_BASE_URL}/api/platform-settings`);
         if (res.ok) {
           setPlatformSettings(await res.json());
@@ -172,32 +160,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
     fetchSettings();
   }, []);
 
-  useEffect(() => {
-    const fetchHours = async () => {
-      if (!currentStore._id) return;
-      setLoadingHours(true);
-      try {
-        
-        const res = await fetch(`${API_BASE_URL}/api/store-hours?storeId=${currentStore._id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setStoreHours(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch store hours", err);
-      } finally {
-        setLoadingHours(false);
-      }
-    };
-    fetchHours();
-  }, [currentStore._id]);
-
   const fetchSocialLinks = async () => {
     if (!currentStore._id) return;
     try {
-      
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const res = await fetch(`${API_BASE_URL}/api/social-media?storeId=${currentStore._id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -213,7 +179,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setStatus('Updating...');
 
     try {
-      
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       
       const response = await fetch(`${API_BASE_URL}/api/store/${storeId}`, {
         method: 'PUT',
@@ -229,8 +195,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
           favicon,
           banner,
           supportPhoneNumbers,
-          whatsappNumber,
-          whatsappSupportEnabled,
           supportEmail,
           locationAddress,
           mapLocation
@@ -241,7 +205,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
       if (response.ok) {
         setStatus('Store updated successfully!');
-        setTimeout(() => window.location.reload(), 1500);
+        // Optional: Update your local App.jsx stores state here if passed down as a prop
       } else {
         setStatus(`Error: ${data.message || 'Failed to update store'}`);
       }
@@ -258,10 +222,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
     uploadData.append('storeId', currentStore._id);
     
     if (field === 'banner') {
-      uploadData.append('type', 'banner');
       files.forEach(file => uploadData.append('images', file));
     } else {
-      uploadData.append('type', field); // 'logo' or 'favicon'
       uploadData.append('images', files[0]); // Just one file for logo/favicon
     }
 
@@ -270,7 +232,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setUploadProgress(0);
     setUploadSpeed('Calculating...');
 
-    
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
     const startTime = Date.now();
     let lastLoaded = 0;
     let lastTime = startTime;
@@ -278,7 +240,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
     const xhr = new XMLHttpRequest();
     setActiveXhr(xhr);
     xhr.open('POST', `${API_BASE_URL}/api/upload`);
-    xhr.withCredentials = true; // Include credentials (accessToken cookie)
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
     xhr.upload.onprogress = (event) => {
@@ -343,44 +304,12 @@ const ManageStore = ({ token, stores, onLogout }) => {
     }
   };
 
-  const fetchMedia = async () => {
-    setLoadingMedia(true);
-    try {
-      
-      const response = await fetch(`${API_BASE_URL}/api/upload?storeId=${currentStore._id}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-        credentials: 'include'
-      });
-      const data = await response.json();
-      if (response.ok) setMediaImages(data.images || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingMedia(false);
-    }
-  };
-
-  const handleDeleteMedia = async (filename) => {
-    if (!window.confirm("Delete this image permanently from cloud storage?")) return;
-    try {
-      
-      const response = await fetch(`${API_BASE_URL}/api/upload`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename })
-      });
-      if (response.ok) fetchMedia();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const handleAddSocial = async (e) => {
     e.preventDefault();
     if (!newUrl) return;
     setSocialStatus('Adding...');
     try {
-      
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const res = await fetch(`${API_BASE_URL}/api/social-media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -400,7 +329,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
   const handleDeleteSocial = async (id) => {
     try {
-      
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const res = await fetch(`${API_BASE_URL}/api/social-media/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -417,7 +346,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setEmpName('');
     
     try {
-      
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const res = await fetch(`${API_BASE_URL}/api/store/verify-employee`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -493,7 +422,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     const planPrice = selectedPlanObj ? selectedPlanObj.price : 0;
 
     try {
-      
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
       let keyData = null;
       if (planPrice > 0) {
@@ -606,7 +535,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
   const handleRestoreStore = async (storeObjId) => {
     try {
-      
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
       const response = await fetch(`${API_BASE_URL}/api/store/${storeObjId}/restore`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -668,10 +597,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
     const phones = (currentStore.supportPhoneNumbers || []).join(', ');
     const contactInfo = (phones || currentStore.supportEmail) ? `
-      <div style="margin-top: 10px; font-size: 13px; color: #555; border-top: 2px dashed #e5e7eb; padding-top: 10px;">
-        <h3 style="font-size: 15px; color: #374151; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">Contact Us</h3>
-        ${phones ? `<p style="margin: 3px 0;"><strong>Phone:</strong> ${phones}</p>` : ''}
-        ${currentStore.supportEmail ? `<p style="margin: 3px 0;"><strong>Email:</strong> ${currentStore.supportEmail}</p>` : ''}
+      <div style="margin-top: 20px; font-size: 14px; color: #555; border-top: 2px dashed #e5e7eb; padding-top: 20px;">
+        <h3 style="font-size: 16px; color: #374151; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Contact Us</h3>
+        ${phones ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${phones}</p>` : ''}
+        ${currentStore.supportEmail ? `<p style="margin: 5px 0;"><strong>Email:</strong> ${currentStore.supportEmail}</p>` : ''}
       </div>
     ` : '';
 
@@ -682,14 +611,14 @@ const ManageStore = ({ token, stores, onLogout }) => {
           <style>
             @page { size: A4; margin: 0; }
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; }
-            .container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 10mm 20mm 5mm 20mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; transform: scale(0.90); transform-origin: top center; }
+            .container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 20mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; }
             .logo { max-width: 250px; max-height: 100px; margin-bottom: 20px; object-fit: contain; }
             .store-name { font-size: 36px; font-weight: 800; color: #111827; margin: 0 0 10px 0; }
-            .qr-main-container { margin: 20px 0; padding: 15px; border: 4px solid #76b900; border-radius: 24px; background: #fff; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+            .qr-main-container { margin: 40px 0; padding: 20px; border: 4px solid #76b900; border-radius: 24px; background: #fff; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
             .qr-main { width: 350px; height: 350px; display: block; }
             .scan-text { font-size: 24px; font-weight: bold; color: #76b900; margin-top: 15px; text-transform: uppercase; letter-spacing: 2px; }
             .url-text { font-size: 18px; color: #4b5563; margin-top: 10px; font-weight: 600; }
-            .bottom-section { width: 100%; margin-top: 15px; }
+            .bottom-section { width: 100%; margin-top: 30px; }
             .mini-qr-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 15px; }
           </style>
         </head>
@@ -742,37 +671,19 @@ const ManageStore = ({ token, stores, onLogout }) => {
     printWindow.focus();
   };
 
-  const handleSaveStoreHours = async (e) => {
-    e.preventDefault();
-    setSavingHours(true);
-    try {
-      
-      const res = await fetch(`${API_BASE_URL}/api/store-hours`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          storeId: currentStore._id,
-          ...storeHours
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setStoreHours(data);
-        alert("Store Hours updated successfully!");
-      } else {
-        const err = await res.json();
-        alert(err.message || "Failed to update Store Hours");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Network error while saving Store Hours");
-    } finally {
-      setSavingHours(false);
-    }
+  const handleStoreNameChange = (e) => {
+    const val = e.target.value;
+    setNewStoreName(val);
+    const slug = val.toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .substring(0, 30);
+    setNewStoreSlug(slug);
   };
+
+  const starterPlan = plans[0] || { _id: 'free', name: 'Starter', price: 0, limits: { maxProducts: 20 }, features: ['Up to 20 products', 'Basic shop themes', 'Standard subdomain hosting'] };
+  const proPlan = plans[1] || { _id: 'pro', name: 'Pro', price: 999, limits: { maxProducts: 100 }, features: ['Up to 100 products', 'WhatsApp support integration', 'Custom store slug option'] };
+  const premiumPlan = plans[2] || { _id: 'premium', name: 'Premium', price: 2999, limits: { maxProducts: 1000 }, features: ['Up to 1000 products', 'Dedicated subdomain & external domain support', 'Priority 24/7 client support'] };
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Store">
@@ -800,13 +711,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
           className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'qrcode' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
         >
           QR Code
-        </button>
-        <button 
-          type="button"
-          onClick={() => setActiveTab('timing')} 
-          className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'timing' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
-        >
-          Store Timing
         </button>
         <button 
           type="button"
@@ -881,10 +785,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
           </div>
 
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-semibold text-slate-700">Logo URL</label>
-              <button type="button" onClick={() => { setIsMediaLibraryOpen(true); setActiveMediaTarget('logo'); fetchMedia(); }} className="text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 px-2 py-1 rounded transition-colors">View Media Library</button>
-            </div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Logo URL</label>
             <div className="flex gap-2">
               <input 
                 type="text" 
@@ -915,10 +816,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
           </div>
 
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-semibold text-slate-700">Favicon URL</label>
-              <button type="button" onClick={() => { setIsMediaLibraryOpen(true); setActiveMediaTarget('favicon'); fetchMedia(); }} className="text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 px-2 py-1 rounded transition-colors">View Media Library</button>
-            </div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Favicon URL</label>
             <div className="flex gap-2">
               <input 
                 type="text" 
@@ -950,13 +848,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm font-semibold text-slate-700">Banner Images (Carousel)</label>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => { setIsMediaLibraryOpen(true); setActiveMediaTarget('banner'); fetchMedia(); }} className="text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 px-3 py-1.5 rounded-lg transition-colors">View Media Library</button>
-                <label className={`cursor-pointer px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap ${uploadingField === 'banner' ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  {uploadingField === 'banner' ? 'Uploading...' : 'Upload Banners'}
-                  <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleImageUpload(e, 'banner')} disabled={uploadingField !== null} />
-                </label>
-              </div>
+              <label className={`cursor-pointer px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap ${uploadingField === 'banner' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {uploadingField === 'banner' ? 'Uploading...' : 'Upload Banners'}
+                <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleImageUpload(e, 'banner')} disabled={uploadingField !== null} />
+              </label>
             </div>
             {uploadingField === 'banner' && (
               <div className="mb-4 bg-blue-50 p-4 rounded-xl border border-blue-100">
@@ -1036,38 +931,6 @@ const ManageStore = ({ token, stores, onLogout }) => {
                 ))}
                 {supportPhoneNumbers.length === 0 && <div className="text-sm text-slate-500 italic">No support numbers added.</div>}
               </div>
-            </div>
-
-            <div className="border-t border-slate-100 pt-5 mt-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-800">WhatsApp Contact Support</h4>
-                  <p className="text-xs text-slate-500">Enable floating WhatsApp button for customer help & support on your storefront.</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    className="sr-only peer" 
-                    checked={whatsappSupportEnabled} 
-                    onChange={e => setWhatsappSupportEnabled(e.target.checked)} 
-                  />
-                  <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#76b900]"></div>
-                </label>
-              </div>
-
-              {whatsappSupportEnabled && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">WhatsApp Number</label>
-                  <input 
-                    type="text" 
-                    value={whatsappNumber}
-                    onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="e.g. 919876543210 (include country code without +)"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition"
-                  />
-                  <p className="text-xs text-slate-500">Enter your full number starting with country code. Do not include spaces, hyphens, or the '+' sign (e.g. 919876543210 for India).</p>
-                </div>
-              )}
             </div>
 
             <div>
@@ -1309,327 +1172,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
         </div>
       )}
 
-      {/* Store Timing Tab */}
-      {activeTab === 'timing' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn text-left">
-          <h2 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
-            ⏰ Store Timing & Open/Close Schedule
-          </h2>
-          
-          {loadingHours ? (
-            <div className="text-center py-12 text-slate-400 font-medium animate-pulse">Loading Store Timing...</div>
-          ) : !storeHours ? (
-            <div className="text-center py-12 text-slate-400 font-medium">No hours loaded or configured.</div>
-          ) : (
-            <form onSubmit={handleSaveStoreHours} className="space-y-8">
-              {/* General Settings */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Store Operation Mode</label>
-                  <select
-                    value={storeHours.mode}
-                    onChange={e => setStoreHours({ ...storeHours, mode: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none bg-white font-medium"
-                  >
-                    <option value="24x7">24x7 (Always Open)</option>
-                    <option value="custom">Custom Schedule</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Store Timezone</label>
-                  <input
-                    type="text"
-                    value={storeHours.timezone || 'Asia/Kolkata'}
-                    onChange={e => setStoreHours({ ...storeHours, timezone: e.target.value })}
-                    placeholder="e.g. Asia/Kolkata"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none font-medium"
-                  />
-                  <p className="text-xs text-slate-400 mt-1">Configure timezone so opening hours match your local time.</p>
-                </div>
-                <div className="md:col-span-2 flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="displayStoreStatus"
-                    checked={storeHours.displayStoreStatus !== false}
-                    onChange={e => setStoreHours({ ...storeHours, displayStoreStatus: e.target.checked })}
-                    className="w-4 h-4 text-[#76b900] focus:ring-[#76b900] rounded cursor-pointer"
-                  />
-                  <label htmlFor="displayStoreStatus" className="text-sm font-bold text-slate-700 cursor-pointer">
-                    Show open/closed badge status to customers on storefront
-                  </label>
-                </div>
-              </div>
-
-              {/* Custom Schedule Builder */}
-              {storeHours.mode === 'custom' && (
-                <div className="space-y-6">
-                  <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Weekly Opening Hours</h3>
-                  <div className="space-y-4">
-                    {storeHours.weeklySchedule?.map((sched, dayIdx) => (
-                      <div key={sched.day} className="flex flex-col md:flex-row md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
-                        {/* Day & Toggle Checkbox */}
-                        <div className="flex items-center gap-3 w-40">
-                          <input
-                            type="checkbox"
-                            id={`day-${sched.day}`}
-                            checked={sched.enabled}
-                            onChange={e => {
-                              const newSched = [...storeHours.weeklySchedule];
-                              newSched[dayIdx].enabled = e.target.checked;
-                              // If enabling and has no slots, add a default slot
-                              if (e.target.checked && (!sched.slots || sched.slots.length === 0)) {
-                                newSched[dayIdx].slots = [{ open: "09:00", close: "18:00" }];
-                              }
-                              setStoreHours({ ...storeHours, weeklySchedule: newSched });
-                            }}
-                            className="w-4 h-4 text-[#76b900] focus:ring-[#76b900] rounded cursor-pointer"
-                          />
-                          <label htmlFor={`day-${sched.day}`} className="text-sm font-bold text-slate-700 capitalize cursor-pointer">
-                            {sched.day}
-                          </label>
-                        </div>
-
-                        {/* Slots */}
-                        <div className="flex-1 space-y-2">
-                          {sched.enabled ? (
-                            <>
-                              {sched.slots?.map((slot, slotIdx) => (
-                                <div key={slotIdx} className="flex items-center gap-3">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-slate-400">Open</span>
-                                    <input
-                                      type="time"
-                                      value={slot.open}
-                                      onChange={e => {
-                                        const newSched = [...storeHours.weeklySchedule];
-                                        newSched[dayIdx].slots[slotIdx].open = e.target.value;
-                                        setStoreHours({ ...storeHours, weeklySchedule: newSched });
-                                      }}
-                                      className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-1 focus:ring-[#76b900] outline-none"
-                                    />
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-slate-400">Close</span>
-                                    <input
-                                      type="time"
-                                      value={slot.close}
-                                      onChange={e => {
-                                        const newSched = [...storeHours.weeklySchedule];
-                                        newSched[dayIdx].slots[slotIdx].close = e.target.value;
-                                        setStoreHours({ ...storeHours, weeklySchedule: newSched });
-                                      }}
-                                      className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-1 focus:ring-[#76b900] outline-none"
-                                    />
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const newSched = [...storeHours.weeklySchedule];
-                                      newSched[dayIdx].slots = newSched[dayIdx].slots.filter((_, idx) => idx !== slotIdx);
-                                      setStoreHours({ ...storeHours, weeklySchedule: newSched });
-                                    }}
-                                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                    title="Remove Slot"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                              ))}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const newSched = [...storeHours.weeklySchedule];
-                                  newSched[dayIdx].slots = [...(newSched[dayIdx].slots || []), { open: "09:00", close: "18:00" }];
-                                  setStoreHours({ ...storeHours, weeklySchedule: newSched });
-                                }}
-                                className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline mt-1"
-                              >
-                                <Plus size={12} /> Add Time Slot
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Closed Entire Day</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Temporary Closure */}
-              <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Temporary Store Closure</h3>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="tempClosureEnabled"
-                    checked={storeHours.temporaryClosure?.enabled || false}
-                    onChange={e => setStoreHours({
-                      ...storeHours,
-                      temporaryClosure: { ...(storeHours.temporaryClosure || {}), enabled: e.target.checked }
-                    })}
-                    className="w-4 h-4 text-[#76b900] focus:ring-[#76b900] rounded cursor-pointer"
-                  />
-                  <label htmlFor="tempClosureEnabled" className="text-sm font-bold text-slate-700 cursor-pointer">
-                    Enable Temporary Store Closure
-                  </label>
-                </div>
-                
-                {storeHours.temporaryClosure?.enabled && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-slate-700 mb-1">Reason for closure</label>
-                      <input
-                        type="text"
-                        value={storeHours.temporaryClosure?.reason || ''}
-                        onChange={e => setStoreHours({
-                          ...storeHours,
-                          temporaryClosure: { ...(storeHours.temporaryClosure || {}), reason: e.target.value }
-                        })}
-                        placeholder="e.g. Closed for renovations / staff training"
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none text-sm font-medium"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1">Start Date/Time</label>
-                      <input
-                        type="datetime-local"
-                        value={storeHours.temporaryClosure?.startDate ? new Date(storeHours.temporaryClosure.startDate).toISOString().slice(0, 16) : ''}
-                        onChange={e => setStoreHours({
-                          ...storeHours,
-                          temporaryClosure: { ...(storeHours.temporaryClosure || {}), startDate: e.target.value ? new Date(e.target.value) : null }
-                        })}
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none text-sm font-medium"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1">End Date/Time</label>
-                      <input
-                        type="datetime-local"
-                        value={storeHours.temporaryClosure?.endDate ? new Date(storeHours.temporaryClosure.endDate).toISOString().slice(0, 16) : ''}
-                        onChange={e => setStoreHours({
-                          ...storeHours,
-                          temporaryClosure: { ...(storeHours.temporaryClosure || {}), endDate: e.target.value ? new Date(e.target.value) : null }
-                        })}
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#76b900] outline-none text-sm font-medium"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Holidays list */}
-              <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <h3 className="text-lg font-bold text-slate-800">Holidays List</h3>
-                  <button
-                    type="button"
-                    onClick={() => setStoreHours({
-                      ...storeHours,
-                      holidays: [...(storeHours.holidays || []), { name: "", date: new Date(), closed: true, slots: [] }]
-                    })}
-                    className="px-3.5 py-1.5 bg-[#76b900] text-white font-bold rounded-lg hover:bg-[#659e00] transition-colors text-xs flex items-center gap-1"
-                  >
-                    <Plus size={14} /> Add Holiday
-                  </button>
-                </div>
-                
-                <div className="space-y-3">
-                  {storeHours.holidays?.length === 0 ? (
-                    <p className="text-xs text-slate-400 font-medium">No holidays scheduled.</p>
-                  ) : (
-                    storeHours.holidays?.map((hol, idx) => (
-                      <div key={idx} className="flex flex-wrap items-center gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
-                        <div className="flex-1 min-w-[200px]">
-                          <input
-                            type="text"
-                            value={hol.name || ''}
-                            onChange={e => {
-                              const newHols = [...storeHours.holidays];
-                              newHols[idx].name = e.target.value;
-                              setStoreHours({ ...storeHours, holidays: newHols });
-                            }}
-                            placeholder="Holiday Name (e.g. Diwali)"
-                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-[#76b900]"
-                          />
-                        </div>
-                        <div>
-                          <input
-                            type="date"
-                            value={hol.date ? new Date(hol.date).toISOString().split('T')[0] : ''}
-                            onChange={e => {
-                              const newHols = [...storeHours.holidays];
-                              newHols[idx].date = e.target.value ? new Date(e.target.value) : null;
-                              setStoreHours({ ...storeHours, holidays: newHols });
-                            }}
-                            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-[#76b900]"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id={`holiday-closed-${idx}`}
-                            checked={hol.closed !== false}
-                            onChange={e => {
-                              const newHols = [...storeHours.holidays];
-                              newHols[idx].closed = e.target.checked;
-                              setStoreHours({ ...storeHours, holidays: newHols });
-                            }}
-                            className="w-4 h-4 text-[#76b900] focus:ring-[#76b900] rounded cursor-pointer"
-                          />
-                          <label htmlFor={`holiday-closed-${idx}`} className="text-xs font-bold text-slate-600 cursor-pointer">Closed Entire Day</label>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newHols = storeHours.holidays.filter((_, hIdx) => hIdx !== idx);
-                            setStoreHours({ ...storeHours, holidays: newHols });
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Submit Action */}
-              <div className="flex justify-end pt-4 border-t border-slate-100">
-                <button
-                  type="submit"
-                  disabled={savingHours}
-                  className="px-8 py-3 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition-colors shadow-lg shadow-green-100 disabled:opacity-50"
-                >
-                  {savingHours ? 'Saving Timing...' : 'Save Timing Settings'}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      )}
-
       </div>
       </div>
-  const handleStoreNameChange = (e) => {
-    const val = e.target.value;
-    setNewStoreName(val);
-    const slug = val.toLowerCase()
-      .replace(/[^a-z0-9-]/g, '')
-      .replace(/-+/g, '-')
-      .substring(0, 30);
-    setNewStoreSlug(slug);
-  };
-
-  const starterPlan = plans[0] || { _id: 'free', name: 'Starter', price: 0, limits: { maxProducts: 20 }, features: ['Up to 20 products', 'Basic shop themes', 'Standard subdomain hosting'] };
-  const proPlan = plans[1] || { _id: 'pro', name: 'Pro', price: 999, limits: { maxProducts: 100 }, features: ['Up to 100 products', 'WhatsApp support integration', 'Custom store slug option'] };
-  const premiumPlan = plans[2] || { _id: 'premium', name: 'Premium', price: 2999, limits: { maxProducts: 1000 }, features: ['Up to 1000 products', 'Dedicated subdomain & external domain support', 'Priority 24/7 client support'] };
-
-  return (
-    <>
-      <style>{`
+    
+    <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: scale(0.95) translateY(10px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
@@ -2002,7 +1548,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
                   className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
                 >
                   {plans.find(p => p._id === newStorePlan)?.price > 0 ? (
-                    <>Proceed for Payment <ArrowRight size={16} /></>
+                    <>Proceed for Payment <ArrowRight size={16}/></>
                   ) : (
                     <>Confirm & Create <CheckCircle size={16} /></>
                   )}
@@ -2012,54 +1558,13 @@ const ManageStore = ({ token, stores, onLogout }) => {
           </div>
         </div>
       )}
-    </>
-    
+    )}
+
     {/* Custom Toast Notification */}
     {toast && (
       <div className={`fixed top-10 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl font-bold flex items-center gap-3 transition-all animate-fadeIn ${toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-[#76b900] text-white'}`}>
         <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
         {toast.message}
-      </div>
-    )}
-    {/* Media Library Modal */}
-    {isMediaLibraryOpen && (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-[85vh]">
-          <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
-            <h3 className="text-2xl font-extrabold text-slate-800">Store Media Library</h3>
-            <button onClick={() => setIsMediaLibraryOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors text-3xl leading-none">&times;</button>
-          </div>
-          <div className="p-8 overflow-y-auto flex-1">
-            {loadingMedia ? (
-              <div className="flex justify-center py-10"><span className="text-slate-500 font-medium">Loading media...</span></div>
-            ) : mediaImages.length === 0 ? (
-              <div className="text-center py-20 text-slate-500 font-medium">No media found. Upload images to populate.</div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {mediaImages.map((img) => (
-                  <div key={img.name} className="relative group rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 aspect-square shadow-sm hover:shadow-md transition-shadow">
-                    <img src={img.url} alt="media" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
-                      <button onClick={() => {
-                        if (activeMediaTarget === 'logo') setLogo(img.url);
-                        else if (activeMediaTarget === 'favicon') setFavicon(img.url);
-                        else if (activeMediaTarget === 'banner') {
-                          if (!banner.includes(img.url)) setBanner(prev => [...prev, img.url]);
-                        }
-                        setIsMediaLibraryOpen(false);
-                      }} className="bg-white text-slate-900 px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-100 shadow-sm w-3/4">
-                        Select
-                      </button>
-                      <button onClick={() => handleDeleteMedia(img.name)} className="bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 shadow-sm w-3/4">
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     )}
     </AdminLayout>
