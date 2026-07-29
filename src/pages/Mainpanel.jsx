@@ -658,7 +658,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                               {(plan.features || []).map((feat, fIdx) => (
                                 <li key={fIdx} className="text-xs text-slate-500 flex items-center gap-1.5">
                                   <CheckCircle size={12} className="text-green-600 shrink-0" />
-                                  <span>{feat.name || feat}</span>
+                                  <span>{typeof feat === 'object' ? feat.name || feat.feature || JSON.stringify(feat) : feat}</span>
                                 </li>
                               ))}
                             </ul>
