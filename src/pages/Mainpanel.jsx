@@ -437,6 +437,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     .sort((a, b) => b.qty - a.qty)
     .slice(0, 5);
   const maxProductQty = Math.max(...topProducts.map(p => p.qty), 1); // Avoid division by zero
+  const recentOrders = [...orders].reverse().slice(0, 5);
 
   const handleStoreNameChange = (e) => {
     const val = e.target.value;
