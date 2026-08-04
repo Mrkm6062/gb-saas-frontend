@@ -93,46 +93,60 @@ const CustomPagePreview = ({ token }) => {
     );
   }
 
-  const cleanHead = (page.headHTML || '').replace(/<link[^>]*href=["'][^"']*docs\.galibrand\.cloud\/style\.css["'][^>]*>/gi, '');
-  const cleanBody = (page.bodyHTML || '').replace(/<link[^>]*href=["'][^"']*docs\.galibrand\.cloud\/style\.css["'][^>]*>/gi, '');
-
   // Compile standard HTML for iframe srcDoc
-  const previewSource = `
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Preview: ${page.title}</title>
-        <script>
-          // Suppress invalid stylesheet MIME type load errors
-          window.addEventListener('error', function(e) {
-            if (e.target && e.target.tagName === 'LINK' && e.target.rel === 'stylesheet') {
-              e.stopImmediatePropagation();
+  const compilePreviewSource = () => {
+    const rawHTML = `
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Preview: ${page.title}</title>
+          <script>
+            (function() {
+              var origSetAttribute = HTMLLinkElement.prototype.setAttribute;
+              HTMLLinkElement.prototype.setAttribute = function(name, val) {
+                if (name === 'href' && val && (val.includes('docs.galibrand.cloud') || val.includes('style.css'))) {
+                  return;
+                }
+                return origSetAttribute.apply(this, arguments);
+              };
+              window.addEventListener('error', function(e) {
+                if (e.target && e.target.tagName === 'LINK' && e.target.rel === 'stylesheet') {
+                  e.stopImmediatePropagation();
+                  e.preventDefault();
+                }
+              }, true);
+            })();
+          </script>
+          ${page.headHTML || ''}
+          <style>
+            ${page.customCSS || ''}
+          </style>
+        </head>
+        <body>
+          ${page.bodyHTML || ''}
+          <script>
+            window.onerror = function(message, source, lineno, colno, error) {
+              console.error(message + " on line " + lineno);
+              return true;
+            };
+            try {
+              ${page.customJS || ''}
+            } catch(e) {
+              console.error("Javascript Error: " + e.message);
             }
-          }, true);
-        </script>
-        ${cleanHead}
-        <style>
-          ${page.customCSS || ''}
-        </style>
-      </head>
-      <body>
-        ${cleanBody}
-        <script>
-          window.onerror = function(message, source, lineno, colno, error) {
-            console.error(message + " on line " + lineno);
-            return true;
-          };
-          try {
-            ${page.customJS || ''}
-          } catch(e) {
-            console.error("Javascript Error: " + e.message);
-          }
-        </script>
-      </body>
-    </html>
-  `;
+          </script>
+        </body>
+      </html>
+    `;
+
+    return rawHTML
+      .replace(/<link[^>]*href=["'][^"']*(?:docs\.galibrand\.cloud|style\.css)[^"']*["'][^>]*>/gi, '')
+      .replace(/@import\s+(?:url\(['"]?|['"])[^'"]*(?:docs\.galibrand\.cloud|style\.css)[^'"]*['"]?\)?;?/gi, '');
+  };
+
+  const previewSource = compilePreviewSource();
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden bg-slate-950">

@@ -324,30 +324,36 @@ const CustomPageEditor = ({ token, stores, onLogout }) => {
 
   // Compile Preview Source
   const compilePreviewSource = () => {
-    const cleanHead = (headHTML || '').replace(/<link[^>]*href=["'][^"']*docs\.galibrand\.cloud\/style\.css["'][^>]*>/gi, '');
-    const cleanBody = (bodyHTML || '').replace(/<link[^>]*href=["'][^"']*docs\.galibrand\.cloud\/style\.css["'][^>]*>/gi, '');
-
-    return `
+    const rawHTML = `
       <!DOCTYPE html>
       <html lang="en">
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <script>
-            // Suppress invalid stylesheet MIME type load errors
-            window.addEventListener('error', function(e) {
-              if (e.target && e.target.tagName === 'LINK' && e.target.rel === 'stylesheet') {
-                e.stopImmediatePropagation();
-              }
-            }, true);
+            (function() {
+              var origSetAttribute = HTMLLinkElement.prototype.setAttribute;
+              HTMLLinkElement.prototype.setAttribute = function(name, val) {
+                if (name === 'href' && val && (val.includes('docs.galibrand.cloud') || val.includes('style.css'))) {
+                  return;
+                }
+                return origSetAttribute.apply(this, arguments);
+              };
+              window.addEventListener('error', function(e) {
+                if (e.target && e.target.tagName === 'LINK' && e.target.rel === 'stylesheet') {
+                  e.stopImmediatePropagation();
+                  e.preventDefault();
+                }
+              }, true);
+            })();
           </script>
-          ${cleanHead}
+          ${headHTML || ''}
           <style>
             ${customCSS || ''}
           </style>
         </head>
         <body>
-          ${cleanBody}
+          ${bodyHTML || ''}
           <script>
             // Console error handlers
             window.onerror = function(message, source, lineno, colno, error) {
@@ -364,6 +370,10 @@ const CustomPageEditor = ({ token, stores, onLogout }) => {
         </body>
       </html>
     `;
+
+    return rawHTML
+      .replace(/<link[^>]*href=["'][^"']*(?:docs\.galibrand\.cloud|style\.css)[^"']*["'][^>]*>/gi, '')
+      .replace(/@import\s+(?:url\(['"]?|['"])[^'"]*(?:docs\.galibrand\.cloud|style\.css)[^'"]*['"]?\)?;?/gi, '');
   };
 
   const handleOpenInNewTab = () => {
