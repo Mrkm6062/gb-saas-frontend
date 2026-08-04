@@ -93,6 +93,9 @@ const CustomPagePreview = ({ token }) => {
     );
   }
 
+  const cleanHead = (page.headHTML || '').replace(/<link[^>]*href=["'][^"']*docs\.galibrand\.cloud\/style\.css["'][^>]*>/gi, '');
+  const cleanBody = (page.bodyHTML || '').replace(/<link[^>]*href=["'][^"']*docs\.galibrand\.cloud\/style\.css["'][^>]*>/gi, '');
+
   // Compile standard HTML for iframe srcDoc
   const previewSource = `
     <!DOCTYPE html>
@@ -101,39 +104,26 @@ const CustomPagePreview = ({ token }) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Preview: ${page.title}</title>
-        ${page.headHTML || ''}
+        <script>
+          // Suppress invalid stylesheet MIME type load errors
+          window.addEventListener('error', function(e) {
+            if (e.target && e.target.tagName === 'LINK' && e.target.rel === 'stylesheet') {
+              e.stopImmediatePropagation();
+            }
+          }, true);
+        </script>
+        ${cleanHead}
         <style>
           ${page.customCSS || ''}
         </style>
       </head>
       <body>
-        ${page.bodyHTML || ''}
+        ${cleanBody}
         <script>
           window.onerror = function(message, source, lineno, colno, error) {
             console.error(message + " on line " + lineno);
             return true;
           };
-          (function() {
-            try {
-              var testKey = '__test_ls__';
-              window.localStorage.setItem(testKey, testKey);
-              window.localStorage.removeItem(testKey);
-            } catch (e) {
-              var store = {};
-              var mockStorage = {
-                getItem: function(k) { return store[k] !== undefined ? store[k] : null; },
-                setItem: function(k, v) { store[k] = String(v); },
-                removeItem: function(k) { delete store[k]; },
-                clear: function() { store = {}; },
-                key: function(i) { return Object.keys(store)[i] || null; },
-                get length() { return Object.keys(store).length; }
-              };
-              try {
-                Object.defineProperty(window, 'localStorage', { value: mockStorage, configurable: true, enumerable: true });
-                Object.defineProperty(window, 'sessionStorage', { value: mockStorage, configurable: true, enumerable: true });
-              } catch(err) {}
-            }
-          })();
           try {
             ${page.customJS || ''}
           } catch(e) {
@@ -197,7 +187,6 @@ const CustomPagePreview = ({ token }) => {
         <iframe
           title={`Custom page preview frame: ${page.title}`}
           srcDoc={previewSource}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation allow-modals"
           className="w-full h-full border-none bg-white"
         />
       </div>
