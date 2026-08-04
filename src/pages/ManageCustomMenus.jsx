@@ -156,10 +156,25 @@ const ManageCustomMenus = ({ token, stores, onLogout }) => {
     setError('');
     setSuccess('');
 
+    const sanitizeItemsForSave = (items) => {
+      if (!items) return [];
+      return items.map(item => {
+        let pId = item.pageId;
+        if (pId && typeof pId === 'object') {
+          pId = pId._id;
+        }
+        return {
+          ...item,
+          pageId: pId,
+          children: item.children ? sanitizeItemsForSave(item.children) : []
+        };
+      });
+    };
+
     const payload = {
       storeId: currentStore._id,
       menuName,
-      menuItems
+      menuItems: sanitizeItemsForSave(menuItems)
     };
 
     try {
