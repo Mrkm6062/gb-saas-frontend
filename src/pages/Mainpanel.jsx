@@ -142,8 +142,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     const delayDebounceFn = setTimeout(async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/api/store/${newStoreSlug}`);
-        if (res.status === 
-          04) {
+        if (res.status === 404) {
           setSubdomainStatus('available');
         } else if (res.status === 200) {
           setSubdomainStatus('taken');
