@@ -347,6 +347,30 @@ const CustomPageEditor = ({ token, stores, onLogout }) => {
               console.error(message + " on line " + lineno);
               return true;
             };
+
+            // Safe polyfill for localStorage / sessionStorage to prevent sandboxed SecurityError
+            (function() {
+              try {
+                var testKey = '__test_ls__';
+                window.localStorage.setItem(testKey, testKey);
+                window.localStorage.removeItem(testKey);
+              } catch (e) {
+                var store = {};
+                var mockStorage = {
+                  getItem: function(k) { return store[k] !== undefined ? store[k] : null; },
+                  setItem: function(k, v) { store[k] = String(v); },
+                  removeItem: function(k) { delete store[k]; },
+                  clear: function() { store = {}; },
+                  key: function(i) { return Object.keys(store)[i] || null; },
+                  get length() { return Object.keys(store).length; }
+                };
+                try {
+                  Object.defineProperty(window, 'localStorage', { value: mockStorage, configurable: true, enumerable: true });
+                  Object.defineProperty(window, 'sessionStorage', { value: mockStorage, configurable: true, enumerable: true });
+                } catch(err) {}
+              }
+            })();
+
             try {
               ${customJS || ''}
             } catch (err) {

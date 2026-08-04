@@ -113,6 +113,27 @@ const CustomPagePreview = ({ token }) => {
             console.error(message + " on line " + lineno);
             return true;
           };
+          (function() {
+            try {
+              var testKey = '__test_ls__';
+              window.localStorage.setItem(testKey, testKey);
+              window.localStorage.removeItem(testKey);
+            } catch (e) {
+              var store = {};
+              var mockStorage = {
+                getItem: function(k) { return store[k] !== undefined ? store[k] : null; },
+                setItem: function(k, v) { store[k] = String(v); },
+                removeItem: function(k) { delete store[k]; },
+                clear: function() { store = {}; },
+                key: function(i) { return Object.keys(store)[i] || null; },
+                get length() { return Object.keys(store).length; }
+              };
+              try {
+                Object.defineProperty(window, 'localStorage', { value: mockStorage, configurable: true, enumerable: true });
+                Object.defineProperty(window, 'sessionStorage', { value: mockStorage, configurable: true, enumerable: true });
+              } catch(err) {}
+            }
+          })();
           try {
             ${page.customJS || ''}
           } catch(e) {
@@ -176,7 +197,7 @@ const CustomPagePreview = ({ token }) => {
         <iframe
           title={`Custom page preview frame: ${page.title}`}
           srcDoc={previewSource}
-          sandbox="allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation allow-modals"
           className="w-full h-full border-none bg-white"
         />
       </div>
