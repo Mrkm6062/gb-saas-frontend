@@ -571,8 +571,11 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
     const xhr = new XMLHttpRequest();
     setActiveXhr(xhr);
+    xhr.withCredentials = true;
     xhr.open('POST', `${API_BASE_URL}/api/upload`);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    if (token && token !== 'dummy-token') {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
 
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
