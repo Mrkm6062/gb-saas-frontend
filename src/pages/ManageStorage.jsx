@@ -58,15 +58,14 @@ const ManageStorage = ({ token, stores, onLogout }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(48);
 
-  
-
   const fetchData = async () => {
     if (!currentStore._id) return;
     setLoading(true);
     try {
       // Fetch Images
       const imgRes = await fetch(`${API_BASE_URL}/api/upload?storeId=${currentStore._id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
       });
       if (imgRes.ok) {
         const data = await imgRes.json();
@@ -101,6 +100,7 @@ const ManageStorage = ({ token, stores, onLogout }) => {
           'Authorization': `Bearer ${token}`, 
           'Content-Type': 'application/json' 
         },
+        credentials: 'include',
         body: JSON.stringify({ filename })
       });
       if (response.ok) {
@@ -124,6 +124,7 @@ const ManageStorage = ({ token, stores, onLogout }) => {
         fetch(`${API_BASE_URL}/api/upload`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ filename })
         })
       ));
@@ -164,8 +165,11 @@ const ManageStorage = ({ token, stores, onLogout }) => {
 
       const xhr = new XMLHttpRequest();
       setActiveXhr(xhr);
+      xhr.withCredentials = true;
       xhr.open('POST', `${API_BASE_URL}/api/upload`);
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      if (token && token !== 'dummy-token') {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
@@ -177,7 +181,12 @@ const ManageStorage = ({ token, stores, onLogout }) => {
         if (xhr.status >= 200 && xhr.status < 300) {
           fetchData(); 
         } else {
-          alert('Upload failed. Please try again or check your storage limits.');
+          let errorMsg = 'Upload failed. Please try again or check your storage limits.';
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (data.message) errorMsg = data.message;
+          } catch (e) {}
+          alert(errorMsg);
         }
         setUploading(false);
         setActiveXhr(null);
@@ -316,50 +325,46 @@ const ManageStorage = ({ token, stores, onLogout }) => {
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                 {paginatedImages.map((img) => {
-                const isSelected = selectedImages.includes(img.name);
-                return (
-                <div key={img.name} className={`relative group rounded-xl border-2 overflow-hidden bg-slate-50 aspect-square shadow-sm transition-all ${isSelected ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 hover:shadow-md'}`}>
-                  <img src={img.url} alt="media" className={`w-full h-full object-cover flex-1 cursor-pointer transition-opacity ${isSelected ? 'opacity-80' : ''}`} onClick={() => toggleSelection(img.name)} />
-                  
-                  {/* Selection Checkbox Overlay */}
-                  <div className="absolute top-2 left-2 z-10">
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelection(img.name)} className="w-5 h-5 cursor-pointer accent-blue-600" />
-                  </div>
-
-                  <div className={`absolute inset-0 bg-slate-900/70 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-[2px] pointer-events-none ${isSelected ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'}`}>
-                    <span className="text-white text-xs font-bold bg-black/50 px-2 py-1 rounded-md pointer-events-auto mb-1">{formatBytes(img.size)}</span>
-                    <div className="flex gap-2">
-                      <button onClick={(e) => { e.stopPropagation(); handleCopyUrl(img.url); }} className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 shadow-lg transform hover:scale-110 transition pointer-events-auto" title="Copy URL"><Copy size={16}/></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(img.name); }} className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-lg transform hover:scale-110 transition pointer-events-auto" title="Delete Image"><Trash2 size={16}/></button>
+                  const isSelected = selectedImages.includes(img.name);
+                  return (
+                    <div key={img.name} className={`relative group rounded-xl border-2 overflow-hidden bg-slate-50 aspect-square shadow-sm transition-all ${isSelected ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 hover:shadow-md'}`}>
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        onChange={() => toggleSelection(img.name)}
+                        className="absolute top-2 left-2 z-10 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shadow-sm"
+                      />
+                      
+                      <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                      
+                      <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+                        <div className="flex justify-end">
+                          <button onClick={() => handleDelete(img.name)} className="p-1.5 bg-red-500/90 text-white rounded-lg hover:bg-red-600 transition" title="Delete Image">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-white font-mono truncate mb-1">{img.name}</p>
+                          <button onClick={() => handleCopyUrl(img.url)} className="w-full py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-bold flex items-center justify-center gap-1 backdrop-blur-sm transition">
+                            <Copy size={12} /> Copy URL
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )})}
+                  );
+                })}
               </div>
 
-              {images.length > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t border-slate-100 gap-4">
-                  <div className="text-sm text-slate-500 flex items-center gap-2">
-                    Showing <span className="font-bold text-slate-800">{startIndex + 1}</span> to <span className="font-bold text-slate-800">{Math.min(startIndex + itemsPerPage, images.length)}</span> of <span className="font-bold text-slate-800">{images.length}</span> items
-                    <select 
-                      value={itemsPerPage} 
-                      onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} 
-                      className="ml-2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-[#76b900]"
-                    >
-                      <option value={24}>24 per page</option>
-                      <option value={48}>48 per page</option>
-                      <option value={96}>96 per page</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
-                      <ChevronLeft size={18} />
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
+                  <span className="text-xs text-slate-500 font-medium">Page {currentPage} of {totalPages} ({images.length} total files)</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition">
+                      <ChevronLeft size={16} />
                     </button>
-                    <div className="text-sm font-medium text-slate-600 px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg shadow-sm">
-                      {currentPage} / {totalPages || 1}
-                    </div>
-                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0} className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
-                      <ChevronRight size={18} />
+                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition">
+                      <ChevronRight size={16} />
                     </button>
                   </div>
                 </div>
