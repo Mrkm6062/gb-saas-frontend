@@ -108,7 +108,13 @@ const ManageStore = ({ token, stores, onLogout }) => {
   // Update form fields if the user switches to managing a different store
   useEffect(() => {
     setStoreName(currentStore.storeName || '');
-    setStoreType(currentStore.storeType || '');
+    const rawType = currentStore.storeType || '';
+    if (rawType && storeTypes.length > 0) {
+      const match = storeTypes.find(st => st.name.toLowerCase() === rawType.toLowerCase());
+      setStoreType(match ? match.name : rawType);
+    } else {
+      setStoreType(rawType);
+    }
     setWebsiteTitle(currentStore.websiteTitle || '');
     setLogo(currentStore.logo || '');
     setFavicon(currentStore.favicon || '');
@@ -118,7 +124,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setLocationAddress(currentStore.locationAddress || '');
     setMapLocation(currentStore.mapLocation || '');
     setStatus('');
-  }, [storeId, currentStore.storeName, currentStore.storeType, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation]);
+  }, [storeId, currentStore.storeName, currentStore.storeType, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation, storeTypes]);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -815,12 +821,15 @@ const ManageStore = ({ token, stores, onLogout }) => {
               onChange={(e) => setStoreType(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition bg-white"
             >
+              {storeType && !storeTypes.some(cat => cat.name.toLowerCase() === storeType.toLowerCase()) && (
+                <option value={storeType}>{storeType}</option>
+              )}
               {storeTypes.length > 0 ? (
                 storeTypes.map(cat => (
                   <option key={cat._id} value={cat.name}>{cat.name}</option>
                 ))
               ) : (
-                <option value="Kirana Stores">Kirana Stores (Default)</option>
+                <option value={storeType || "Kirana Stores"}>{storeType || "Kirana Stores (Default)"}</option>
               )}
             </select>
           </div>
