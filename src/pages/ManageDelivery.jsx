@@ -54,6 +54,9 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
     enabled: true
   });
 
+  // State for editing a delivery area
+  const [editingArea, setEditingArea] = useState(null);
+
   // Fetch state & district map
   useEffect(() => {
     const fetchLocations = async () => {
@@ -253,6 +256,45 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
       }
     } catch (e) {
       console.error("Failed to delete area", e);
+    }
+  };
+
+  const handleUpdateArea = async (e) => {
+    e.preventDefault();
+    if (!editingArea || !editingArea.name.trim()) return alert("Location area name is required");
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/delivery-settings/areas/${editingArea._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: editingArea.name.trim(),
+          type: editingArea.type,
+          state: editingArea.state || '',
+          district: editingArea.district || '',
+          postOffice: editingArea.postOffice || '',
+          pincode: editingArea.pincode ? editingArea.pincode.trim() : '',
+          charge: Number(editingArea.charge || 0),
+          enabled: editingArea.enabled
+        })
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setDeliveryAreas(prev => prev.map(a => a._id === updated._id ? updated : a));
+        setEditingArea(null);
+        setStatus('Delivery area updated successfully!');
+        setTimeout(() => setStatus(''), 3000);
+      } else {
+        const err = await res.json();
+        alert(err.message || 'Failed to update area');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error updating delivery area');
     }
   };
 
@@ -716,14 +758,24 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
                               </button>
                             </td>
                             <td className="p-3 text-right">
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteArea(area._id)}
-                                className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
-                                title="Delete Area"
-                              >
-                                <Trash2 size={16} />
-                              </button>
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingArea({ ...area })}
+                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                  title="Edit Area"
+                                >
+                                  <Edit2 size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteArea(area._id)}
+                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+                                  title="Delete Area"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -741,6 +793,102 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
           )}
 
         </form>
+
+        {/* Edit Delivery Area Modal */}
+        {editingArea && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Edit2 size={18} className="text-blue-600" /> Edit Delivery Location / Area
+                </h3>
+                <button 
+                  type="button" 
+                  onClick={() => setEditingArea(null)} 
+                  className="text-slate-400 hover:text-red-500 transition-colors text-2xl leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateArea} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Location Type</label>
+                  <select
+                    value={editingArea.type}
+                    onChange={e => setEditingArea({ ...editingArea, type: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold bg-white"
+                  >
+                    {LOCATION_TYPES.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Area / Location Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingArea.name}
+                    onChange={e => setEditingArea({ ...editingArea, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Pincode (Optional)</label>
+                  <input
+                    type="text"
+                    value={editingArea.pincode || ''}
+                    onChange={e => setEditingArea({ ...editingArea, pincode: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Delivery Charge (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingArea.charge}
+                    onChange={e => setEditingArea({ ...editingArea, charge: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-800"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <label className="text-xs font-bold text-slate-600">Status:</label>
+                  <button
+                    type="button"
+                    onClick={() => setEditingArea({ ...editingArea, enabled: !editingArea.enabled })}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition ${
+                      editingArea.enabled ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}
+                  >
+                    {editingArea.enabled ? 'Enabled' : 'Disabled'}
+                  </button>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditingArea(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-[#76b900] hover:bg-[#659e00] text-white text-xs font-bold rounded-xl transition shadow-md"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
