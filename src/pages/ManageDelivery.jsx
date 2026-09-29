@@ -26,6 +26,7 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
   const [formData, setFormData] = useState({
     baseCharge: 0,
     freeShippingThreshold: 0,
+    minimumOrderLimitThreshold: 0,
     deliveryMode: 'all', // 'all', 'state', 'district', 'pincode', 'postOffice', 'locality'
     allowedStates: [],
     allowedPincodes: [],
@@ -115,6 +116,7 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
           setFormData({
             baseCharge: data.baseCharge || 0,
             freeShippingThreshold: data.freeShippingThreshold || 0,
+            minimumOrderLimitThreshold: data.minimumOrderLimitThreshold || 0,
             deliveryMode: data.deliveryMode || 'all',
             allowedStates: data.allowedStates || [],
             allowedPincodes: data.allowedPincodes || [],
@@ -396,7 +398,7 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
                 Shipping Charges & Rules Configuration
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">Base Shipping Charge (₹)</label>
                   <p className="text-xs text-slate-500 mb-3">Default delivery fee applied to orders when no location-specific charge is matched.</p>
@@ -426,6 +428,21 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Minimum Order Limit Threshold (₹)</label>
+                  <p className="text-xs text-slate-500 mb-3">Minimum items subtotal required for customer to checkout. (Set to 0 to disable)</p>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                    <input 
+                      type="number" 
+                      min="0"
+                      value={formData.minimumOrderLimitThreshold} 
+                      onChange={e => setFormData({...formData, minimumOrderLimitThreshold: Number(e.target.value)})} 
+                      className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-lg font-bold text-slate-800" 
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Shipping Rules Summary Banner */}
@@ -446,6 +463,15 @@ const ManageDelivery = ({ token, stores, onLogout }) => {
                   {formData.freeShippingThreshold === 0 && (
                     <p className="text-xs text-amber-600 font-semibold bg-amber-50 p-2 rounded-lg mt-2">
                       Note: Free shipping threshold is set to 0. All orders will be charged the standard delivery fees.
+                    </p>
+                  )}
+                  {formData.minimumOrderLimitThreshold > 0 ? (
+                    <p className="text-xs text-blue-700 font-semibold bg-blue-50 p-2.5 rounded-lg mt-2 border border-blue-200">
+                      • <span className="font-bold">Minimum Order Requirement Active:</span> Customers must add at least <span className="font-bold">₹{formData.minimumOrderLimitThreshold}</span> worth of products to their cart. If cart is less than ₹{formData.minimumOrderLimitThreshold}, customers will be guided to add more products to reach the threshold before checking out.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500 font-medium bg-slate-100 p-2 rounded-lg mt-2">
+                      • Minimum order limit is set to 0 (disabled). Customers can checkout with any order value.
                     </p>
                   )}
                 </div>
