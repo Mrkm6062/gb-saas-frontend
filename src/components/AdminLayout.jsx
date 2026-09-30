@@ -124,20 +124,15 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     fetchPolicies();
   }, []);
 
-  // Fallback to first store if localStorage has invalid/old ID format
-  const isValidStore = stores?.some(s => s.storeId === activeStoreId);
-  if (!isValidStore && stores?.length > 0) {
-    activeStoreId = stores[0].storeId;
+  // Match store by storeId code or MongoDB _id, falling back to first store
+  let matchedStore = stores?.find(s => s.storeId === activeStoreId || s._id === activeStoreId);
+  if (!matchedStore && stores?.length > 0) {
+    matchedStore = stores[0];
   }
-
-  useEffect(() => {
-    if (activeStoreId) {
-      localStorage.setItem('gb_active_store_id', activeStoreId);
-    }
-  }, [activeStoreId]);
-
-  // Calculate plan days remaining for the active store
-  const currentStoreInfo = stores?.find(s => s.storeId === activeStoreId);
+  const currentStoreInfo = matchedStore;
+  if (currentStoreInfo && currentStoreInfo.storeId) {
+    activeStoreId = currentStoreInfo.storeId;
+  }
   let daysLeft = null;
   let isExpired = false;
   let isExpiringSoon = false;

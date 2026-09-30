@@ -1,6 +1,6 @@
 import { API_BASE_URL } from '../api';
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { 
   Printer, 
@@ -32,7 +32,18 @@ import {
 
 const LiveOrderManage = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
-  const currentStore = stores.find(s => s.storeId === storeId) || {};
+  const navigate = useNavigate();
+
+  // Find store by storeId code (e.g. GBS006) OR MongoDB _id
+  const currentStore = stores.find(s => s.storeId === storeId || s._id === storeId) || 
+    (stores.length > 0 && !stores.some(s => s.storeId === storeId) ? stores[0] : {});
+
+  // If the notification or link opened with MongoDB _id, normalize to friendly storeId (e.g. GBS006)
+  useEffect(() => {
+    if (currentStore && currentStore.storeId && storeId === currentStore._id) {
+      navigate(`/store/${currentStore.storeId}/live-orders`, { replace: true });
+    }
+  }, [currentStore, storeId, navigate]);
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);

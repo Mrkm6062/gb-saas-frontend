@@ -83,7 +83,8 @@ self.addEventListener('notificationclick', (event) => {
       }
       // If no window is open (e.g. app/browser is closed), open a new window
       if (self.clients.openWindow) {
-        return self.clients.openWindow(targetUrl);
+        const fullUrl = new URL(targetUrl, self.location.origin).href;
+        return self.clients.openWindow(fullUrl);
       }
     })
   );
