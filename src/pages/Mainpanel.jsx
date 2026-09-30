@@ -392,8 +392,11 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   
   const today = new Date();
   const todaysSales = orders.filter(o => {
+    const status = (o.orderStatus || '').toLowerCase();
+    const isExcluded = status === 'canceled' || status === 'cancelled' || status === 'refunded' || status === 'returned';
     const orderDate = new Date(o.createdAt);
-    return orderDate.getDate() === today.getDate() &&
+    return !isExcluded &&
+           orderDate.getDate() === today.getDate() &&
            orderDate.getMonth() === today.getMonth() &&
            orderDate.getFullYear() === today.getFullYear();
   }).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
@@ -455,7 +458,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Overview Dashboard">
-        <main className="w-full px-6 py-10 text-left">
+        <main className="w-full px-3.5 sm:px-6 py-6 sm:py-10 text-left">
 
         {status && (
            <div className={`mb-8 p-4 rounded-xl text-sm font-medium ${status.startsWith('Error') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
@@ -479,51 +482,51 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
         ) : activeStores.length > 0 ? (
           <>
 
-            {/* 4 Analytics Metric Cards */}
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center shrink-0">
-                  <IndianRupee size={28} />
+            {/* Analytics Metric Cards - 2 cards per row on mobile */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
+              <div className="bg-white p-3.5 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2.5 sm:gap-4">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+                  <IndianRupee className="w-5 h-5 sm:w-7 sm:h-7" />
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Sales</p>
-                  <p className="text-2xl font-extrabold text-slate-800">₹{totalSales}</p>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                  <TrendingUp size={28} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Today's Sales</p>
-                  <p className="text-2xl font-extrabold text-slate-800">₹{todaysSales}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-tight sm:tracking-wider mb-0.5 sm:mb-1 truncate">Total Sales</p>
+                  <p className="text-base sm:text-2xl font-extrabold text-slate-800 truncate">₹{totalSales}</p>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                  <ShoppingBag size={28} />
+              <div className="bg-white p-3.5 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2.5 sm:gap-4">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-5 h-5 sm:w-7 sm:h-7" />
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Placed Orders</p>
-                  <p className="text-2xl font-extrabold text-slate-800">{placedOrders}</p>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                  <Users size={28} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Customers</p>
-                  <p className="text-2xl font-extrabold text-slate-800">{totalCustomers}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-tight sm:tracking-wider mb-0.5 sm:mb-1 truncate">Today's Sales</p>
+                  <p className="text-base sm:text-2xl font-extrabold text-slate-800 truncate">₹{todaysSales}</p>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                  <CreditCard size={28} />
+              <div className="bg-white p-3.5 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2.5 sm:gap-4">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                  <ShoppingBag className="w-5 h-5 sm:w-7 sm:h-7" />
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Avg Lifetime Spend</p>
-                  <p className="text-2xl font-extrabold text-slate-800">₹{averageLifetimeSpend}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-tight sm:tracking-wider mb-0.5 sm:mb-1 truncate">Placed Orders</p>
+                  <p className="text-base sm:text-2xl font-extrabold text-slate-800 truncate">{placedOrders}</p>
+                </div>
+              </div>
+              <div className="bg-white p-3.5 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2.5 sm:gap-4">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                  <Users className="w-5 h-5 sm:w-7 sm:h-7" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-tight sm:tracking-wider mb-0.5 sm:mb-1 truncate">Total Customers</p>
+                  <p className="text-base sm:text-2xl font-extrabold text-slate-800 truncate">{totalCustomers}</p>
+                </div>
+              </div>
+              <div className="col-span-2 sm:col-span-1 bg-white p-3.5 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2.5 sm:gap-4">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <CreditCard className="w-5 h-5 sm:w-7 sm:h-7" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-tight sm:tracking-wider mb-0.5 sm:mb-1 truncate">Avg Lifetime Spend</p>
+                  <p className="text-base sm:text-2xl font-extrabold text-slate-800 truncate">₹{averageLifetimeSpend}</p>
                 </div>
               </div>
             </div>
@@ -599,19 +602,62 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
               </div>
             </div>
 
-            {/* Recent Orders Table */}
-            <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 mt-8">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-slate-800">Recent Orders</h3>
+            {/* Recent Orders Section */}
+            <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 mt-8">
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-bold text-slate-800">Recent Orders</h3>
                 <button 
                   onClick={() => navigate(`/store/${activeStoreStringId}/orders`)}
-                  className="text-sm font-bold text-[#76b900] hover:text-[#659e00] bg-green-50 hover:bg-green-100 px-4 py-2 rounded-xl transition-colors"
+                  className="text-xs sm:text-sm font-bold text-[#76b900] hover:text-[#659e00] bg-green-50 hover:bg-green-100 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl transition-colors"
                 >
                   View All Orders
                 </button>
               </div>
               
-              <div className="overflow-x-auto">
+              {/* Mobile View: Vertically stacked order cards (No horizontal scrolling) */}
+              <div className="block md:hidden space-y-2.5">
+                {recentOrders.length === 0 ? (
+                  <div className="p-6 text-center text-slate-500 text-sm font-medium">No recent orders found.</div>
+                ) : (
+                  recentOrders.map(order => (
+                    <div 
+                      key={order._id}
+                      onClick={() => setSelectedOrder(order)}
+                      className="bg-slate-50/70 hover:bg-slate-100 active:bg-slate-100 p-3.5 rounded-xl border border-slate-200/80 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-xs font-bold text-slate-800">#{order._id.slice(-6).toUpperCase()}</span>
+                          <span className="text-[10px] text-slate-400">•</span>
+                          <span className="text-[11px] text-slate-500 truncate">{new Date(order.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold shrink-0 ${
+                          order.orderStatus === 'delivered' ? 'bg-blue-100 text-blue-700' :
+                          order.orderStatus === 'shipped' ? 'bg-indigo-100 text-indigo-700' :
+                          order.orderStatus === 'canceled' ? 'bg-red-100 text-red-700' :
+                          order.orderStatus === 'returned' ? 'bg-orange-100 text-orange-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {order.orderStatus}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60">
+                        <div className="min-w-0 pr-2">
+                          <p className="font-semibold text-slate-800 truncate">{order.customerName || 'Customer'}</p>
+                          <p className="text-[11px] text-slate-500">{order.orderItems?.length || 0} item{(order.orderItems?.length || 0) === 1 ? '' : 's'}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-sm font-extrabold text-green-600">₹{order.totalAmount}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop View: Full Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
