@@ -728,10 +728,17 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
 
               {/* Notification Dropdown Panel */}
               {isNotificationOpen && (
-                <div 
-                  ref={notificationDropdownRef}
-                  className="absolute right-0 top-12 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col text-slate-800 animate-in fade-in zoom-in-95 duration-150"
-                >
+                <>
+                  {/* Backdrop for mobile view */}
+                  <div 
+                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-40 sm:hidden"
+                    onClick={() => setIsNotificationOpen(false)}
+                  />
+
+                  <div 
+                    ref={notificationDropdownRef}
+                    className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-16 sm:top-12 w-auto sm:w-96 max-w-[calc(100vw-1.5rem)] sm:max-w-none bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col text-slate-800 animate-in fade-in zoom-in-95 duration-150"
+                  >
                   {/* Dropdown Header */}
                   <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                     <div className="flex items-center gap-2">
@@ -894,6 +901,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
                     </button>
                   </div>
                 </div>
+              </>
               )}
             </div>
 
