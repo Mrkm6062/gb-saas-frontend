@@ -19,8 +19,16 @@ import {
   CheckCircle,
   AlertCircle,
   Volume2,
-  VolumeX
+  VolumeX,
+  Smartphone,
+  BellRing
 } from 'lucide-react';
+import { 
+  isPushNotificationSupported, 
+  checkIsSubscribed, 
+  subscribeToPushNotifications, 
+  triggerTestPushNotification 
+} from '../utils/pushNotifications';
 
 const LiveOrderManage = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
@@ -48,6 +56,62 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
     DeliveryPersonName: '',
     DeliveryPersonPhone: ''
   });
+
+  // Closed-app PWA Push notifications state
+  const [pushStatus, setPushStatus] = useState('checking'); // 'subscribed' | 'unsubscribed' | 'denied' | 'unsupported' | 'checking'
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [testPushLoading, setTestPushLoading] = useState(false);
+  const [pushMsg, setPushMsg] = useState('');
+
+  useEffect(() => {
+    const checkPush = async () => {
+      if (!isPushNotificationSupported()) {
+        setPushStatus('unsupported');
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        setPushStatus('denied');
+        return;
+      }
+      const isSub = await checkIsSubscribed();
+      setPushStatus(isSub ? 'subscribed' : 'unsubscribed');
+    };
+    checkPush();
+  }, [currentStore._id]);
+
+  const handleSubscribePush = async () => {
+    if (!currentStore._id) return;
+    setIsSubscribing(true);
+    setPushMsg('');
+    try {
+      await subscribeToPushNotifications(currentStore._id, token);
+      setPushStatus('subscribed');
+      setPushMsg('✅ Closed-app push alerts enabled!');
+      setTimeout(() => setPushMsg(''), 4000);
+    } catch (err) {
+      if (Notification.permission === 'denied') setPushStatus('denied');
+      setPushMsg('❌ ' + (err.message || 'Error enabling notifications'));
+      setTimeout(() => setPushMsg(''), 4000);
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  const handleTestPush = async () => {
+    if (!currentStore._id) return;
+    setTestPushLoading(true);
+    setPushMsg('');
+    try {
+      await triggerTestPushNotification(currentStore._id, token);
+      setPushMsg('🚀 Test alert sent! Check your device.');
+      setTimeout(() => setPushMsg(''), 4000);
+    } catch (err) {
+      setPushMsg('❌ Test failed');
+      setTimeout(() => setPushMsg(''), 4000);
+    } finally {
+      setTestPushLoading(false);
+    }
+  };
 
   const playNotificationSound = (themeName = soundTheme) => {
     try {
@@ -136,6 +200,11 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
         orderIdsRef.current = new Set(data.map(order => order._id));
 
         setOrders(data);
+
+        // Broadcast to AdminLayout header
+        window.dispatchEvent(new CustomEvent('gb_live_orders_updated', {
+          detail: { orders: data, storeId: currentStore._id }
+        }));
       } else {
         setError('Failed to load orders.');
       }
@@ -439,6 +508,68 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
               className="md:hidden p-2 rounded-xl border border-slate-100 hover:bg-slate-50 text-slate-600 cursor-pointer"
             >
               {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+            </button>
+
+            {/* Closed-App Push Alerts Widget (Desktop View) */}
+            <div className="hidden md:flex flex-col gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                  <Smartphone size={14} className="text-[#76b900]" /> Closed-App Alerts
+                </span>
+                {pushStatus === 'subscribed' && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                )}
+              </div>
+
+              {pushStatus === 'subscribed' ? (
+                <div className="flex flex-col gap-1.5 mt-0.5">
+                  <span className="text-[11px] text-emerald-700 font-semibold">
+                    ✓ Device will alert even when app is closed
+                  </span>
+                  <button
+                    onClick={handleTestPush}
+                    disabled={testPushLoading}
+                    className="w-full py-1 px-2 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-lg border border-slate-200 text-[10px] transition"
+                  >
+                    {testPushLoading ? 'Testing...' : 'Send Test Alert'}
+                  </button>
+                </div>
+              ) : pushStatus === 'denied' ? (
+                <span className="text-[10px] text-red-600 font-medium">
+                  Notifications blocked in browser settings.
+                </span>
+              ) : (
+                <div className="flex flex-col gap-1.5 mt-0.5">
+                  <p className="text-[10px] text-slate-500 leading-tight">
+                    Get sound & push alerts when app/browser is closed.
+                  </p>
+                  <button
+                    onClick={handleSubscribePush}
+                    disabled={isSubscribing}
+                    className="w-full py-1.5 px-2 bg-[#76b900] hover:bg-[#68a500] text-white font-bold rounded-lg text-[11px] transition shadow-xs"
+                  >
+                    {isSubscribing ? 'Enabling...' : 'Enable Push Alerts'}
+                  </button>
+                </div>
+              )}
+
+              {pushMsg && (
+                <span className="text-[10px] font-semibold text-center text-slate-700 mt-1">
+                  {pushMsg}
+                </span>
+              )}
+            </div>
+
+            {/* Closed-App Push Icon Button (Mobile View - Icon Only) */}
+            <button 
+              onClick={pushStatus === 'subscribed' ? handleTestPush : handleSubscribePush}
+              title={pushStatus === 'subscribed' ? 'Push Alerts Active (Click to test)' : 'Enable Closed-App Push Alerts'}
+              className="md:hidden p-2 rounded-xl border border-slate-100 hover:bg-slate-50 text-slate-600 cursor-pointer relative"
+            >
+              <Smartphone size={20} className={pushStatus === 'subscribed' ? 'text-[#76b900]' : 'text-slate-400'} />
+              {pushStatus === 'subscribed' && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full"></span>
+              )}
             </button>
 
             {/* Order status queues */}
