@@ -73,7 +73,7 @@ export async function checkIsSubscribed() {
 /**
  * Subscribe user to Push Notifications for a specific store
  */
-export async function subscribeToPushNotifications(storeId, token) {
+export async function subscribeToPushNotifications(storeId, token, forceNew = false) {
   if (!isPushNotificationSupported()) {
     throw new Error('Push notifications are not supported by this browser.');
   }
@@ -105,6 +105,16 @@ export async function subscribeToPushNotifications(storeId, token) {
   // 4. Subscribe with PushManager
   const applicationServerKey = urlBase64ToUint8Array(publicKey);
   let subscription = await registration.pushManager.getSubscription();
+
+  // If forceNew is requested (e.g. user clicked Enable Push Alerts to refresh stale key)
+  if (forceNew && subscription) {
+    try {
+      await subscription.unsubscribe();
+      subscription = null;
+    } catch (subErr) {
+      console.warn('Error resetting previous subscription:', subErr);
+    }
+  }
 
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({

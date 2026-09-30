@@ -84,7 +84,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
     setIsSubscribing(true);
     setPushMsg('');
     try {
-      await subscribeToPushNotifications(currentStore._id, token);
+      await subscribeToPushNotifications(currentStore._id, token, true);
       setPushStatus('subscribed');
       setPushMsg('✅ Closed-app push alerts enabled!');
       setTimeout(() => setPushMsg(''), 4000);

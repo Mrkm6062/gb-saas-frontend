@@ -363,7 +363,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     setIsSubscribing(true);
     setTestPushMsg('');
     try {
-      await subscribeToPushNotifications(currentStoreInfo._id);
+      await subscribeToPushNotifications(currentStoreInfo._id, null, true);
       setPushStatus('subscribed');
       setTestPushMsg('🎉 Push notifications enabled on this device!');
       setTimeout(() => setTestPushMsg(''), 5000);
