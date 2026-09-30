@@ -1,5 +1,5 @@
 // Galibrand Dashboard - Progressive Web App Service Worker
-const SW_VERSION = 'v1.0.0';
+const SW_VERSION = 'v1.0.1';
 
 self.addEventListener('install', (event) => {
   // Activate immediately without waiting
@@ -26,22 +26,38 @@ self.addEventListener('push', (event) => {
   }
 
   const title = data.title || '🎉 New Live Order!';
+  const origin = self.location.origin || '';
+
+  // Ensure absolute URLs for icons
+  const iconUrl = data.icon 
+    ? (data.icon.startsWith('http') ? data.icon : origin + data.icon) 
+    : (origin + '/icon-192x192.png');
+  const badgeUrl = data.badge 
+    ? (data.badge.startsWith('http') ? data.badge : origin + data.badge) 
+    : (origin + '/icon-192x192.png');
+
   const options = {
     body: data.body || 'A new order has been received on your store.',
-    icon: data.icon || '/icon-192x192.png',
-    badge: data.badge || '/icon-192x192.png',
+    icon: iconUrl,
+    badge: badgeUrl,
     tag: data.tag || 'live-order-' + Date.now(),
     renotify: true,
-    requireInteraction: true, // Keep notification visible until user interacts with it
-    vibrate: [250, 100, 250, 100, 250],
+    requireInteraction: true,
     data: data.data || { url: '/' },
-    actions: [
-      { action: 'open_orders', title: '👀 View Live Orders' }
-    ]
   };
 
+  if ('vibrate' in navigator) {
+    options.vibrate = [250, 100, 250, 100, 250];
+  }
+
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    self.registration.showNotification(title, options).catch((err) => {
+      console.warn('[SW] showNotification with full options failed, falling back to minimal:', err);
+      return self.registration.showNotification(title, {
+        body: data.body || 'A new order has been received on your store.',
+        icon: iconUrl,
+      });
+    })
   );
 });
 
@@ -49,7 +65,6 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const action = event.action;
   const targetUrl = (event.notification.data && event.notification.data.url) 
     ? event.notification.data.url 
     : '/';

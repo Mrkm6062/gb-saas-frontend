@@ -384,12 +384,12 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     setTestPushLoading(true);
     setTestPushMsg('');
     try {
-      await triggerTestPushNotification(currentStoreInfo._id);
-      setTestPushMsg('🚀 Test alert sent! Check your notification bar.');
+      const data = await triggerTestPushNotification(currentStoreInfo._id);
+      setTestPushMsg('🚀 ' + (data.message || 'Test alert sent! Check your notification bar.'));
       setTimeout(() => setTestPushMsg(''), 5000);
     } catch (err) {
       setTestPushMsg('❌ Failed: ' + (err.message || 'Error triggering push'));
-      setTimeout(() => setTestPushMsg(''), 5000);
+      setTimeout(() => setTestPushMsg(''), 6000);
     } finally {
       setTestPushLoading(false);
     }

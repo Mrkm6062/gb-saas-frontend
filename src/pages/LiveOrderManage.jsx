@@ -102,12 +102,12 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
     setTestPushLoading(true);
     setPushMsg('');
     try {
-      await triggerTestPushNotification(currentStore._id, token);
-      setPushMsg('🚀 Test alert sent! Check your device.');
-      setTimeout(() => setPushMsg(''), 4000);
+      const data = await triggerTestPushNotification(currentStore._id, token);
+      setPushMsg('🚀 ' + (data.message || 'Test alert sent! Check your device.'));
+      setTimeout(() => setPushMsg(''), 5000);
     } catch (err) {
-      setPushMsg('❌ Test failed');
-      setTimeout(() => setPushMsg(''), 4000);
+      setPushMsg('❌ ' + (err.message || 'Test failed'));
+      setTimeout(() => setPushMsg(''), 6000);
     } finally {
       setTestPushLoading(false);
     }
