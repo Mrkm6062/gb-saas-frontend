@@ -440,7 +440,7 @@ const ManageOrders = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Orders">
-      <div className="w-full px-6 py-10">
+      <div className="w-full px-3.5 sm:px-6 py-6 sm:py-10">
         {/* <h2 className="text-3xl font-extrabold mb-2 text-slate-800">Order Management</h2>
         <p className="text-slate-500 mb-8">View and process incoming orders for <span className="font-bold text-slate-700">{currentStore.storeName}</span></p> */}
 
@@ -491,7 +491,8 @@ const ManageOrders = ({ token, stores, onLogout }) => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Desktop View: Full Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
@@ -595,6 +596,143 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile View: Clean Vertical Order Cards (No horizontal side scroll) */}
+          <div className="block md:hidden">
+            {loading ? (
+              <div className="p-8 text-center text-slate-400 font-medium animate-pulse">Loading orders...</div>
+            ) : orders.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 font-medium">No orders received yet.</div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 font-medium">No orders match your search and filters.</div>
+            ) : (
+              <div className="p-3 space-y-3">
+                {paginatedOrders.map(order => (
+                  <div key={order._id} className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 transition-colors">
+                    {/* Top Row: Order ID, Date, Channel */}
+                    <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-200/60">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-xs font-mono font-bold text-slate-800">#{order._id.slice(-6).toUpperCase()}</span>
+                        <span className="text-[10px] text-slate-400">•</span>
+                        <span className="text-[11px] text-slate-500 truncate">{new Date(order.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div>
+                        {order.paymentMethod === 'whatsapp' || order.WhasAppOrder ? (
+                          <span className="text-[10px] font-bold text-[#76b900] bg-green-50 px-2 py-0.5 rounded border border-green-200">WhatsApp</span>
+                        ) : order.paymentMethod === 'razorpay' ? (
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Online</span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">COD</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Middle Row: Customer Info, Items & Amount */}
+                    <div className="flex items-start justify-between gap-3 text-xs mb-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-800 text-sm truncate">{order.customerName}</p>
+                        {order.customerPhone && <p className="text-[11px] text-slate-500 mt-0.5">{order.customerPhone}</p>}
+                        {order.address && (
+                          <p className="text-[11px] text-slate-400 truncate mt-0.5" title={`${order.address.addressLine1 || ''}, ${order.address.city || ''}`}>
+                            {order.address.addressLine1 ? `${order.address.addressLine1}, ` : ''}{order.address.city || ''}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-base font-extrabold text-green-600 block">₹{order.totalAmount}</span>
+                        <span className="text-[11px] text-slate-500 block">{order.orderItems?.length || 0} item{(order.orderItems?.length || 0) === 1 ? '' : 's'}</span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Status Selectors & View Details */}
+                    <div className="pt-2.5 border-t border-slate-200/60 flex flex-col gap-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* Payment Status Dropdown */}
+                        <div>
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Payment</label>
+                          <select 
+                            value={order.paymentStatus} 
+                            onChange={(e) => handleStatusChange(order._id, 'payment', e.target.value, order)} 
+                            disabled={['canceled', 'returned'].includes(order.orderStatus) && order.paymentStatus !== 'paid'}
+                            className={`w-full text-xs font-bold rounded-lg px-2 py-1.5 outline-none border cursor-pointer ${
+                              order.paymentStatus === 'paid' 
+                                ? 'bg-green-50 text-green-700 border-green-200' 
+                                : order.paymentStatus === 'refunded'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-orange-50 text-orange-700 border-orange-200'
+                            }`}
+                          >
+                            <option value="pending" disabled={['canceled', 'returned'].includes(order.orderStatus)}>Pending</option>
+                            <option value="paid" disabled={['canceled', 'returned'].includes(order.orderStatus) && order.paymentStatus === 'paid'}>Paid</option>
+                            {(order.paymentStatus === 'refunded' || (['canceled', 'returned'].includes(order.orderStatus) && order.paymentStatus === 'paid')) && (
+                              <option value="refunded">Refunded</option>
+                            )}
+                          </select>
+                        </div>
+
+                        {/* Order Status Dropdown */}
+                        <div>
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Status</label>
+                          <div className="flex items-center gap-1.5">
+                            <select 
+                              value={order.orderStatus} 
+                              onChange={(e) => handleStatusChange(order._id, 'order', e.target.value, order)} 
+                              disabled={['canceled', 'returned'].includes(order.orderStatus) || isDeliveredMoreThan10Days(order)}
+                              className={`w-full text-xs font-bold rounded-lg px-2 py-1.5 outline-none border cursor-pointer ${
+                                order.orderStatus === 'delivered' 
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                                  : order.orderStatus === 'shipped' 
+                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
+                                  : order.orderStatus === 'canceled' 
+                                  ? 'bg-red-50 text-red-700 border-red-200' 
+                                  : order.orderStatus === 'returned' 
+                                  ? 'bg-orange-50 text-orange-700 border-orange-200' 
+                                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              <option value="placed" disabled={order.orderStatus !== 'placed'}>Placed</option>
+                              <option value="shipped" disabled={order.orderStatus !== 'placed'}>Shipped</option>
+                              <option value="delivered" disabled={order.orderStatus !== 'placed' && order.orderStatus !== 'shipped' && order.orderStatus !== 'delivered'}>Delivered</option>
+                              <option value="canceled" disabled={order.orderStatus !== 'placed' && order.orderStatus !== 'shipped'}>Canceled</option>
+                              <option value="returned" disabled={order.orderStatus !== 'delivered' && order.orderStatus !== 'returned'}>Returned</option>
+                            </select>
+                            {order.orderStatus === 'shipped' && (
+                              <button 
+                                onClick={() => {
+                                  const isOwn = order.ShippingMethod && !order.ShippingMethod.startsWith('By Shipping Company');
+                                  setTrackingModal({
+                                    isOpen: true,
+                                    orderId: order._id,
+                                    ShippingMethod: isOwn ? 'By Store Name' : 'By Shipping Company',
+                                    ShippingCompany: order.ShippingCompany || '',
+                                    ShippingTrackingNumber: order.ShippingTrackingNumber || '',
+                                    DeliveryPersonName: order.DeliveryPersonName || '',
+                                    DeliveryPersonPhone: order.DeliveryPersonPhone || ''
+                                  });
+                                }}
+                                className="p-1.5 text-indigo-600 hover:text-indigo-800 transition bg-indigo-50 hover:bg-indigo-100 rounded-lg flex items-center justify-center shrink-0"
+                                title="Edit Tracking Details"
+                              >
+                                <Truck size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* View Details Button */}
+                      <button 
+                        onClick={() => setSelectedOrder(order)} 
+                        className="w-full mt-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:text-blue-800 transition text-center shadow-2xs"
+                      >
+                        View Full Order Details
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Pagination Controls */}
