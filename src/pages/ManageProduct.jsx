@@ -816,7 +816,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Products">
-    <div className="w-full px-6 py-10">
+    <div className="w-full px-3.5 sm:px-6 py-6 sm:py-10">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
         <div>
           {maxProducts > 0 && (
@@ -878,120 +878,282 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
       {/* Product List */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="grid grid-cols-12 gap-4 p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-sm items-center">
-          <div className="col-span-3">Product Name</div><div className="col-span-2">Category</div><div className="col-span-2">Price</div><div className="col-span-2">Stock</div><div className="col-span-1 text-center">Status</div>
-          <div className="col-span-2 text-right flex justify-end">
-            {isBulkEditing ? (
-              <button onClick={handleSaveBulkEdits} disabled={bulkSaving || Object.keys(bulkEdits).length === 0} className="px-4 py-1.5 bg-[#76b900] text-white rounded-lg flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50 transition-opacity">
-                <Save size={16} /> {bulkSaving ? 'Saving...' : 'Save All'}
-              </button>
-            ) : 'Actions'}
+        {/* Desktop View: Full Table */}
+        <div className="hidden md:block">
+          <div className="grid grid-cols-12 gap-4 p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-sm items-center">
+            <div className="col-span-3">Product Name</div><div className="col-span-2">Category</div><div className="col-span-2">Price</div><div className="col-span-2">Stock</div><div className="col-span-1 text-center">Status</div>
+            <div className="col-span-2 text-right flex justify-end">
+              {isBulkEditing ? (
+                <button onClick={handleSaveBulkEdits} disabled={bulkSaving || Object.keys(bulkEdits).length === 0} className="px-4 py-1.5 bg-[#76b900] text-white rounded-lg flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50 transition-opacity">
+                  <Save size={16} /> {bulkSaving ? 'Saving...' : 'Save All'}
+                </button>
+              ) : 'Actions'}
+            </div>
           </div>
-        </div>
-        {products.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 font-medium">No products found. Add your first product above!</div>
-        ) : paginatedProducts.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 font-medium">No products match the selected filter.</div>
-        ) : (
-          paginatedProducts.map(p => (
-            <div key={p._id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 items-center hover:bg-slate-50 transition">
-              <div className="col-span-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] text-slate-400 font-semibold">
-                  {p.images && p.images.length > 0 ? (
-                    <img 
-                      src={p.images[0]} 
-                      alt={p.name} 
-                      className="w-full h-full object-cover" 
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = 'No image';
-                      }}
-                    />
-                  ) : p.image ? (
-                    <img 
-                      src={p.image} 
-                      alt={p.name} 
-                      className="w-full h-full object-cover" 
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = 'No image';
-                      }}
-                    />
+          {products.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 font-medium">No products found. Add your first product above!</div>
+          ) : paginatedProducts.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 font-medium">No products match the selected filter.</div>
+          ) : (
+            paginatedProducts.map(p => (
+              <div key={p._id} className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 items-center hover:bg-slate-50 transition">
+                <div className="col-span-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] text-slate-400 font-semibold">
+                    {p.images && p.images.length > 0 ? (
+                      <img 
+                        src={p.images[0]} 
+                        alt={p.name} 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML = 'No image';
+                        }}
+                      />
+                    ) : p.image ? (
+                      <img 
+                        src={p.image} 
+                        alt={p.name} 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML = 'No image';
+                        }}
+                      />
+                    ) : (
+                      "No image"
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-slate-800 truncate" title={p.name}>{p.name}</div>
+                    {p.Brand && <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block">{p.Brand}</span>}
+                  </div>
+                </div>
+                <div className="col-span-2 text-slate-600 text-sm font-medium">
+                  {categories.find(c => c._id === p.category)?.name || <span className="text-slate-400 italic">None</span>}
+                </div>
+                <div className="col-span-2 text-green-600 font-bold">
+                  {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-500 text-xs">₹</span>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="w-full max-w-[80px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-[#76b900] text-sm text-slate-800 font-medium" 
+                        value={bulkEdits[p._id]?.basePrice ?? (p.basePrice || p.price || 0)} 
+                        onChange={e => handleBulkEditChange(p._id, 'basePrice', e.target.value)} 
+                      />
+                    </div>
                   ) : (
-                    "No image"
+                    <div>
+                      {p.discount > 0 ? (
+                        <div>
+                          <span className="line-through text-slate-400 text-xs mr-1">₹{p.basePrice}</span>
+                          <span>₹{p.price}</span>
+                          <span className="text-red-500 text-[10px] font-bold ml-1">(-{p.discount}%)</span>
+                        </div>
+                      ) : (
+                        `₹${p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}`
+                      )}
+                    </div>
                   )}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-slate-800 truncate" title={p.name}>{p.name}</div>
-                  {p.Brand && <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block">{p.Brand}</span>}
-                </div>
-              </div>
-              <div className="col-span-2 text-slate-600 text-sm font-medium">
-                {categories.find(c => c._id === p.category)?.name || <span className="text-slate-400 italic">None</span>}
-              </div>
-              <div className="col-span-2 text-green-600 font-bold">
-                {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-500 text-xs">₹</span>
+                <div className="col-span-2 text-slate-600">
+                  {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
                     <input 
                       type="number" 
                       min="0"
                       className="w-full max-w-[80px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-[#76b900] text-sm text-slate-800 font-medium" 
-                      value={bulkEdits[p._id]?.basePrice ?? (p.basePrice || p.price || 0)} 
-                      onChange={e => handleBulkEditChange(p._id, 'basePrice', e.target.value)} 
+                      value={bulkEdits[p._id]?.totalStock ?? (p.totalStock !== undefined ? p.totalStock : (p.stock || 0))} 
+                      onChange={e => handleBulkEditChange(p._id, 'totalStock', e.target.value)} 
                     />
-                  </div>
-                ) : (
-                  <div>
-                    {p.discount > 0 ? (
-                      <div>
-                        <span className="line-through text-slate-400 text-xs mr-1">₹{p.basePrice}</span>
-                        <span>₹{p.price}</span>
-                        <span className="text-red-500 text-[10px] font-bold ml-1">(-{p.discount}%)</span>
-                      </div>
-                    ) : (
-                      `₹${p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}`
-                    )}
-                  </div>
-                )}
+                  ) : (
+                    `${p.totalStock !== undefined ? p.totalStock : (p.stock || 0)} ${p.unitType || 'units'}`
+                  )}
+                  {isBulkEditing && p.variants?.length > 0 && <span className="text-[10px] font-bold text-amber-500 block leading-tight mt-1 bg-amber-50 px-2 py-0.5 rounded w-fit">Has variants</span>}
+                </div>
+                <div className="col-span-1 text-center">
+                  <button 
+                    type="button"
+                    onClick={() => handleToggleActive(p)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${p.isActive !== false ? 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100' : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'}`}
+                    title="Click to toggle status"
+                  >
+                    {p.isActive !== false ? 'Active' : 'Inactive'}
+                  </button>
+                </div>
+                <div className="col-span-2 text-right flex justify-end gap-2">
+                  {!isBulkEditing && (
+                    <>
+                      <button onClick={() => handleEdit(p)} className="text-blue-500 hover:text-blue-700 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded-lg transition">Edit</button>
+                      <button onClick={() => handleDelete(p._id)} className="text-red-500 hover:text-red-700 text-sm font-bold bg-red-50 px-3 py-1.5 rounded-lg transition">Delete</button>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="col-span-2 text-slate-600">
-                {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
-                  <input 
-                    type="number" 
-                    min="0"
-                    className="w-full max-w-[80px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-[#76b900] text-sm text-slate-800 font-medium" 
-                    value={bulkEdits[p._id]?.totalStock ?? (p.totalStock !== undefined ? p.totalStock : (p.stock || 0))} 
-                    onChange={e => handleBulkEditChange(p._id, 'totalStock', e.target.value)} 
-                  />
-                ) : (
-                  `${p.totalStock !== undefined ? p.totalStock : (p.stock || 0)} ${p.unitType || 'units'}`
-                )}
-                {isBulkEditing && p.variants?.length > 0 && <span className="text-[10px] font-bold text-amber-500 block leading-tight mt-1 bg-amber-50 px-2 py-0.5 rounded w-fit">Has variants</span>}
+            ))
+          )}
+        </div>
+
+        {/* Mobile View: Product Cards with Quick Edit support */}
+        <div className="block md:hidden">
+          {/* Quick Edit Sticky/Top Banner on Mobile */}
+          {isBulkEditing && (
+            <div className="bg-emerald-50 border-b border-emerald-200 p-3 flex items-center justify-between gap-2">
+              <div>
+                <span className="text-xs font-bold text-emerald-800 block">Quick Edit Mode</span>
+                <span className="text-[10px] text-emerald-600 font-medium">
+                  {Object.keys(bulkEdits).length} product{Object.keys(bulkEdits).length === 1 ? '' : 's'} modified
+                </span>
               </div>
-              <div className="col-span-1 text-center">
-                <button 
-                  type="button"
-                  onClick={() => handleToggleActive(p)}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${p.isActive !== false ? 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100' : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'}`}
-                  title="Click to toggle status"
-                >
-                  {p.isActive !== false ? 'Active' : 'Inactive'}
-                </button>
-              </div>
-              <div className="col-span-2 text-right flex justify-end gap-2">
-                {!isBulkEditing && (
-                  <>
-                    <button onClick={() => handleEdit(p)} className="text-blue-500 hover:text-blue-700 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded-lg transition">Edit</button>
-                    <button onClick={() => handleDelete(p._id)} className="text-red-500 hover:text-red-700 text-sm font-bold bg-red-50 px-3 py-1.5 rounded-lg transition">Delete</button>
-                  </>
-                )}
-              </div>
+              <button 
+                onClick={handleSaveBulkEdits} 
+                disabled={bulkSaving || Object.keys(bulkEdits).length === 0} 
+                className="px-3.5 py-1.5 bg-[#76b900] text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-opacity shrink-0"
+              >
+                <Save size={14} /> {bulkSaving ? 'Saving...' : 'Save All'}
+              </button>
             </div>
-          ))
-        )}
+          )}
+
+          {products.length === 0 ? (
+            <div className="p-6 text-center text-slate-500 text-sm font-medium">No products found. Add your first product above!</div>
+          ) : paginatedProducts.length === 0 ? (
+            <div className="p-6 text-center text-slate-500 text-sm font-medium">No products match the selected filter.</div>
+          ) : (
+            <div className="p-3 space-y-2.5">
+              {paginatedProducts.map(p => (
+                <div key={p._id} className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 transition-colors">
+                  {/* Top row: Image, Name, Category/Brand, Status */}
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-12 h-12 rounded-lg bg-white border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center text-[10px] text-slate-400 font-semibold shadow-2xs">
+                      {p.images && p.images.length > 0 ? (
+                        <img 
+                          src={p.images[0]} 
+                          alt={p.name} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = 'No image';
+                          }}
+                        />
+                      ) : p.image ? (
+                        <img 
+                          src={p.image} 
+                          alt={p.name} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = 'No image';
+                          }}
+                        />
+                      ) : (
+                        "No image"
+                      )}
+                    </div>
+                    
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-slate-800 text-sm truncate" title={p.name}>{p.name}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span className="text-[10px] bg-white text-slate-600 font-semibold px-2 py-0.5 rounded border border-slate-200 truncate max-w-[130px]">
+                          {categories.find(c => c._id === p.category)?.name || 'Uncategorized'}
+                        </span>
+                        {p.Brand && (
+                          <span className="text-[10px] bg-slate-200/80 text-slate-600 font-bold px-1.5 py-0.5 rounded truncate max-w-[100px]">
+                            {p.Brand}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button 
+                      type="button"
+                      onClick={() => handleToggleActive(p)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all shrink-0 ${p.isActive !== false ? 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100' : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'}`}
+                      title="Click to toggle status"
+                    >
+                      {p.isActive !== false ? 'Active' : 'Inactive'}
+                    </button>
+                  </div>
+
+                  {/* Middle row: Quick Edit inputs OR Normal display */}
+                  {isBulkEditing ? (
+                    <div className="mt-2.5 pt-2.5 border-t border-slate-200/70">
+                      {(!p.variants || p.variants.length === 0) ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Price (₹)</label>
+                            <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2 py-1.5 focus-within:border-[#76b900]">
+                              <span className="text-slate-400 text-xs">₹</span>
+                              <input 
+                                type="number" 
+                                min="0"
+                                className="w-full text-xs text-slate-800 font-bold outline-none bg-transparent" 
+                                value={bulkEdits[p._id]?.basePrice ?? (p.basePrice || p.price || 0)} 
+                                onChange={e => handleBulkEditChange(p._id, 'basePrice', e.target.value)} 
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Stock ({p.unitType || 'unit'})</label>
+                            <div className="bg-white border border-slate-300 rounded-lg px-2 py-1.5 focus-within:border-[#76b900]">
+                              <input 
+                                type="number" 
+                                min="0"
+                                className="w-full text-xs text-slate-800 font-bold outline-none bg-transparent" 
+                                value={bulkEdits[p._id]?.totalStock ?? (p.totalStock !== undefined ? p.totalStock : (p.stock || 0))} 
+                                onChange={e => handleBulkEditChange(p._id, 'totalStock', e.target.value)} 
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg flex items-center justify-between">
+                          <span>Has variants (edit individually)</span>
+                          <button onClick={() => handleEdit(p)} className="text-amber-800 underline text-xs font-bold">Edit</button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-slate-200/70 text-xs">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Price</span>
+                          {p.discount > 0 ? (
+                            <div className="flex items-baseline gap-1">
+                              <span className="line-through text-slate-400 text-[10px]">₹{p.basePrice}</span>
+                              <span className="text-green-600 font-black text-xs">₹{p.price}</span>
+                              <span className="text-red-500 text-[9px] font-bold">(-{p.discount}%)</span>
+                            </div>
+                          ) : (
+                            <span className="text-green-600 font-black text-xs">
+                              ₹{p.basePrice || p.price || (p.variants?.length > 0 ? p.variants[0].price : 0)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="h-5 w-px bg-slate-200"></div>
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Stock</span>
+                          <span className="text-xs font-bold text-slate-700">
+                            {p.totalStock !== undefined ? p.totalStock : (p.stock || 0)} <span className="text-[10px] font-normal text-slate-400">{p.unitType || 'units'}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button onClick={() => handleEdit(p)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 text-xs font-bold px-2.5 py-1 rounded-lg transition">Edit</button>
+                        <button onClick={() => handleDelete(p._id)} className="text-red-600 bg-red-50 hover:bg-red-100 text-xs font-bold px-2.5 py-1 rounded-lg transition">Delete</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         
         {/* Pagination Controls */}
         {displayedProducts.length > 0 && (
