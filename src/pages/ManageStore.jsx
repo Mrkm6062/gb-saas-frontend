@@ -1085,7 +1085,18 @@ const ManageStore = ({ token, stores, onLogout }) => {
           onClick={() => setActiveTab('qrcode')} 
           className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'qrcode' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
         >
-          QR Code
+          Store QR Code
+        </button>
+        <button 
+          type="button"
+          onClick={() => setActiveTab('table-qr')} 
+          className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'table-qr' ? 'bg-orange-600 text-white shadow-lg shadow-orange-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+        >
+          <QrCode size={16} />
+          <span>Table QR Codes</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${activeTab === 'table-qr' ? 'bg-white text-orange-600' : 'bg-orange-100 text-orange-700'}`}>
+            {tablesList.length}
+          </span>
         </button>
         <button 
           type="button"
@@ -1171,6 +1182,30 @@ const ManageStore = ({ token, stores, onLogout }) => {
                 />
                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#76b900]"></div>
               </label>
+            </div>
+
+            {/* Always visible Action Button to View/Generate Table QR Codes */}
+            <div className="p-4 bg-white border-2 border-orange-200 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
+              <div>
+                <p className="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                  <QrCode size={16} className="text-orange-600" />
+                  <span>Table-wise QR Codes ({tablesList.length} Tables Active)</span>
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Customers scan these table QR codes to view the menu and place dine-in orders automatically.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRestaurant(true);
+                  setActiveTab('table-qr');
+                }}
+                className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-orange-600/25 transition cursor-pointer"
+              >
+                <QrCode size={16} />
+                <span>View & Print Table QR Codes</span>
+              </button>
             </div>
 
             {isRestaurant && (
@@ -1596,6 +1631,154 @@ const ManageStore = ({ token, stores, onLogout }) => {
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Download A4 Poster
           </button>
+
+          <div className="mt-8 w-full pt-6 border-t border-slate-200 flex flex-col items-center">
+            <h3 className="font-extrabold text-base text-slate-800 mb-1">Looking for Dining Table QR Codes?</h3>
+            <p className="text-xs text-slate-500 mb-4 max-w-md">Generate individual QR codes for Table 1 to Table {tablesList.length} so restaurant customers can scan from their table and order.</p>
+            <button
+              type="button"
+              onClick={() => setActiveTab('table-qr')}
+              className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition flex items-center gap-2 shadow-md cursor-pointer"
+            >
+              <QrCode size={16} />
+              <span>Go to Table QR Codes ({tablesList.length} Tables) &rarr;</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Table-wise QR Codes Tab View */}
+      {activeTab === 'table-qr' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn space-y-6">
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-200">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-black shadow-lg shadow-orange-500/20">
+                <QrCode size={26} />
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-slate-800">
+                  Table QR Codes for Contactless Ordering
+                </h2>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  {currentStore.storeName} &bull; {tablesList.length} Active Tables &bull; Base: <span className="font-mono text-slate-700">{getStoreBaseUrl()}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handlePrintAllTableCards}
+                className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-orange-600/20 transition cursor-pointer"
+              >
+                <Printer size={16} />
+                <span>Print All Table Standees</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('settings')}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
+              >
+                Configure Tables Count
+              </button>
+            </div>
+          </div>
+
+          {/* Search Filter Toolbar */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            <div className="relative w-full sm:w-80">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search table number (e.g. 1, 2, VIP)..."
+                value={tableFilterSearch}
+                onChange={(e) => setTableFilterSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-orange-500 shadow-xs"
+              />
+            </div>
+            <div className="text-xs text-slate-500 font-semibold">
+              Showing {tablesList.filter(t => !tableFilterSearch.trim() || t.toLowerCase().includes(tableFilterSearch.toLowerCase())).length} of {tablesList.length} tables
+            </div>
+          </div>
+
+          {/* Table Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {tablesList
+              .filter(t => !tableFilterSearch.trim() || t.toLowerCase().includes(tableFilterSearch.toLowerCase()))
+              .map(t => {
+                const tableUrl = getTableUrl(t);
+                const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(tableUrl)}`;
+                const isCopied = copiedTable === t;
+
+                return (
+                  <div
+                    key={t}
+                    className="bg-white rounded-2xl border-2 border-orange-100 hover:border-orange-400 p-4 flex flex-col justify-between shadow-xs hover:shadow-md transition duration-200 group"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="px-3.5 py-1 rounded-full bg-orange-600 text-white font-black text-xs uppercase tracking-wider shadow-xs">
+                        TABLE {t}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyTableLink(t)}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-orange-100 text-slate-600 hover:text-orange-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                        title="Copy Direct Link"
+                      >
+                        <Copy size={13} />
+                        <span>{isCopied ? 'Copied!' : 'Copy Link'}</span>
+                      </button>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl mb-3 flex items-center justify-center">
+                      <img
+                        src={qrImgUrl}
+                        alt={`Table ${t} QR`}
+                        className="w-36 h-36 object-contain rounded-lg border border-slate-200 bg-white p-1"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="p-2 rounded-lg bg-slate-100/80 font-mono text-[10px] text-slate-600 truncate select-all" title={tableUrl}>
+                        {tableUrl}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadTableQr(t)}
+                          className="py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer"
+                          title="Download QR Image"
+                        >
+                          <Download size={12} />
+                          <span>QR</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePrintSingleTableStandee(t)}
+                          className="py-1.5 px-2 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer"
+                          title="Print Single Standee"
+                        >
+                          <Printer size={12} />
+                          <span>Print</span>
+                        </button>
+                        <a
+                          href={tableUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-1.5 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] flex items-center justify-center gap-1 transition text-center"
+                          title="Test Order Flow"
+                        >
+                          <ExternalLink size={12} />
+                          <span>Test</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
         </div>
       )}
 
