@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../api';
 import AdminLayout from '../components/AdminLayout';
-import { Link as LinkIcon, Trash2, Plus, CreditCard, Download, Store, Package, Wallet, Building, MapPin, Upload, ArrowRight, CheckCircle, X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Link as LinkIcon, Trash2, Plus, CreditCard, Download, Store, Package, Wallet, Building, MapPin, Upload, ArrowRight, CheckCircle, X, ChevronRight, ChevronLeft, Printer, Copy, ExternalLink, Search, QrCode } from 'lucide-react';
 
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
@@ -71,6 +71,293 @@ const ManageStore = ({ token, stores, onLogout }) => {
       : ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
   );
   const [tableCountPreset, setTableCountPreset] = useState("10");
+  const [showTableQrModal, setShowTableQrModal] = useState(false);
+  const [tableFilterSearch, setTableFilterSearch] = useState('');
+  const [copiedTable, setCopiedTable] = useState(null);
+
+  const getStoreBaseUrl = () => {
+    if (currentStore.customDomain) return `https://${currentStore.customDomain}`;
+    if (currentStore.subdomain) {
+      if (currentStore.subdomain.includes('.')) {
+        return `https://${currentStore.subdomain}`;
+      }
+      return `https://${currentStore.subdomain}.galibrand.cloud`;
+    }
+    return window.location.origin;
+  };
+
+  const getTableUrl = (tableNo) => {
+    const base = getStoreBaseUrl();
+    return `${base}/?table=${encodeURIComponent(tableNo)}`;
+  };
+
+  const handleCopyTableLink = (tableNo) => {
+    const url = getTableUrl(tableNo);
+    navigator.clipboard.writeText(url);
+    setCopiedTable(tableNo);
+    showToast(`Copied Table ${tableNo} link to clipboard!`, 'success');
+    setTimeout(() => setCopiedTable(null), 3000);
+  };
+
+  const handleDownloadTableQr = async (tableNo) => {
+    const url = getTableUrl(tableNo);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(url)}`;
+    try {
+      const response = await fetch(qrUrl);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${(currentStore.storeName || 'Store').replace(/\s+/g, '_')}_Table_${tableNo}_QR.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+      showToast(`Downloaded Table ${tableNo} QR Code!`, 'success');
+    } catch (e) {
+      window.open(qrUrl, '_blank');
+    }
+  };
+
+  const handlePrintSingleTableStandee = (tableNo) => {
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+      showToast('Please allow popups to print table standee.', 'error');
+      return;
+    }
+
+    const url = getTableUrl(tableNo);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=450x450&data=${encodeURIComponent(url)}`;
+    const storeLogo = currentStore.logo ? `<img src="${currentStore.logo}" style="max-height: 60px; max-width: 180px; object-fit: contain; margin-bottom: 12px;" />` : '';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Table ${tableNo} Standee - ${currentStore.storeName}</title>
+        <style>
+          @page { size: A5 portrait; margin: 10mm; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #fff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            text-align: center;
+            -webkit-print-color-adjust: exact;
+          }
+          .card {
+            width: 100%;
+            max-width: 380px;
+            padding: 30px 24px;
+            border: 3px solid #f97316;
+            border-radius: 28px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            box-sizing: border-box;
+          }
+          .table-badge {
+            background: #f97316;
+            color: #ffffff;
+            font-size: 26px;
+            font-weight: 900;
+            padding: 8px 24px;
+            border-radius: 100px;
+            display: inline-block;
+            margin-bottom: 18px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+          }
+          .qr-img {
+            width: 240px;
+            height: 240px;
+            display: block;
+            margin: 15px auto;
+            border: 8px solid #f8fafc;
+            border-radius: 16px;
+          }
+          h2 {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 8px 0 4px;
+          }
+          p {
+            font-size: 13px;
+            color: #64748b;
+            margin: 0 0 12px;
+            line-height: 1.4;
+          }
+          .steps {
+            background: #fff7ed;
+            border: 1px dashed #fdba74;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #9a3412;
+            font-weight: bold;
+            margin-top: 15px;
+          }
+          .url-hint {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-top: 12px;
+            word-break: break-all;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          ${storeLogo}
+          <div class="table-badge">TABLE ${tableNo}</div>
+          <h2>SCAN TO ORDER</h2>
+          <p>Point phone camera to view our digital menu & place your order directly!</p>
+          <img src="${qrUrl}" class="qr-img" />
+          <div class="steps">
+            1. Scan QR &bull; 2. Add to Cart &bull; 3. Checkout
+          </div>
+          <div class="url-hint">${url}</div>
+        </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 400);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWin.document.write(html);
+    printWin.document.close();
+  };
+
+  const handlePrintAllTableCards = () => {
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+      showToast('Please allow popups to print table standees.', 'error');
+      return;
+    }
+
+    const storeLogo = currentStore.logo ? `<img src="${currentStore.logo}" style="max-height: 38px; max-width: 140px; object-fit: contain; margin-bottom: 6px;" />` : '';
+
+    const cardsHtml = tablesList.map(t => {
+      const url = getTableUrl(t);
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+      return `
+        <div class="standee-card">
+          ${storeLogo}
+          <div class="table-badge">TABLE ${t}</div>
+          <div class="scan-title">SCAN TO ORDER</div>
+          <p class="scan-desc">Scan to view digital menu & order</p>
+          <img src="${qrUrl}" class="qr-img" />
+          <div class="order-steps">
+            1. Scan &bull; 2. Choose &bull; 3. Order
+          </div>
+          <div class="table-url">${url}</div>
+        </div>
+      `;
+    }).join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${currentStore.storeName} - All Table Standees</title>
+        <style>
+          @page { size: A4 portrait; margin: 10mm; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #fff;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+          }
+          .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-gap: 15mm;
+            box-sizing: border-box;
+          }
+          .standee-card {
+            border: 2px dashed #ea580c;
+            border-radius: 20px;
+            padding: 20px 16px;
+            text-align: center;
+            background: #ffffff;
+            box-sizing: border-box;
+            page-break-inside: avoid;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+          }
+          .table-badge {
+            background: #ea580c;
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 900;
+            padding: 6px 18px;
+            border-radius: 100px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+          }
+          .scan-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+          }
+          .scan-desc {
+            font-size: 11px;
+            color: #64748b;
+            margin: 0 0 8px;
+          }
+          .qr-img {
+            width: 170px;
+            height: 170px;
+            display: block;
+            margin: 0 auto;
+            border: 4px solid #f8fafc;
+            border-radius: 12px;
+          }
+          .order-steps {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 11px;
+            color: #c2410c;
+            font-weight: 800;
+            margin-top: 8px;
+          }
+          .table-url {
+            font-size: 9px;
+            color: #94a3b8;
+            margin-top: 6px;
+            word-break: break-all;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="grid-container">
+          ${cardsHtml}
+        </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWin.document.write(html);
+    printWin.document.close();
+  };
 
   const handleTableCountChange = (val) => {
     setTableCountPreset(val);

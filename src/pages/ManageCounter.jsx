@@ -26,7 +26,8 @@ import {
   ShieldCheck,
   RefreshCw,
   Receipt,
-  Lock
+  Lock,
+  Store as StoreIcon
 } from 'lucide-react';
 
 const ManageCounter = () => {
@@ -49,9 +50,16 @@ const ManageCounter = () => {
   // Login form state
   const [loginStaffId, setLoginStaffId] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [loginStoreCode, setLoginStoreCode] = useState(urlStoreId || '');
+  const defaultStoreCode = urlStoreId || localStorage.getItem('gb_active_store_id') || localStorage.getItem('gb_pos_store_code') || '';
+  const [loginStoreCode, setLoginStoreCode] = useState(defaultStoreCode);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState('');
+
+  useEffect(() => {
+    if (urlStoreId) {
+      setLoginStoreCode(urlStoreId);
+    }
+  }, [urlStoreId]);
 
   // -------------------------------------------------------------
   // POS & Catalog State
@@ -121,6 +129,9 @@ const ManageCounter = () => {
       if (res.ok) {
         localStorage.setItem('gb_pos_staff_token', data.token);
         localStorage.setItem('gb_pos_staff_data', JSON.stringify(data.staff));
+        if (data.staff?.store?.storeId) {
+          localStorage.setItem('gb_pos_store_code', data.staff.store.storeId);
+        }
         setStaffToken(data.token);
         setStaffData(data.staff);
         setLoginPassword('');
@@ -539,16 +550,24 @@ const ManageCounter = () => {
 
           <form onSubmit={handleStaffLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-extrabold uppercase text-slate-700 mb-1.5">
-                Store ID / Code
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. GBS001"
-                value={loginStoreCode}
-                onChange={(e) => setLoginStoreCode(e.target.value.toUpperCase())}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 font-bold text-sm text-slate-900"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-extrabold uppercase text-slate-700">
+                  Store ID / Code
+                </label>
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1 border border-slate-200">
+                  <Lock size={10} className="text-slate-400" /> Locked
+                </span>
+              </div>
+              <div className="relative">
+                <StoreIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={loginStoreCode || 'Default Store'}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 font-mono font-bold text-sm cursor-not-allowed select-none focus:outline-none"
+                />
+              </div>
             </div>
 
             <div>
