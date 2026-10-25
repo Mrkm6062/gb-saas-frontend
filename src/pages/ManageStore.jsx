@@ -62,6 +62,23 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [locationAddress, setLocationAddress] = useState(currentStore.locationAddress || '');
   const [mapLocation, setMapLocation] = useState(currentStore.mapLocation || '');
   const [status, setStatus] = useState('');
+  
+  // Restaurant & Dining Tables configuration
+  const [isRestaurant, setIsRestaurant] = useState(Boolean(currentStore.isRestaurant || (currentStore.storeType && /restaurant|cafe|food|dine|bistro|dhaba|eatery/i.test(currentStore.storeType))));
+  const [tablesList, setTablesList] = useState(
+    Array.isArray(currentStore.tables) && currentStore.tables.length > 0 
+      ? currentStore.tables 
+      : ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+  );
+  const [tableCountPreset, setTableCountPreset] = useState("10");
+
+  const handleTableCountChange = (val) => {
+    setTableCountPreset(val);
+    if (val !== 'custom') {
+      const count = parseInt(val) || 10;
+      setTablesList(Array.from({ length: count }, (_, i) => String(i + 1)));
+    }
+  };
   const [uploadingField, setUploadingField] = useState(null); // 'logo' or 'favicon'
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSpeed, setUploadSpeed] = useState('');
@@ -125,6 +142,15 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setLocationAddress(currentStore.locationAddress || '');
     setMapLocation(currentStore.mapLocation || '');
     setStatus('');
+    setIsRestaurant(Boolean(currentStore.isRestaurant || (currentStore.storeType && /restaurant|cafe|food|dine|bistro|dhaba|eatery/i.test(currentStore.storeType))));
+    if (Array.isArray(currentStore.tables) && currentStore.tables.length > 0) {
+      setTablesList(currentStore.tables);
+      if ([5, 10, 15, 20, 25, 30, 50].includes(currentStore.tables.length)) {
+        setTableCountPreset(String(currentStore.tables.length));
+      } else {
+        setTableCountPreset('custom');
+      }
+    }
   }, [storeId, currentStore.storeName, currentStore.storeType, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation, storeTypes]);
 
   useEffect(() => {
@@ -236,7 +262,9 @@ const ManageStore = ({ token, stores, onLogout }) => {
           supportPhoneNumbers,
           supportEmail,
           locationAddress,
-          mapLocation
+          mapLocation,
+          tables: tablesList,
+          isRestaurant
         })
       });
 
@@ -835,6 +863,98 @@ const ManageStore = ({ token, stores, onLogout }) => {
                 <option value={storeType || "Kirana Stores"}>{storeType || "Kirana Stores (Default)"}</option>
               )}
             </select>
+          </div>
+
+          {/* Restaurant & Dining Table Settings */}
+          <div className="p-5 bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-white border-2 border-orange-200/80 rounded-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl">🍽️</span>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-800">Restaurant & Cafe Dining Setup</h3>
+                  <p className="text-xs text-slate-500 font-medium">Configure tables for QR code ordering, dine-in customers, and counter sales</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={isRestaurant} 
+                  onChange={(e) => setIsRestaurant(e.target.checked)} 
+                  className="sr-only peer" 
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#76b900]"></div>
+              </label>
+            </div>
+
+            {isRestaurant && (
+              <div className="space-y-4 pt-2 border-t border-orange-100 animate-fadeIn">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                      How Many Tables in your Store / Cafe?
+                    </label>
+                    <select
+                      value={tableCountPreset}
+                      onChange={(e) => handleTableCountChange(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-orange-200 rounded-xl focus:ring-2 focus:ring-orange-400 outline-none bg-white font-extrabold text-slate-800"
+                    >
+                      <option value="5">5 Tables (1 - 5)</option>
+                      <option value="10">10 Tables (1 - 10)</option>
+                      <option value="15">15 Tables (1 - 15)</option>
+                      <option value="20">20 Tables (1 - 20)</option>
+                      <option value="25">25 Tables (1 - 25)</option>
+                      <option value="30">30 Tables (1 - 30)</option>
+                      <option value="50">50 Tables (1 - 50)</option>
+                      <option value="custom">Custom Tables Count / List</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Total Active Tables Count: <span className="text-orange-600 font-extrabold">{tablesList.length}</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={tablesList.length}
+                      onChange={(e) => {
+                        const count = Math.max(1, Math.min(100, parseInt(e.target.value) || 1));
+                        const newTables = Array.from({ length: count }, (_, i) => String(i + 1));
+                        setTablesList(newTables);
+                        setTableCountPreset('custom');
+                      }}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-400 outline-none font-extrabold text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    Table Numbers List (Editable / Custom Names, e.g. 1, 2, 3, VIP-1, Patio-1)
+                  </label>
+                  <input
+                    type="text"
+                    value={tablesList.join(', ')}
+                    onChange={(e) => {
+                      const split = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
+                      setTablesList(split);
+                      setTableCountPreset('custom');
+                    }}
+                    placeholder="1, 2, 3, 4, 5..."
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-400 outline-none text-xs font-mono text-slate-800"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+                  {tablesList.map(t => (
+                    <span key={t} className="px-2.5 py-1 rounded-lg bg-orange-100 text-orange-800 font-extrabold text-xs border border-orange-200">
+                      Table {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

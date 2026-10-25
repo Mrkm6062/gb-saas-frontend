@@ -5,6 +5,7 @@ import AdminLayout from '../components/AdminLayout';
 import { 
   Printer, 
   Check, 
+  Utensils, 
   Clock, 
   MapPin, 
   Phone, 
@@ -644,9 +645,22 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                     >
                       {/* Card Header */}
                       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                        <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-xs text-slate-400 font-bold font-mono">ID:</span>
-                          <span className="text-sm font-bold font-mono text-blue-600 ml-1">#{order._id.slice(-6).toUpperCase()}</span>
+                          <span className="text-sm font-bold font-mono text-blue-600">#{order._id.slice(-6).toUpperCase()}</span>
+                          {order.orderType === 'Dine-in' || (order.tableNumber && order.tableNumber !== '0') ? (
+                            <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-800 font-black text-[10px] border border-orange-200">
+                              🍽️ Table {order.tableNumber || '1'}
+                            </span>
+                          ) : order.orderSource === 'counter' ? (
+                            <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-black text-[10px] border border-purple-200">
+                              🏪 Counter POS
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[10px] border border-blue-100">
+                              🛵 Delivery
+                            </span>
+                          )}
                         </div>
                         <span className="text-xs text-slate-400 font-semibold">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
@@ -664,9 +678,19 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                           </h4>
                           
                           <div className="text-xs space-y-1 mt-2 text-slate-500">
-                            <p className="flex items-center gap-1.5"><Phone size={12} /> {order.customerPhone}</p>
+                            <p className="flex items-center gap-1.5"><Phone size={12} /> {order.customerPhone || 'Walk-in Guest'}</p>
                             {order.customerEmail && <p className="flex items-center gap-1.5"><Mail size={12} /> {order.customerEmail}</p>}
-                            <p className="flex items-start gap-1.5 leading-relaxed mt-1"><MapPin size={12} className="shrink-0 mt-0.5" /> {fullAddress}</p>
+                            {order.orderType === 'Dine-in' || (order.tableNumber && order.tableNumber !== '0') ? (
+                              <p className="flex items-center gap-1.5 font-black text-orange-700 bg-orange-50 px-2 py-1 rounded-md border border-orange-200 mt-1">
+                                <Utensils size={12} /> Dine-in: Table {order.tableNumber || '1'} {order.orderBy ? `(Staff: ${order.orderBy})` : ''}
+                              </p>
+                            ) : order.orderSource === 'counter' ? (
+                              <p className="flex items-center gap-1.5 font-black text-purple-700 bg-purple-50 px-2 py-1 rounded-md border border-purple-200 mt-1">
+                                🏪 Counter POS {order.orderBy ? `(Staff: ${order.orderBy})` : ''}
+                              </p>
+                            ) : (
+                              <p className="flex items-start gap-1.5 leading-relaxed mt-1"><MapPin size={12} className="shrink-0 mt-0.5" /> {fullAddress}</p>
+                            )}
                           </div>
                         </div>
 
@@ -752,7 +776,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                                 : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'
                             }`}
                           >
-                            <CheckCircle size={12} /> Mark Delivered
+                            <CheckCircle size={12} /> {order.orderType === 'Dine-in' ? 'Mark Served' : 'Mark Delivered'}
                           </button>
 
                           <button 

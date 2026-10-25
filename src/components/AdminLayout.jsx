@@ -437,7 +437,9 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       group: 'Sales & Orders',
       items: [
         { name: 'Manage Orders', icon: <ClipboardList size={18} />, path: activeStoreId ? `/store/${activeStoreId}/orders` : '#' },
-        { name: 'Live Monitor', icon: <Bell size={18} />, path: activeStoreId ? `/store/${activeStoreId}/live-orders` : '#' }
+        { name: 'Live Monitor', icon: <Bell size={18} />, path: activeStoreId ? `/store/${activeStoreId}/live-orders` : '#' },
+        { name: 'Counter Sale (POS)', icon: <CreditCard size={18} />, path: activeStoreId ? `/store/${activeStoreId}/counter` : '#' },
+        { name: 'Manage Staff', icon: <Users size={18} />, path: activeStoreId ? `/store/${activeStoreId}/staff` : '#' }
       ]
     }] : []),
     ...(!isCustomWebsite ? [{
@@ -856,6 +858,15 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
                               }`}>
                                 {order.orderStatus === 'placed' ? 'Placed' : 'Shipped'}
                               </span>
+                              {order.orderType === 'Dine-in' || (order.tableNumber && order.tableNumber !== '0') ? (
+                                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+                                  🍽️ T-{order.tableNumber || '1'}
+                                </span>
+                              ) : order.orderSource === 'counter' ? (
+                                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                                  🏪 Counter
+                                </span>
+                              ) : null}
                             </div>
                             <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
                               {order.customerName || 'Customer'}

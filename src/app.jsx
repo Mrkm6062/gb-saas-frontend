@@ -8,6 +8,8 @@ import ManageStore from './pages/ManageStore';
 import ManageProduct from './pages/ManageProduct';
 import UpgradePlan from './pages/UpgradePlan';
 import ManageOrders from './pages/ManageOrders';
+import ManageStaff from './pages/ManageStaff';
+import ManageCounter from './pages/ManageCounter';
 import LiveOrderManage from './pages/LiveOrderManage';
 import ManagePolicy from './pages/ManagePolicy';
 import ManageCustomer from './pages/ManageCustomer';
@@ -184,6 +186,18 @@ function App() {
           <Route 
             path="/store/:storeId/live-orders" 
             element={isLoggedIn ? <LiveOrderManage token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/store/:storeId/counter" 
+            element={<ManageCounter />} 
+          />
+          <Route 
+            path="/counter" 
+            element={<ManageCounter />} 
+          />
+          <Route 
+            path="/store/:storeId/staff" 
+            element={isLoggedIn ? <ManageStaff token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/policies" 

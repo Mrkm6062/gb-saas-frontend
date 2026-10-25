@@ -516,14 +516,37 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                     <tr key={order._id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                       <td className="p-4">
                         <div className="text-sm font-bold text-slate-700">{new Date(order.createdAt).toLocaleDateString()}</div>
-                        <div className="text-xs font-mono text-slate-400 mt-1">{order._id.slice(-6).toUpperCase()}</div>
+                        <div className="text-xs font-mono text-slate-400 mt-1">#{order._id.slice(-6).toUpperCase()}</div>
+                        {order.orderType === 'Dine-in' || (order.tableNumber && order.tableNumber !== '0') ? (
+                          <span className="inline-block mt-1.5 px-2 py-0.5 rounded-md bg-orange-100 text-orange-800 font-black text-[10px] border border-orange-200">
+                            🍽️ Table {order.tableNumber || '1'}
+                          </span>
+                        ) : order.orderSource === 'counter' ? (
+                          <span className="inline-block mt-1.5 px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 font-black text-[10px] border border-purple-200">
+                            🏪 Counter
+                          </span>
+                        ) : (
+                          <span className="inline-block mt-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-bold text-[10px] border border-blue-100">
+                            🛵 Delivery
+                          </span>
+                        )}
                       </td>
                       <td className="p-4">
-                        <div className="font-semibold text-slate-800">{order.customerName}</div>
-                        <div className="text-xs text-slate-500">{order.customerPhone}</div>
-                        <div className="text-xs text-slate-500 mt-1 max-w-[200px] truncate" title={`${order.address?.addressLine1}, ${order.address?.city}`}>
-                          {order.address?.addressLine1}, {order.address?.city}
-                        </div>
+                        <div className="font-semibold text-slate-800">{order.customerName || 'Walk-in Guest'}</div>
+                        <div className="text-xs text-slate-500">{order.customerPhone || 'No Phone'}</div>
+                        {order.orderType === 'Dine-in' || (order.tableNumber && order.tableNumber !== '0') ? (
+                          <div className="text-xs font-bold text-orange-700 mt-1">
+                            🍽️ Dine-in {order.orderBy ? <span className="text-slate-400 font-normal">({order.orderBy})</span> : ''}
+                          </div>
+                        ) : order.orderSource === 'counter' ? (
+                          <div className="text-xs font-bold text-purple-700 mt-1">
+                            🏪 Counter Sale {order.orderBy ? <span className="text-slate-400 font-normal">({order.orderBy})</span> : ''}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-500 mt-1 max-w-[200px] truncate" title={`${order.address?.addressLine1}, ${order.address?.city}`}>
+                            {order.address?.addressLine1}, {order.address?.city}
+                          </div>
+                        )}
                       </td>
                       <td className="p-4 text-sm text-slate-600">
                         <div>{order.orderItems?.length || 0} items</div>
@@ -631,12 +654,22 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                     {/* Middle Row: Customer Info, Items & Amount */}
                     <div className="flex items-start justify-between gap-3 text-xs mb-3">
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-slate-800 text-sm truncate">{order.customerName}</p>
+                        <p className="font-bold text-slate-800 text-sm truncate">{order.customerName || 'Walk-in Guest'}</p>
                         {order.customerPhone && <p className="text-[11px] text-slate-500 mt-0.5">{order.customerPhone}</p>}
-                        {order.address && (
-                          <p className="text-[11px] text-slate-400 truncate mt-0.5" title={`${order.address.addressLine1 || ''}, ${order.address.city || ''}`}>
-                            {order.address.addressLine1 ? `${order.address.addressLine1}, ` : ''}{order.address.city || ''}
-                          </p>
+                        {order.orderType === 'Dine-in' || (order.tableNumber && order.tableNumber !== '0') ? (
+                          <span className="inline-block px-2 py-0.5 rounded bg-orange-100 text-orange-800 font-black text-[10px] border border-orange-200 mt-1">
+                            🍽️ Dine-in: Table {order.tableNumber || '1'}
+                          </span>
+                        ) : order.orderSource === 'counter' ? (
+                          <span className="inline-block px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-black text-[10px] border border-purple-200 mt-1">
+                            🏪 Counter POS
+                          </span>
+                        ) : (
+                          order.address && (
+                            <p className="text-[11px] text-slate-400 truncate mt-0.5" title={`${order.address.addressLine1 || ''}, ${order.address.city || ''}`}>
+                              {order.address.addressLine1 ? `${order.address.addressLine1}, ` : ''}{order.address.city || ''}
+                            </p>
+                          )
                         )}
                       </div>
                       <div className="text-right shrink-0">
@@ -843,11 +876,36 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                     {selectedOrder.customerEmail && <p className="text-sm text-slate-600 mt-1 flex items-center gap-2">✉️ {selectedOrder.customerEmail}</p>}
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Delivery Address</h4>
-                    <p className="text-sm text-slate-800 font-medium">{selectedOrder.address?.addressLine1}</p>
-                    {selectedOrder.address?.landmark && <p className="text-sm text-slate-600 mt-1">Landmark: {selectedOrder.address?.landmark}</p>}
-                    <p className="text-sm text-slate-600 mt-1">{selectedOrder.address?.city}, {selectedOrder.address?.state} {selectedOrder.address?.pincode}</p>
-                    {selectedOrder.address?.alternateNumber && <p className="text-xs text-slate-500 mt-2">Alt Phone: {selectedOrder.address?.alternateNumber}</p>}
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      {selectedOrder.orderType === 'Dine-in' || (selectedOrder.tableNumber && selectedOrder.tableNumber !== '0') ? '🍽️ Dining Details' : 'Delivery Address'}
+                    </h4>
+                    {selectedOrder.orderType === 'Dine-in' || (selectedOrder.tableNumber && selectedOrder.tableNumber !== '0') ? (
+                      <div className="space-y-1.5">
+                        <p className="text-base font-extrabold text-orange-700 bg-orange-100/70 px-3 py-1.5 rounded-lg border border-orange-200 inline-block">
+                          🍽️ Table {selectedOrder.tableNumber || '1'} (Dine-in)
+                        </p>
+                        {selectedOrder.orderBy && (
+                          <p className="text-xs text-slate-600 font-semibold mt-1">Staff / Server: {selectedOrder.orderBy}</p>
+                        )}
+                        <p className="text-xs text-slate-500">Order Source: {selectedOrder.orderSource || 'web'}</p>
+                      </div>
+                    ) : selectedOrder.orderSource === 'counter' ? (
+                      <div className="space-y-1.5">
+                        <p className="text-base font-extrabold text-purple-700 bg-purple-100/70 px-3 py-1.5 rounded-lg border border-purple-200 inline-block">
+                          🏪 Counter POS Sale
+                        </p>
+                        {selectedOrder.orderBy && (
+                          <p className="text-xs text-slate-600 font-semibold mt-1">Staff / Cashier: {selectedOrder.orderBy}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-slate-800 font-medium">{selectedOrder.address?.addressLine1}</p>
+                        {selectedOrder.address?.landmark && <p className="text-sm text-slate-600 mt-1">Landmark: {selectedOrder.address?.landmark}</p>}
+                        <p className="text-sm text-slate-600 mt-1">{selectedOrder.address?.city}, {selectedOrder.address?.state} {selectedOrder.address?.pincode}</p>
+                        {selectedOrder.address?.alternateNumber && <p className="text-xs text-slate-500 mt-2">Alt Phone: {selectedOrder.address?.alternateNumber}</p>}
+                      </>
+                    )}
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Order Info</h4>
