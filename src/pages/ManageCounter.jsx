@@ -91,7 +91,7 @@ const ManageCounter = () => {
   }, []);
 
   const activeStore = staffData?.store || {};
-  const currentStoreId = activeStore._id || urlStoreId;
+  const currentStoreId = activeStore._id || activeStore.storeId || urlStoreId;
 
   // -------------------------------------------------------------
   // Staff Login Handler
@@ -146,27 +146,34 @@ const ManageCounter = () => {
   // Fetch Products & Categories for Store
   // -------------------------------------------------------------
   useEffect(() => {
-    if (!staffToken || !currentStoreId) return;
+    if (!currentStoreId) return;
 
     const fetchStoreData = async () => {
       setLoadingProducts(true);
       try {
-        // Fetch products
-        const prodRes = await fetch(`${API_BASE_URL}/api/products/public`, {
-          headers: { 'x-store-id': currentStoreId }
-        });
+        const catalogUrl = `${API_BASE_URL}/api/store-staff/pos-catalog?storeId=${currentStoreId}`;
+        const prodRes = await fetch(catalogUrl);
         if (prodRes.ok) {
-          const prods = await prodRes.json();
-          setProducts(prods);
-        }
-
-        // Fetch categories
-        const catRes = await fetch(`${API_BASE_URL}/api/categories/public`, {
-          headers: { 'x-store-id': currentStoreId }
-        });
-        if (catRes.ok) {
-          const cats = await catRes.json();
-          setCategories(cats);
+          const catalogData = await prodRes.json();
+          setProducts(catalogData.products || []);
+          setCategories(catalogData.categories || []);
+          if (catalogData.store) {
+            setStaffData((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                store: {
+                  ...prev.store,
+                  ...catalogData.store,
+                  tables: catalogData.store.tables && catalogData.store.tables.length > 0
+                    ? catalogData.store.tables
+                    : (prev.store?.tables || ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
+                }
+              };
+            });
+          }
+        } else {
+          console.error('Failed to load POS catalog:', prodRes.status);
         }
       } catch (err) {
         console.error('Error fetching POS catalog:', err);
@@ -279,7 +286,12 @@ const ManageCounter = () => {
   const filteredProducts = products.filter((p) => {
     const matchesCat =
       selectedCategory === 'ALL' ||
-      (p.category && (p.category._id === selectedCategory || p.category === selectedCategory));
+      (p.category && (
+        p.category._id === selectedCategory || 
+        p.category === selectedCategory || 
+        String(p.category) === String(selectedCategory)
+      )) ||
+      (p.categoryName && p.categoryName === selectedCategory);
     const matchesSearch =
       !searchQuery.trim() ||
       p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
