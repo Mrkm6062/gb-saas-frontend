@@ -88,7 +88,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
   const getTableUrl = (tableNo) => {
     const base = getStoreBaseUrl();
-    return `${base}/?table=${encodeURIComponent(tableNo)}`;
+    return `${base}/category/all?table=${encodeURIComponent(tableNo)}`;
   };
 
   const handleCopyTableLink = (tableNo) => {
