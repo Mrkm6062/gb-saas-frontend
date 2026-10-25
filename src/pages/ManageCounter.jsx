@@ -25,7 +25,8 @@ import {
   ArrowRight,
   ShieldCheck,
   RefreshCw,
-  Receipt
+  Receipt,
+  Lock
 } from 'lucide-react';
 
 const ManageCounter = () => {
@@ -106,7 +107,7 @@ const ManageCounter = () => {
     setLoginError('');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/staff/login`, {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -370,7 +371,7 @@ const ManageCounter = () => {
     setEmailStatusMsg({ text: 'Sending digital invoice email...', type: 'info' });
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/staff/send-digital-bill`, {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/send-digital-bill`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -54,16 +54,19 @@ const ManageStaff = ({ token, stores, onLogout }) => {
   const [editStatus, setEditStatus] = useState('active');
   const [editPassword, setEditPassword] = useState('');
 
+  const activeStoreIdentifier = currentStore._id || currentStore.storeId;
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
 
   const fetchStaff = async () => {
-    if (!currentStore._id) return;
+    if (!activeStoreIdentifier) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/staff?storeId=${currentStore._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff?storeId=${activeStoreIdentifier}`, {
+        credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -82,7 +85,7 @@ const ManageStaff = ({ token, stores, onLogout }) => {
 
   useEffect(() => {
     fetchStaff();
-  }, [currentStore._id]);
+  }, [activeStoreIdentifier]);
 
   const handleAddStaff = async (e) => {
     e.preventDefault();
@@ -92,14 +95,15 @@ const ManageStaff = ({ token, stores, onLogout }) => {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/staff`, {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          storeId: currentStore._id,
+          storeId: activeStoreIdentifier,
           name: addName.trim(),
           staffId: addStaffId.trim().toUpperCase(),
           password: addPassword,
@@ -158,8 +162,9 @@ const ManageStaff = ({ token, stores, onLogout }) => {
         payload.password = editPassword.trim();
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/staff/${selectedStaff._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/${selectedStaff._id}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
@@ -188,8 +193,9 @@ const ManageStaff = ({ token, stores, onLogout }) => {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/staff/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       });
 
