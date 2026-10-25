@@ -83,10 +83,12 @@ const SeoSetting = ({ token, stores, onLogout }) => {
             blockMetaExternalAgent: data.blockMetaExternalAgent ?? false,
             blockAmazonBot: data.blockAmazonBot ?? false,
             blockApplebotExtended: data.blockApplebotExtended ?? false,
-            metaTitle: data.metaTitle || '',
-            metaDescription: data.metaDescription || '',
-            metaKeywords: Array.isArray(data.metaKeywords) ? data.metaKeywords.join(', ') : '',
-            canonicalDomain: data.canonicalDomain || '',
+            metaTitle: data.metaTitle || data.websiteTitle || currentStore.websiteTitle || currentStore.storeName || '',
+            metaDescription: data.metaDescription || currentStore.metaDescription || '',
+            metaKeywords: Array.isArray(data.metaKeywords) && data.metaKeywords.length > 0
+              ? data.metaKeywords.join(', ')
+              : (Array.isArray(currentStore.metaKeywords) ? currentStore.metaKeywords.join(', ') : (currentStore.metaKeywords || '')),
+            canonicalDomain: data.canonicalDomain || currentStore.canonicalDomain || (currentStore.subdomain ? `https://${currentStore.subdomain}.galibrand.cloud` : ''),
             customRobotsContent: data.customRobotsContent || '',
             customLlmsContent: data.customLlmsContent || ''
           });
@@ -272,6 +274,12 @@ const SeoSetting = ({ token, stores, onLogout }) => {
         });
 
         if (res.ok) {
+          if (currentStore) {
+            currentStore.websiteTitle = formData.metaTitle;
+            currentStore.metaDescription = formData.metaDescription;
+            currentStore.metaKeywords = keywordsArray;
+            currentStore.canonicalDomain = formData.canonicalDomain;
+          }
           setStatus('SEO and AI settings saved successfully!');
           setTimeout(() => setStatus(''), 3000);
         } else {
@@ -368,10 +376,40 @@ const SeoSetting = ({ token, stores, onLogout }) => {
                 {/* 1. SEO Tab */}
                 {activeSection === 'seo' && (
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-6">
-                    <h3 className="text-xl font-bold text-slate-800 border-b pb-3 border-slate-100">Search Engine Indexing</h3>
-                    
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b pb-4 border-slate-100">
+                      <div>
+                        <h3 className="text-xl font-bold text-slate-800">Search Engine Optimization (SEO)</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">Manage your website title, meta description, keywords, and canonical settings.</p>
+                      </div>
+                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-50 text-[#76b900] border border-green-200/60">
+                        Live Store SEO
+                      </span>
+                    </div>
+
+                    {/* Google Search Live Result Preview */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Google Search Live Preview</p>
+                        <span className="text-[11px] font-semibold text-slate-400">Desktop & Mobile Snippet</span>
+                      </div>
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-1.5">
+                        <div className="flex items-center gap-2 text-xs text-slate-700">
+                          <span className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px]">🌐</span>
+                          <span className="font-semibold text-slate-600 truncate">
+                            {formData.canonicalDomain || (currentStore.subdomain ? `https://${currentStore.subdomain}.galibrand.cloud` : 'https://yourstore.galibrand.cloud')}
+                          </span>
+                        </div>
+                        <h4 className="text-base sm:text-lg font-bold text-blue-700 hover:underline cursor-pointer truncate">
+                          {formData.metaTitle || currentStore.websiteTitle || currentStore.storeName || 'My Online Store'}
+                        </h4>
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                          {formData.metaDescription || currentStore.metaDescription || 'Welcome to our online store. Browse our complete catalog, view prices, and order online with fast doorstep delivery.'}
+                        </p>
+                      </div>
+                    </div>
+
                     {/* Indexing Toggle */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/60">
                       <div>
                         <h4 className="font-bold text-slate-800">Index Website</h4>
                         <p className="text-sm text-slate-500">Allow search engines to index your store pages so you appear in search results.</p>
@@ -387,55 +425,119 @@ const SeoSetting = ({ token, stores, onLogout }) => {
                       </label>
                     </div>
 
-                    <div className="border-t border-slate-100 pt-6 space-y-4">
-                      <h3 className="text-xl font-bold text-slate-800 mb-2">Global Meta Tags</h3>
+                    <div className="border-t border-slate-100 pt-6 space-y-5">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-slate-800">Global Meta Tags & Canonical</h3>
+                        <span className="text-xs text-slate-400 font-semibold">Storefront Meta Header</span>
+                      </div>
                       
+                      {/* SEO Title / Website Title */}
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Default SEO Title</label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-bold text-slate-700">
+                            SEO Title (Website Title)
+                          </label>
+                          <span className={`text-xs font-semibold ${
+                            (formData.metaTitle || '').length > 60 ? 'text-amber-600' : 'text-slate-400'
+                          }`}>
+                            {(formData.metaTitle || '').length} / 60 characters
+                          </span>
+                        </div>
                         <input 
                           type="text" 
                           placeholder="e.g. My Premium Gift Shop | Order Custom Gifts Online" 
                           value={formData.metaTitle} 
                           onChange={e => handleChange('metaTitle', e.target.value)} 
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" 
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-medium" 
                         />
-                        <p className="text-xs text-slate-500 mt-1">Leave empty to use store name as fallback. Recommended length: 50-60 characters.</p>
+                        <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
+                          <span>💡</span>
+                          <span>Pre-filled from your Website Title. Appears in browser tabs and search engine headlines. Updating this also updates your store title.</span>
+                        </p>
                       </div>
 
+                      {/* Meta Description */}
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Default Meta Description</label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-bold text-slate-700">
+                            Meta Description
+                          </label>
+                          <span className={`text-xs font-semibold ${
+                            (formData.metaDescription || '').length > 160 ? 'text-amber-600' : 'text-slate-400'
+                          }`}>
+                            {(formData.metaDescription || '').length} / 160 characters
+                          </span>
+                        </div>
                         <textarea 
                           rows="3"
-                          placeholder="e.g. Buy customized mugs, photo keychains, birthday frames and beautiful hampers at affordable rates." 
+                          placeholder="e.g. Buy customized gifts, printed mugs, photo keychains, birthday frames and hampers online at the best prices." 
                           value={formData.metaDescription} 
                           onChange={e => handleChange('metaDescription', e.target.value)} 
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm resize-none" 
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm resize-none font-medium leading-relaxed" 
                         />
-                        <p className="text-xs text-slate-500 mt-1">Recommended length: 150-160 characters.</p>
+                        <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
+                          <span>💡</span>
+                          <span>Displayed underneath your title in search engine results. Recommended length: 150-160 characters.</span>
+                        </p>
                       </div>
 
+                      {/* Meta Keywords */}
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">SEO Keywords</label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-bold text-slate-700">
+                            Meta Keywords
+                          </label>
+                          <span className="text-xs text-slate-400 font-semibold">Comma-separated</span>
+                        </div>
                         <input 
                           type="text" 
-                          placeholder="gifts, customized mugs, frames, buy online" 
+                          placeholder="gifts, customized mugs, frames, restaurant, buy online" 
                           value={formData.metaKeywords} 
                           onChange={e => handleChange('metaKeywords', e.target.value)} 
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" 
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-medium" 
                         />
-                        <p className="text-xs text-slate-500 mt-1">Separate keywords using commas.</p>
+                        <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
+                          <span>💡</span>
+                          <span>Keywords and search phrases that match what customers search for when looking for your store.</span>
+                        </p>
+                        {formData.metaKeywords && (
+                          <div className="flex flex-wrap gap-1.5 mt-2.5">
+                            {formData.metaKeywords.split(',').map(k => k.trim()).filter(Boolean).map((kw, i) => (
+                              <span key={i} className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/70">
+                                #{kw}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
+                      {/* Canonical Domain URL */}
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Canonical Domain URL</label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-bold text-slate-700">
+                            Canonical Domain URL
+                          </label>
+                          {currentStore.subdomain && (
+                            <button
+                              type="button"
+                              onClick={() => handleChange('canonicalDomain', `https://${currentStore.subdomain}.galibrand.cloud`)}
+                              className="text-xs font-bold text-[#76b900] hover:underline cursor-pointer"
+                            >
+                              Auto-fill Store Subdomain
+                            </button>
+                          )}
+                        </div>
                         <input 
                           type="url" 
-                          placeholder="e.g. https://www.mygiftshop.com" 
+                          placeholder="e.g. https://store.galibrand.cloud or https://www.yourdomain.com" 
                           value={formData.canonicalDomain} 
                           onChange={e => handleChange('canonicalDomain', e.target.value)} 
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" 
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-medium" 
                         />
-                        <p className="text-xs text-slate-500 mt-1">If you have a custom domain connected, specify it here to prevent duplicate content SEO penalties.</p>
+                        <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
+                          <span>💡</span>
+                          <span>The master canonical URL for your storefront to prevent duplicate content SEO penalties across domain variants.</span>
+                        </p>
                       </div>
                     </div>
                   </div>
