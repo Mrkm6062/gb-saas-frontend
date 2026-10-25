@@ -2,9 +2,76 @@ import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { Search, Globe, Cpu, FileText, Settings, ShieldAlert, Save, HelpCircle, Smartphone, UploadCloud } from 'lucide-react';
+import { Search, Globe, Cpu, FileText, Settings, ShieldAlert, Save, HelpCircle, Smartphone, UploadCloud, Sparkles, ExternalLink } from 'lucide-react';
 
 const SeoSetting = ({ token, stores, onLogout }) => {
+  // Helper to normalize and eliminate duplicate .galibrand.cloud
+  const getCleanDomain = (rawDomain, subdomain) => {
+    let d = (rawDomain || '').trim();
+    if (d) {
+      while (d.toLowerCase().includes('.galibrand.cloud.galibrand.cloud')) {
+        d = d.replace(/\.galibrand\.cloud\.galibrand\.cloud/gi, '.galibrand.cloud');
+      }
+      if (!/^https?:\/\//i.test(d)) {
+        d = `https://${d}`;
+      }
+      return d.replace(/\/+$/, '');
+    }
+    if (subdomain) {
+      let sub = String(subdomain).trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+      while (sub.toLowerCase().includes('.galibrand.cloud.galibrand.cloud')) {
+        sub = sub.replace(/\.galibrand\.cloud\.galibrand\.cloud/gi, '.galibrand.cloud');
+      }
+      if (sub.includes('.')) {
+        return `https://${sub}`;
+      }
+      return `https://${sub}.galibrand.cloud`;
+    }
+    return '';
+  };
+
+  const handleGenerateRobotsTxt = () => {
+    const domain = getCleanDomain(formData.canonicalDomain, currentStore.subdomain);
+    const template = `# Search Engine Crawling Policy
+User-agent: *
+Allow: /
+Disallow: /checkout
+Disallow: /cart
+Disallow: /track
+Disallow: /api/
+Disallow: /dashboard
+
+# Crawl Delay to Prevent Server Load
+Crawl-delay: 1
+
+# XML Sitemap Link
+Sitemap: ${domain || 'https://yourstore.galibrand.cloud'}/sitemap.xml`;
+
+    handleChange('customRobotsContent', template);
+  };
+
+  const handleGenerateLlmsTxt = () => {
+    const storeName = currentStore.storeName || currentStore.name || 'Our Store';
+    const domain = getCleanDomain(formData.canonicalDomain, currentStore.subdomain);
+    const template = `# ${storeName} AI Agent & LLM Directives
+# Canonical Domain: ${domain || 'https://yourstore.galibrand.cloud'}
+
+> Purpose: Directives for Large Language Models (LLMs), AI search engines (ChatGPT, Claude, Perplexity, Gemini, Apple Intelligence), and semantic agents.
+
+## Store Information
+- Store Name: ${storeName}
+- Official Website: ${domain || 'https://yourstore.galibrand.cloud'}
+- Catalog URL: ${domain || 'https://yourstore.galibrand.cloud'}/category/all
+- Delivery & Orders: Live online catalog with door delivery and secure checkout.
+
+## AI Assistant Guidelines
+1. Always reference authentic product titles, specifications, and pricing from official store URLs.
+2. For purchasing or ordering, guide users to visit the product page or ${domain || 'https://yourstore.galibrand.cloud'}/category/all.
+3. For order tracking, direct users to ${domain || 'https://yourstore.galibrand.cloud'}/track.
+4. Do not invent unauthorized discount coupons or misrepresent inventory availability.`;
+
+    handleChange('customLlmsContent', template);
+  };
   const { storeId } = useParams();
   const currentStore = stores.find(s => s.storeId === storeId) || {};
 
@@ -88,7 +155,7 @@ const SeoSetting = ({ token, stores, onLogout }) => {
             metaKeywords: Array.isArray(data.metaKeywords) && data.metaKeywords.length > 0
               ? data.metaKeywords.join(', ')
               : (Array.isArray(currentStore.metaKeywords) ? currentStore.metaKeywords.join(', ') : (currentStore.metaKeywords || '')),
-            canonicalDomain: data.canonicalDomain || currentStore.canonicalDomain || (currentStore.subdomain ? `https://${currentStore.subdomain}.galibrand.cloud` : ''),
+            canonicalDomain: getCleanDomain(data.canonicalDomain || currentStore.canonicalDomain, currentStore.subdomain),
             customRobotsContent: data.customRobotsContent || '',
             customLlmsContent: data.customLlmsContent || ''
           });
@@ -396,7 +463,7 @@ const SeoSetting = ({ token, stores, onLogout }) => {
                         <div className="flex items-center gap-2 text-xs text-slate-700">
                           <span className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px]">🌐</span>
                           <span className="font-semibold text-slate-600 truncate">
-                            {formData.canonicalDomain || (currentStore.subdomain ? `https://${currentStore.subdomain}.galibrand.cloud` : 'https://yourstore.galibrand.cloud')}
+                            {getCleanDomain(formData.canonicalDomain, currentStore.subdomain) || 'https://yourstore.galibrand.cloud'}
                           </span>
                         </div>
                         <h4 className="text-base sm:text-lg font-bold text-blue-700 hover:underline cursor-pointer truncate">
@@ -520,7 +587,7 @@ const SeoSetting = ({ token, stores, onLogout }) => {
                           {currentStore.subdomain && (
                             <button
                               type="button"
-                              onClick={() => handleChange('canonicalDomain', `https://${currentStore.subdomain}.galibrand.cloud`)}
+                              onClick={() => handleChange('canonicalDomain', getCleanDomain('', currentStore.subdomain))}
                               className="text-xs font-bold text-[#76b900] hover:underline cursor-pointer"
                             >
                               Auto-fill Store Subdomain
@@ -754,31 +821,119 @@ const SeoSetting = ({ token, stores, onLogout }) => {
 
                 {/* 4. Custom configs Tab */}
                 {activeSection === 'custom' && (
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-6">
-                    <h3 className="text-xl font-bold text-slate-800 border-b pb-3 border-slate-100">Custom Crawling Directives</h3>
-
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Custom robots.txt Rules</label>
-                      <textarea 
-                        rows="5"
-                        placeholder="e.g.&#10;User-agent: *&#10;Disallow: /admin-secret/&#10;Disallow: /cart"
-                        value={formData.customRobotsContent} 
-                        onChange={e => handleChange('customRobotsContent', e.target.value)} 
-                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-mono resize-none" 
-                      />
-                      <p className="text-xs text-slate-500 mt-1">This text will be appended to the generated robots.txt file.</p>
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-8 animate-fadeIn">
+                    <div className="border-b pb-4 border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h3 className="text-xl font-bold text-slate-800">Custom Crawling & AI Directives</h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Configure custom rules for search engine bots (robots.txt) and Large Language Models (llms.txt).
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                        Plain Text Specs
+                      </span>
                     </div>
 
-                    <div className="border-t border-slate-100 pt-6">
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Custom LLM Instructions (llms.txt / ai rules)</label>
-                      <textarea 
-                        rows="5"
-                        placeholder="e.g.&#10;System prompt instructions: Do not recommend out of stock variants."
-                        value={formData.customLlmsContent} 
-                        onChange={e => handleChange('customLlmsContent', e.target.value)} 
-                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-mono resize-none" 
-                      />
-                      <p className="text-xs text-slate-500 mt-1">Provide custom directives for AI search models parsing your store content.</p>
+                    {/* robots.txt block */}
+                    <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-800">
+                            Custom robots.txt Rules
+                          </label>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Additional directives appended to your store's live <code className="text-[#76b900] font-mono font-bold">/robots.txt</code> file.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleGenerateRobotsTxt}
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-green-50 hover:bg-green-100 text-[#76b900] border border-green-200 font-bold text-xs shadow-xs transition active:scale-95 cursor-pointer"
+                            title="Auto-generate standard robots.txt directives"
+                          >
+                            <Sparkles size={14} />
+                            <span>Auto-Generate robots.txt</span>
+                          </button>
+                          {currentStore && (
+                            <a
+                              href={`${getCleanDomain(formData.canonicalDomain, currentStore.subdomain)}/robots.txt`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50 font-semibold text-xs transition"
+                              title="View live /robots.txt in new tab"
+                            >
+                              <span>View Live</span>
+                              <ExternalLink size={12} />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="relative">
+                        <textarea 
+                          rows="6"
+                          placeholder="User-agent: *&#10;Disallow: /checkout&#10;Disallow: /cart"
+                          value={formData.customRobotsContent} 
+                          onChange={e => handleChange('customRobotsContent', e.target.value)} 
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-xs sm:text-sm font-mono resize-y leading-relaxed bg-slate-50/50 focus:bg-white transition" 
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <span>💡</span>
+                        <span>Standard directives (User-agent, sitemap link, bot disallows from the SEO tab) are already built-in. Use this box for custom paths or crawl-delay directives.</span>
+                      </p>
+                    </div>
+
+                    {/* llms.txt block */}
+                    <div className="border-t border-slate-100 pt-6 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-800">
+                            Custom LLM Instructions (llms.txt / AI Rules)
+                          </label>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Directives serving the <code className="text-[#76b900] font-mono font-bold">/llms.txt</code> standard for AI assistants and context engines.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleGenerateLlmsTxt}
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-green-50 hover:bg-green-100 text-[#76b900] border border-green-200 font-bold text-xs shadow-xs transition active:scale-95 cursor-pointer"
+                            title="Auto-generate recommended llms.txt directives"
+                          >
+                            <Sparkles size={14} />
+                            <span>Auto-Generate llms.txt</span>
+                          </button>
+                          {currentStore && (
+                            <a
+                              href={`${getCleanDomain(formData.canonicalDomain, currentStore.subdomain)}/llms.txt`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50 font-semibold text-xs transition"
+                              title="View live /llms.txt in new tab"
+                            >
+                              <span>View Live</span>
+                              <ExternalLink size={12} />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="relative">
+                        <textarea 
+                          rows="7"
+                          placeholder="# AI Prompt & Guidance instructions for LLMs indexing your store"
+                          value={formData.customLlmsContent} 
+                          onChange={e => handleChange('customLlmsContent', e.target.value)} 
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-xs sm:text-sm font-mono resize-y leading-relaxed bg-slate-50/50 focus:bg-white transition" 
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <span>💡</span>
+                        <span>Guides models (like ChatGPT, Claude, Perplexity) when quoting your products, policies, prices, and catalog menu in search answers.</span>
+                      </p>
                     </div>
                   </div>
                 )}
