@@ -14,6 +14,7 @@ import {
   LogOut, 
   CheckCircle, 
   Printer,
+  QrCode,
   Download,
   FileText, 
   Send, 
@@ -101,6 +102,15 @@ const ManageCounter = () => {
   // Delivery Staff Assigned Orders State
   const [myAssignedOrders, setMyAssignedOrders] = useState([]);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [checkoutSettings, setCheckoutSettings] = useState(null);
+  const [upiModal, setUpiModal] = useState({
+    isOpen: false,
+    order: null,
+    loading: false,
+    successMsg: '',
+    errorMsg: '',
+    manualUtr: ''
+  });
 
   // Play Kitchen Notification Tone
   const playKitchenTone = () => {
@@ -164,6 +174,27 @@ const ManageCounter = () => {
 
   const activeStore = staffData?.store || {};
   const currentStoreId = activeStore._id || activeStore.storeId || urlStoreId;
+
+  // Fetch store checkout & payment settings (to check if online payment / Razorpay is enabled)
+  useEffect(() => {
+    if (!currentStoreId) return;
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/checkout-settings/public`, {
+          headers: { 'x-store-id': currentStoreId }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCheckoutSettings(data);
+        }
+      } catch (err) {
+        console.warn('Failed to load checkout settings:', err);
+      }
+    };
+    fetchSettings();
+  }, [currentStoreId]);
+
+  const isOnlinePaymentEnabled = Boolean(checkoutSettings?.razorpayEnabled);
 
   // -------------------------------------------------------------
   // Staff Login Handler
@@ -674,6 +705,191 @@ const ManageCounter = () => {
     } finally {
       setIsGeneratingPdf(false);
     }
+  };
+
+  
+  // Razorpay Dynamic Loader for UPI collection
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      if (typeof window !== 'undefined' && 'Razorpay' in window) {
+        return resolve(true);
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleOpenUpiModal = (order) => {
+    setUpiModal({
+      isOpen: true,
+      order,
+      loading: false,
+      successMsg: '',
+      errorMsg: '',
+      manualUtr: ''
+    });
+  };
+
+  const handleCollectUpiRazorpay = async () => {
+    const order = upiModal.order;
+    if (!order) return;
+
+    setUpiModal((prev) => ({ ...prev, loading: true, errorMsg: '', successMsg: '' }));
+    try {
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) {
+        throw new Error('Razorpay SDK failed to load. Check your internet connection.');
+      }
+
+      // Create Razorpay order via backend
+      const res = await fetch(`${API_BASE_URL}/api/payment/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-store-id': currentStoreId
+        },
+        body: JSON.stringify({
+          amount: order.totalAmount,
+          storeId: currentStoreId,
+          orderId: order._id
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to initialize payment gateway.');
+      }
+
+      const rzpOrder = await res.json();
+      const razorpayKey = rzpOrder.keyId || checkoutSettings?.razorpayKeyId;
+
+      if (!razorpayKey) {
+        throw new Error('Razorpay API Key is not configured by the store owner.');
+      }
+
+      const options = {
+        key: razorpayKey,
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency || 'INR',
+        name: activeStore.storeName || 'Store Payment',
+        description: `Order #${order._id.slice(-6).toUpperCase()} Payment (Delivery)`,
+        order_id: rzpOrder.id,
+        prefill: {
+          name: order.customerName || 'Customer',
+          contact: order.customerPhone || ''
+        },
+        theme: {
+          color: '#4f46e5'
+        },
+        handler: async function (paymentResponse) {
+          try {
+            // 1. Verify Razorpay signature
+            await fetch(`${API_BASE_URL}/api/orders/verify-payment`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...paymentResponse, orderId: order._id })
+            });
+
+            // 2. Update staff order status to mark as paid via UPI
+            await fetch(`${API_BASE_URL}/api/store-staff/orders/${order._id}/status`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${staffToken}`
+              },
+              body: JSON.stringify({
+                paymentStatus: 'paid',
+                paymentMethod: 'upi',
+                paymentId: paymentResponse.razorpay_payment_id
+              })
+            });
+
+            fetchMyAssignedOrders();
+            setUpiModal((prev) => ({
+              ...prev,
+              loading: false,
+              successMsg: `✓ Payment of ₹${order.totalAmount} received successfully via UPI!`
+            }));
+          } catch (verifyErr) {
+            setUpiModal((prev) => ({
+              ...prev,
+              loading: false,
+              errorMsg: `Payment succeeded but verification failed: ${verifyErr.message}`
+            }));
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setUpiModal((prev) => ({ ...prev, loading: false }));
+          }
+        }
+      };
+
+      const paymentObj = new window.Razorpay(options);
+      paymentObj.open();
+    } catch (err) {
+      setUpiModal((prev) => ({ ...prev, loading: false, errorMsg: err.message }));
+    }
+  };
+
+  const handleManualUpiConfirm = async () => {
+    const order = upiModal.order;
+    if (!order) return;
+
+    setUpiModal((prev) => ({ ...prev, loading: true, errorMsg: '', successMsg: '' }));
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/orders/${order._id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${staffToken}`
+        },
+        body: JSON.stringify({
+          paymentStatus: 'paid',
+          paymentMethod: 'upi',
+          paymentId: upiModal.manualUtr ? `UPI-${upiModal.manualUtr.trim()}` : `UPI-${Date.now()}`
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to update order payment.');
+      }
+
+      fetchMyAssignedOrders();
+      setUpiModal((prev) => ({
+        ...prev,
+        loading: false,
+        successMsg: `✓ Confirmed! Order #${order._id.slice(-6).toUpperCase()} marked as PAID via UPI.`
+      }));
+    } catch (err) {
+      setUpiModal((prev) => ({ ...prev, loading: false, errorMsg: err.message }));
+    }
+  };
+
+  const handleSendUpiWhatsAppLink = () => {
+    const order = upiModal.order;
+    if (!order) return;
+    const cleanPhone = (order.customerPhone || '').replace(/[^0-9]/g, '');
+    const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const orderNo = order._id.slice(-6).toUpperCase();
+    const storeName = activeStore.storeName || 'Our Store';
+
+    let text = `👋 Hello ${order.customerName || 'Customer'},\n\n`;
+    text += `Your order *#${orderNo}* from *${storeName}* is out for delivery with our delivery executive *${staffData?.name || 'Staff'}*.\n\n`;
+    text += `💵 *Total Amount Due:* ₹${order.totalAmount}\n\n`;
+    text += `Please have your UPI app ready or pay when our delivery executive arrives.\n`;
+    text += `Thank you!`;
+
+    const encoded = encodeURIComponent(text);
+    const waUrl = phoneWithCountry
+      ? `https://api.whatsapp.com/send?phone=${phoneWithCountry}&text=${encoded}`
+      : `https://api.whatsapp.com/send?text=${encoded}`;
+
+    window.open(waUrl, '_blank');
   };
 
   const handleDownloadReceiptPdf = () => {
@@ -1781,19 +1997,38 @@ const ManageCounter = () => {
                           ))}
                         </div>
 
-                        <div className="flex justify-between items-center pt-2 border-t border-slate-100 text-sm font-black">
-                          <span>Amount to Collect:</span>
-                          <span className="text-emerald-700">₹{order.totalAmount} ({String(order.paymentMethod || 'COD').toUpperCase()})</span>
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-100 text-xs font-black">
+                          <span className="text-slate-600">Payment Status:</span>
+                          {order.paymentStatus === 'paid' ? (
+                            <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-extrabold flex items-center gap-1">
+                              ✓ PAID (₹{order.totalAmount} • {String(order.paymentMethod || 'UPI').toUpperCase()})
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-[11px] font-extrabold flex items-center gap-1">
+                              PENDING (₹{order.totalAmount} • {String(order.paymentMethod || 'COD').toUpperCase()})
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div className="p-3 bg-slate-50 border-t border-slate-100">
+                      <div className="p-3 bg-slate-50 border-t border-slate-100 space-y-2">
+                        {/* Collect UPI Payment Button (Available ONLY if store owner enabled online payment & order is not yet paid) */}
+                        {isOnlinePaymentEnabled && order.paymentStatus !== 'paid' && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenUpiModal(order)}
+                            className="w-full py-2.5 px-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition flex items-center justify-center gap-2"
+                          >
+                            <QrCode size={15} /> Collect UPI Payment (₹{order.totalAmount})
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => handleMarkDeliveryDelivered(order._id)}
-                          className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition flex items-center justify-center gap-1.5"
+                          className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow transition flex items-center justify-center gap-1.5"
                         >
-                          <CheckCircle size={15} /> Mark Delivered & Paid ✓
+                          <CheckCircle size={15} /> {order.paymentStatus === 'paid' ? 'Mark Delivered ✓' : 'Mark Delivered & Paid ✓'}
                         </button>
                       </div>
                     </div>
@@ -2102,6 +2337,131 @@ const ManageCounter = () => {
                   ✓ Start New Sale
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ========================================================= */}
+      {/* MODAL: COLLECT UPI PAYMENT (For Delivery Staff)           */}
+      {/* ========================================================= */}
+      {upiModal.isOpen && upiModal.order && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-violet-600 to-indigo-700 text-white p-6 relative">
+              <button
+                onClick={() => setUpiModal({ isOpen: false, order: null, loading: false, successMsg: '', errorMsg: '', manualUtr: '' })}
+                className="absolute top-4 right-4 text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10"
+              >
+                <X size={20} />
+              </button>
+              <div className="w-12 h-12 rounded-2xl bg-white/10 text-white mx-auto flex items-center justify-center mb-2 font-black">
+                <QrCode size={26} />
+              </div>
+              <h2 className="text-lg font-black text-center">Collect UPI Payment</h2>
+              <p className="text-xs text-indigo-100 text-center font-bold mt-0.5">
+                Order #{upiModal.order._id.slice(-6).toUpperCase()} • Amount: ₹{upiModal.order.totalAmount}
+              </p>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* Customer details pill */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
+                <div>
+                  <p className="font-extrabold text-slate-800">{upiModal.order.customerName || 'Customer'}</p>
+                  <p className="text-slate-500 font-mono">{upiModal.order.customerPhone || 'No Phone'}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Due</span>
+                  <span className="text-base font-black text-indigo-700">₹{upiModal.order.totalAmount}</span>
+                </div>
+              </div>
+
+              {/* Status messages */}
+              {upiModal.successMsg && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-extrabold flex items-center gap-2">
+                  <CheckCircle size={18} className="shrink-0 text-emerald-600" />
+                  <span>{upiModal.successMsg}</span>
+                </div>
+              )}
+
+              {upiModal.errorMsg && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs font-bold flex items-center gap-2">
+                  <AlertTriangle size={18} className="shrink-0 text-red-500" />
+                  <span>{upiModal.errorMsg}</span>
+                </div>
+              )}
+
+              {/* Action 1: Open Razorpay QR / UPI Flow */}
+              {!upiModal.successMsg && (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    disabled={upiModal.loading}
+                    onClick={handleCollectUpiRazorpay}
+                    className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-indigo-600/25 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {upiModal.loading ? (
+                      <>
+                        <RefreshCw size={16} className="animate-spin" /> Initializing UPI Gateway...
+                      </>
+                    ) : (
+                      <>
+                        <QrCode size={18} /> Show Customer UPI QR / Apps
+                      </>
+                    )}
+                  </button>
+
+                  <div className="relative flex py-1 items-center">
+                    <div className="flex-grow border-t border-slate-200"></div>
+                    <span className="flex-shrink mx-3 text-slate-400 text-[10px] font-bold uppercase tracking-wider">or verify shop QR</span>
+                    <div className="flex-grow border-t border-slate-200"></div>
+                  </div>
+
+                  {/* Manual UPI reference confirmation */}
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <label className="block text-[11px] font-bold text-slate-700">
+                      Customer Paid to Store QR? (Optional UTR / Ref)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 12-digit UPI Ref / UTR (Optional)"
+                      value={upiModal.manualUtr}
+                      onChange={(e) => setUpiModal(prev => ({ ...prev, manualUtr: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-indigo-500"
+                    />
+                    <button
+                      type="button"
+                      disabled={upiModal.loading}
+                      onClick={handleManualUpiConfirm}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
+                    >
+                      <Check size={14} /> Confirm UPI Received
+                    </button>
+                  </div>
+
+                  {/* Send payment reminder on WhatsApp */}
+                  {upiModal.order.customerPhone && (
+                    <button
+                      type="button"
+                      onClick={handleSendUpiWhatsAppLink}
+                      className="w-full py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5"
+                    >
+                      <MessageCircle size={14} className="text-green-600" /> Send Amount Reminder on WhatsApp
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Close / Done */}
+              <button
+                type="button"
+                onClick={() => setUpiModal({ isOpen: false, order: null, loading: false, successMsg: '', errorMsg: '', manualUtr: '' })}
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+              >
+                {upiModal.successMsg ? '✓ Close & Return' : 'Cancel'}
+              </button>
             </div>
           </div>
         </div>
