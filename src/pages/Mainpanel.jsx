@@ -38,6 +38,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [pincode, setPincode] = useState('');
   const [plans, setPlans] = useState([]);
   const [newStorePlan, setNewStorePlan] = useState('');
+  const [billingCycle, setBillingCycle] = useState(1); // 1, 6, or 12 months
   const [status, setStatus] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const [orders, setOrders] = useState([]);
@@ -64,18 +65,54 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     status.startsWith('Waiting')
   );
 
-  const getPlanPrice = (plan) => {
-    if (!plan) return 0;
-    if (plan.price !== undefined) return plan.price;
-    if (plan.billing && plan.billing.length > 0) {
-      const bill = plan.billing.find(b => b.durationMonths === 1);
-      if (bill) {
-        return bill.discountEnabled
-          ? Math.round(bill.price - (bill.price * bill.discountValue / 100))
-          : bill.price;
-      }
+  // Helper to extract billing price info dynamically for selected duration (1, 6, or 12 months)
+  const getPlanBilling = (plan, duration = billingCycle) => {
+    if (!plan) return { price: 0, originalPrice: 0, discountEnabled: false, discount: 0 };
+    if (!plan.billing || plan.billing.length === 0) {
+      const fallbackPrice = plan.price !== undefined ? plan.price : 0;
+      return { price: fallbackPrice, originalPrice: fallbackPrice, discountEnabled: false, discount: 0 };
     }
-    return 0;
+    const bill = plan.billing.find(b => b.durationMonths === duration);
+    if (!bill) {
+      const fallbackBill = plan.billing.find(b => b.durationMonths === 1) || plan.billing[0];
+      if (!fallbackBill) return { price: 0, originalPrice: 0, discountEnabled: false, discount: 0 };
+      const finalPrice = fallbackBill.discountEnabled
+        ? Math.round(fallbackBill.price - (fallbackBill.price * fallbackBill.discountValue / 100))
+        : fallbackBill.price;
+      return {
+        price: finalPrice,
+        originalPrice: fallbackBill.price,
+        discountEnabled: fallbackBill.discountEnabled,
+        discount: fallbackBill.discountValue
+      };
+    }
+    
+    const finalPrice = bill.discountEnabled
+      ? Math.round(bill.price - (bill.price * bill.discountValue / 100))
+      : bill.price;
+      
+    return {
+      price: finalPrice,
+      originalPrice: bill.price,
+      discountEnabled: bill.discountEnabled,
+      discount: bill.discountValue
+    };
+  };
+
+  // Helper to get max discount percentage for a cycle duration to show next to toggle selector
+  const getMaxDiscountForCycle = (duration) => {
+    let maxDisc = 0;
+    plans.forEach(p => {
+      const bill = p.billing?.find(b => b.durationMonths === duration);
+      if (bill && bill.discountEnabled && bill.discountValue > maxDisc) {
+        maxDisc = bill.discountValue;
+      }
+    });
+    return maxDisc;
+  };
+
+  const getPlanPrice = (plan, duration = billingCycle) => {
+    return getPlanBilling(plan, duration).price;
   };
 
   useEffect(() => {
@@ -162,7 +199,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     setStatus('Processing...');
 
     const selectedPlanObj = plans.find(p => p._id === newStorePlan);
-    const planPrice = getPlanPrice(selectedPlanObj);
+    const planRate = getPlanBilling(selectedPlanObj, billingCycle);
+    const totalAmount = planRate.price * billingCycle;
 
     // Pre-check subdomain slug availability
     try {
@@ -176,7 +214,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     }
 
     try {
-      if (planPrice === 0) {
+      if (totalAmount === 0) {
         // Free plan: Create store immediately
         setStatus('Creating store...');
         const response = await fetch(`${API_BASE_URL}/api/store`, {
@@ -191,7 +229,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
             empId: newStoreEmpId,
             metaDescription: newStoreMeta,
             planId: newStorePlan,
-            storeSlug: newStoreSlug
+            storeSlug: newStoreSlug,
+            billingDuration: billingCycle
           })
         });
 
@@ -207,6 +246,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
           setNewStoreSlug('');
           setSubdomainStatus('idle');
           setCurrentStep(1);
+          setBillingCycle(1);
           setStores([...stores, createdStore]);
           showToast('Store created successfully!', 'success');
         } else {
@@ -231,7 +271,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
       const orderRes = await fetch(`${API_BASE_URL}/api/platform-payments/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ amount: planPrice })
+        body: JSON.stringify({ amount: totalAmount })
       });
       const orderData = await orderRes.json();
       if (!orderRes.ok) throw new Error(orderData.message || 'Failed to create order');
@@ -241,7 +281,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
         amount: orderData.amount,
         currency: orderData.currency,
         name: "Galibrand Cloud",
-        description: `${selectedPlanObj.name} Plan Subscription`,
+        description: `${selectedPlanObj.name} Plan (${billingCycle === 1 ? '1 Month' : billingCycle === 6 ? '6 Months' : '1 Year'}) Subscription`,
         order_id: orderData.id,
         handler: async function (paymentResponse) {
           setStatus('Creating store...');
@@ -258,7 +298,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 empId: newStoreEmpId,
                 metaDescription: newStoreMeta,
                 planId: newStorePlan,
-                storeSlug: newStoreSlug
+                storeSlug: newStoreSlug,
+                billingDuration: billingCycle
               })
             });
 
@@ -274,7 +315,12 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
             const verifyRes = await fetch(`${API_BASE_URL}/api/platform-payments/verify-payment`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify({ ...paymentResponse, storeId: createdStore._id, planId: newStorePlan })
+              body: JSON.stringify({ 
+                ...paymentResponse, 
+                storeId: createdStore._id, 
+                planId: newStorePlan,
+                billingDuration: billingCycle
+              })
             });
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
@@ -287,6 +333,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
               setNewStoreSlug('');
               setSubdomainStatus('idle');
               setCurrentStep(1);
+              setBillingCycle(1);
               setStores([...stores, createdStore]);
               showToast('Store created & payment successful!', 'success');
             } else {
@@ -317,6 +364,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     setIsCreatingStore(false);
     setStatus('');
     setCurrentStep(1);
+    setBillingCycle(1);
   };
 
   const handleVerifyEmpId = async () => {
@@ -751,6 +799,43 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
               ) : currentStep === 1 ? (
                 /* STEP 1: Choose Your Plan (Full Width, side-by-side) */
                 <div className="space-y-6 w-full">
+                  {/* Billing Cycle Toggle Switch (1 Month, 6 Months, 12 Months) */}
+                  <div className="flex justify-center mb-6">
+                    <div className="inline-flex flex-wrap justify-center gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-full shadow-inner">
+                      <button 
+                        type="button" 
+                        onClick={() => setBillingCycle(1)} 
+                        className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 ease-in-out cursor-pointer border-0 ${billingCycle === 1 ? 'bg-white text-green-600 shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+                      >
+                        1 Month
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setBillingCycle(6)} 
+                        className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 ease-in-out cursor-pointer border-0 ${billingCycle === 6 ? 'bg-white text-green-600 shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+                      >
+                        6 Months
+                        {getMaxDiscountForCycle(6) > 0 && (
+                          <span className="bg-[#FB8C00] text-white text-[10px] px-2 py-0.5 rounded-full font-black animate-pulse">
+                            -{getMaxDiscountForCycle(6)}%
+                          </span>
+                        )}
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setBillingCycle(12)} 
+                        className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 ease-in-out cursor-pointer border-0 ${billingCycle === 12 ? 'bg-white text-green-600 shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+                      >
+                        12 Months (Yearly)
+                        {getMaxDiscountForCycle(12) > 0 && (
+                          <span className="bg-[#FB8C00] text-white text-[10px] px-2 py-0.5 rounded-full font-black animate-pulse">
+                            -{getMaxDiscountForCycle(12)}%
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
                   {plans.length === 0 ? (
                     <div className="text-center py-8 text-slate-400 font-bold animate-pulse">Loading plans...</div>
                   ) : (
@@ -758,6 +843,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                       {plans.map((plan, idx) => {
                         const isSelected = newStorePlan === plan._id;
                         const isPro = plan.popular || plan.name === 'Pro';
+                        const rate = getPlanBilling(plan, billingCycle);
                         return (
                           <div 
                             key={plan._id}
@@ -779,9 +865,28 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                                 />
                               </div>
                               {plan.description && <p className="text-[10px] text-slate-400 italic mb-2">"{plan.description}"</p>}
-                              <div className="flex items-baseline mb-3">
-                                <span className="text-2xl font-black text-slate-900">₹{getPlanPrice(plan)}</span>
-                                <span className="text-xs text-slate-500 font-medium ml-1">/month</span>
+                              
+                              {/* Price Section */}
+                              <div className="mb-3">
+                                <div className="flex items-baseline gap-1.5">
+                                  {rate.discountEnabled && (
+                                    <span className="line-through text-slate-400 text-sm font-normal">
+                                      ₹{rate.originalPrice}
+                                    </span>
+                                  )}
+                                  <span className="text-2xl font-black text-slate-900">₹{rate.price}</span>
+                                  <span className="text-xs text-slate-500 font-medium ml-1">/month</span>
+                                </div>
+                                {rate.discountEnabled && (
+                                  <span className="inline-block bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full text-[10px] font-bold mt-1">
+                                    Save {rate.discount}%
+                                  </span>
+                                )}
+                                {billingCycle > 1 && rate.price > 0 && (
+                                  <p className="text-[11px] font-semibold text-slate-500 mt-1">
+                                    Billed ₹{rate.price * billingCycle} every {billingCycle} months
+                                  </p>
+                                )}
                               </div>
                               
                               <ul className="space-y-1.5 my-3 text-left border-t border-slate-100 pt-3">
@@ -819,19 +924,28 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                     <h4 className="text-lg font-bold text-slate-800">Confirmed Plan Summary</h4>
                     <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl">
                       <div className="flex justify-between items-center mb-2">
-                        <div className="font-bold text-slate-800 text-lg">
-                          {plans.find(p => p._id === newStorePlan)?.name || 'Selected Plan'}
+                        <div>
+                          <div className="font-bold text-slate-800 text-lg">
+                            {plans.find(p => p._id === newStorePlan)?.name || 'Selected Plan'}
+                          </div>
+                          <span className="inline-block text-[11px] font-bold text-green-700 bg-green-100/70 px-2.5 py-0.5 rounded-full mt-1">
+                            {billingCycle === 1 ? 'Monthly Plan (1 Month)' : billingCycle === 6 ? '6 Months Plan' : 'Yearly Plan (12 Months)'}
+                          </span>
                         </div>
                         <div className="text-right">
-                          <div className="font-black text-xl text-slate-900">₹{getPlanPrice(plans.find(p => p._id === newStorePlan))}</div>
-                          <div className="text-[10px] text-slate-500 font-bold uppercase">/month</div>
+                          <div className="font-black text-xl text-slate-900">
+                            ₹{getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-bold uppercase">
+                            {billingCycle > 1 ? `₹${getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price}/mo` : '/month'}
+                          </div>
                         </div>
                       </div>
-                      <p className="text-xs text-slate-500">Includes 7 days free trial. Start date: {new Date(new Date().setDate(new Date().getDate() + 7)).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500 mt-2">Includes 7 days free trial. Plan official start date: {new Date(new Date().setDate(new Date().getDate() + 7)).toLocaleDateString()}</p>
                     </div>
 
                     {/* Choose Payment Method */}
-                    {getPlanPrice(plans.find(p => p._id === newStorePlan)) > 0 && (
+                    {getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle > 0 && (
                       <div className="space-y-3">
                         <h4 className="text-sm font-bold text-slate-800">Choose Payment Method</h4>
                         <div className="grid grid-cols-2 gap-3">
@@ -1007,8 +1121,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                       disabled={!newStoreName || !newStoreSlug || subdomainStatus === 'taken' || subdomainStatus === 'checking' || subdomainStatus === 'invalid'}
                       className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
                     >
-                      {getPlanPrice(plans.find(p => p._id === newStorePlan)) > 0 ? (
-                        <>Proceed for Payment <ArrowRight size={16} /></>
+                      {getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle > 0 ? (
+                        <>Proceed for Payment (₹{getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle}) <ArrowRight size={16} /></>
                       ) : (
                         <>Confirm & Create <CheckCircle size={16} /></>
                       )}
