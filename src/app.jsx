@@ -32,6 +32,7 @@ import CustomPageEditor from './pages/CustomPageEditor';
 import CustomPagePreview from './pages/CustomPagePreview';
 import ManageCustomMenus from './pages/ManageCustomMenus';
 import ManageCustomAssets from './pages/ManageCustomAssets';
+import StaffLogin from './pages/StaffLogin';
 
 
 function App() {
@@ -194,6 +195,14 @@ function App() {
           <Route 
             path="/counter" 
             element={<ManageCounter />} 
+          />
+          <Route 
+            path="/staff-login" 
+            element={<StaffLogin />} 
+          />
+          <Route 
+            path="/staff-login/:role" 
+            element={<StaffLogin />} 
           />
           <Route 
             path="/store/:storeId/staff" 
