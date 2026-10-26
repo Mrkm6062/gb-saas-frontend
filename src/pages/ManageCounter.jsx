@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../api';
+import { generateReceiptPdf, downloadReceiptPdf, sendWhatsAppWithReceiptPdf } from '../utils/receiptPdf';
 import { 
   CreditCard, 
   Search, 
@@ -12,7 +13,9 @@ import {
   User, 
   LogOut, 
   CheckCircle, 
-  Printer, 
+  Printer,
+  Download,
+  FileText, 
   Send, 
   Phone, 
   Mail, 
@@ -150,6 +153,8 @@ const ManageCounter = () => {
   const [billCustomerPhone, setBillCustomerPhone] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailStatusMsg, setEmailStatusMsg] = useState({ text: '', type: '' });
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [waStatusMsg, setWaStatusMsg] = useState({ text: '', type: '' });
 
   // Update live clock every second
   useEffect(() => {
@@ -593,6 +598,7 @@ const ManageCounter = () => {
         setBillCustomerPhone(customerPhone || '');
         setBillCustomerEmail('');
         setEmailStatusMsg({ text: '', type: '' });
+        setWaStatusMsg({ text: '', type: '' });
 
         // Reset cart for next order
         setCart([]);
@@ -646,35 +652,38 @@ const ManageCounter = () => {
     }
   };
 
-  const handleOpenWhatsAppBill = () => {
+  const handleOpenWhatsAppBill = async () => {
     if (!completedOrder) return;
-    const cleanPhone = billCustomerPhone ? billCustomerPhone.replace(/[^0-9]/g, '') : '';
-    const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-
-    const storeName = activeStore.storeName || 'Our Store';
-    const orderNo = completedOrder._id ? completedOrder._id.slice(-6).toUpperCase() : '';
-
-    let text = `🧾 *Digital Bill - ${storeName}*\n\n`;
-    text += `*Order #:* ${orderNo}\n`;
-    text += `*Date:* ${new Date(completedOrder.createdAt || Date.now()).toLocaleString('en-IN')}\n`;
-    if (completedOrder.tableNumber && completedOrder.tableNumber !== '0') {
-      text += `*Table:* Table ${completedOrder.tableNumber} (Dine-in)\n`;
+    setIsGeneratingPdf(true);
+    setWaStatusMsg({ text: '', type: '' });
+    try {
+      const receiptUrl = `${API_BASE_URL}/api/orders/receipt/${completedOrder._id}`;
+      const res = await sendWhatsAppWithReceiptPdf({
+        order: completedOrder,
+        store: activeStore,
+        staff: staffData,
+        targetPhone: billCustomerPhone,
+        receiptUrl
+      });
+      if (res?.message) {
+        setWaStatusMsg({ text: res.message, type: res.success ? 'success' : 'error' });
+      }
+    } catch (err) {
+      console.error('Error sharing receipt:', err);
+      setWaStatusMsg({ text: `Failed to share receipt: ${err.message}`, type: 'error' });
+    } finally {
+      setIsGeneratingPdf(false);
     }
-    text += `*Billed by:* ${completedOrder.orderBy || staffData?.name || 'Counter'}\n\n`;
-    text += `*Items:*\n`;
-    (completedOrder.orderItems || []).forEach((item) => {
-      text += `• ${item.name} x ${item.qty} = ₹${item.price * item.qty}\n`;
-    });
-    text += `\n*Total Amount:* ₹${completedOrder.totalAmount}\n`;
-    text += `*Payment:* ${String(completedOrder.paymentMethod || 'cash').toUpperCase()} (PAID ✓)\n\n`;
-    text += `Thank you for visiting ${storeName}! Visit us again soon.`;
+  };
 
-    const encoded = encodeURIComponent(text);
-    const waUrl = phoneWithCountry
-      ? `https://wa.me/${phoneWithCountry}?text=${encoded}`
-      : `https://api.whatsapp.com/send?text=${encoded}`;
-
-    window.open(waUrl, '_blank');
+  const handleDownloadReceiptPdf = () => {
+    if (!completedOrder) return;
+    try {
+      downloadReceiptPdf(completedOrder, activeStore, staffData);
+      setWaStatusMsg({ text: '✓ PDF Receipt downloaded successfully!', type: 'success' });
+    } catch (err) {
+      alert(`Could not download PDF: ${err.message}`);
+    }
   };
 
   const handlePrintReceipt = () => {
@@ -1964,7 +1973,7 @@ const ManageCounter = () => {
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 animate-fadeIn">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Customer Mobile Number
+                      Customer WhatsApp Number
                     </label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -1980,25 +1989,44 @@ const ManageCounter = () => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 pt-1">
-                    {/* SMS Option: Disabled as requested */}
+                    {/* Download PDF Option */}
                     <button
                       type="button"
-                      disabled={true}
-                      title="SMS Gateway is currently disabled"
-                      className="py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-200 text-slate-400 font-bold text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-60"
+                      onClick={handleDownloadReceiptPdf}
+                      className="py-2.5 px-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
                     >
-                      <MessageCircle size={14} /> SMS (Disabled)
+                      <Download size={14} className="text-slate-600" /> Download PDF Bill
                     </button>
 
-                    {/* WhatsApp Option: Enabled */}
+                    {/* WhatsApp Option: Enabled with Attached PDF */}
                     <button
                       type="button"
                       onClick={handleOpenWhatsAppBill}
-                      className="py-2.5 px-3 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-green-500/20 transition"
+                      disabled={isGeneratingPdf}
+                      className="py-2.5 px-3 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-green-500/20 transition disabled:opacity-50"
                     >
-                      <MessageCircle size={16} /> Send on WhatsApp
+                      {isGeneratingPdf ? (
+                        <>
+                          <RefreshCw size={14} className="animate-spin" /> Preparing PDF...
+                        </>
+                      ) : (
+                        <>
+                          <MessageCircle size={16} /> Send on WhatsApp
+                        </>
+                      )}
                     </button>
                   </div>
+
+                  {waStatusMsg.text && (
+                    <div
+                      className={`text-xs font-bold p-2.5 rounded-xl flex items-center gap-1.5 ${
+                        waStatusMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200'
+                      }`}
+                    >
+                      <CheckCircle size={14} className="shrink-0" />
+                      <span>{waStatusMsg.text}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
