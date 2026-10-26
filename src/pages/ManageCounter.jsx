@@ -133,6 +133,7 @@ const ManageCounter = () => {
 
   // Cart & Checkout State
   const [cart, setCart] = useState([]);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [customerPhone, setCustomerPhone] = useState('');
   const [selectedTable, setSelectedTable] = useState('0');
   const [paymentType, setPaymentType] = useState('cash'); // 'cash' | 'upi' | 'card'
@@ -861,80 +862,136 @@ const ManageCounter = () => {
   // -------------------------------------------------------------
   const tables = activeStore.tables || ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
+  // Resolve Store Custom ID (e.g. GBS006) - NEVER show raw MongoDB ObjectId
+  const rawIdCandidate = activeStore?.storeId || staffData?.store?.storeId || urlStoreId || '';
+  const storeCustomId = (/^[0-9a-fA-F]{24}$/.test(rawIdCandidate))
+    ? (activeStore?.storeSlug || staffData?.store?.storeSlug || 'STORE')
+    : (rawIdCandidate || activeStore?.storeSlug || '');
+
+  // Strict Role-Based Access Control: Staff can only access their assigned role's view
+  const userRole = (staffData?.role || 'counter').toLowerCase();
+  const isManager = userRole === 'manager';
+  const canAccessCounter = isManager || ['counter', 'cashier', 'waiter'].includes(userRole);
+  const canAccessKitchen = isManager || userRole === 'kitchen';
+  const canAccessDelivery = isManager || userRole === 'delivery';
+
+  // Force active view strictly to role-permitted terminal
+  const effectiveView = (() => {
+    if (userRole === 'kitchen') return 'kitchen';
+    if (userRole === 'delivery') return 'delivery';
+    if (!canAccessCounter && canAccessKitchen) return 'kitchen';
+    if (!canAccessCounter && canAccessDelivery) return 'delivery';
+    if (isManager) return activeView;
+    return 'counter';
+  })();
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans select-none">
       
       {/* ========================================================= */}
-      {/* TOP HEADER: Store Info, Staff Details, Live Clock         */}
+      {/* TOP HEADER: Responsive on Mobile & Desktop                */}
       {/* ========================================================= */}
-      <header className="h-16 bg-slate-900 text-white px-4 md:px-6 flex items-center justify-between border-b border-slate-800 shrink-0 shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center font-black shadow-md">
-            <CreditCard size={20} />
+      <header className="min-h-16 bg-slate-900 text-white px-3 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-800 shrink-0 shadow-md z-30">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center font-black shadow-md shrink-0">
+            {effectiveView === 'kitchen' ? <ChefHat size={20} /> : effectiveView === 'delivery' ? <Truck size={20} /> : <CreditCard size={18} />}
           </div>
-          <div>
-            <h1 className="text-sm md:text-base font-black truncate max-w-[200px] md:max-w-xs">
+          <div className="min-w-0">
+            <h1 className="text-xs md:text-base font-black truncate max-w-[140px] sm:max-w-[200px] md:max-w-xs leading-tight">
               {activeStore.storeName || 'Counter POS'}
             </h1>
-            <p className="text-[10px] text-slate-400 font-mono">
-              Store: {activeStore.storeId || currentStoreId}
-            </p>
+            {storeCustomId && (
+              <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-orange-500/20 text-orange-400 font-mono text-[9px] md:text-[10px] font-black border border-orange-500/30">
+                ID: {storeCustomId}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* View Mode Navigation Switcher */}
-        <div className="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
-          <button
-            type="button"
-            onClick={() => setActiveView('counter')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 ${
-              activeView === 'counter'
-                ? 'bg-orange-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-            }`}
-          >
-            <CreditCard size={14} />
-            <span>Counter POS</span>
-          </button>
+        {/* View Switcher: Manager can switch; non-managers only see their assigned role terminal */}
+        {isManager ? (
+          <div className="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setActiveView('counter')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 ${
+                effectiveView === 'counter'
+                  ? 'bg-orange-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+              }`}
+            >
+              <CreditCard size={14} />
+              <span>Counter POS</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveView('kitchen')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 relative ${
-              activeView === 'kitchen'
-                ? 'bg-amber-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-            }`}
-          >
-            <Utensils size={14} />
-            <span>Kitchen Area</span>
-            {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black leading-none animate-pulse">
-                {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length}
-              </span>
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveView('kitchen')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 relative ${
+                effectiveView === 'kitchen'
+                  ? 'bg-amber-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+              }`}
+            >
+              <Utensils size={14} />
+              <span>Kitchen Area</span>
+              {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black leading-none animate-pulse">
+                  {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length}
+                </span>
+              )}
+            </button>
 
-          {(staffData?.role === 'delivery' || staffData?.role === 'manager') && (
             <button
               type="button"
               onClick={() => setActiveView('delivery')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 ${
-                activeView === 'delivery'
+                effectiveView === 'delivery'
                   ? 'bg-indigo-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
               }`}
             >
               <Truck size={14} />
-              <span>My Deliveries</span>
+              <span>Delivery Orders</span>
               {myAssignedOrders.length > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full bg-indigo-400 text-slate-900 text-[10px] font-black leading-none">
                   {myAssignedOrders.length}
                 </span>
               )}
             </button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="flex items-center">
+            {canAccessKitchen && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-black shadow-xs">
+                <ChefHat size={16} />
+                <span>Kitchen Display Terminal (KDS)</span>
+                {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px] font-black leading-none animate-pulse">
+                    {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length}
+                  </span>
+                )}
+              </div>
+            )}
+            {canAccessDelivery && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-xs font-black shadow-xs">
+                <Truck size={16} />
+                <span>Delivery Staff Terminal</span>
+                {myAssignedOrders.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-indigo-400 text-slate-900 text-[10px] font-black leading-none">
+                    {myAssignedOrders.length}
+                  </span>
+                )}
+              </div>
+            )}
+            {canAccessCounter && !canAccessKitchen && !canAccessDelivery && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-orange-500/20 text-orange-300 border border-orange-500/40 text-xs font-black shadow-xs">
+                <CreditCard size={16} />
+                <span>Counter Sale POS Terminal</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Live Clock */}
         <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs font-mono font-bold text-amber-400">
@@ -981,13 +1038,13 @@ const ManageCounter = () => {
       {/* ========================================================= */}
       {/* 1. VIEW: MAIN COUNTER POS                                 */}
       {/* ========================================================= */}
-      {activeView === 'counter' && (
-      <div className="flex-1 flex overflow-hidden">
+      {effectiveView === 'counter' && canAccessCounter && (
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
         
         {/* ------------------------------------------------------- */}
-        {/* LEFT COLUMN: 70% Product Catalog & Search               */}
+        {/* LEFT COLUMN: Full width on mobile, 70% on desktop       */}
         {/* ------------------------------------------------------- */}
-        <div className="w-[68%] lg:w-[70%] xl:w-[72%] flex flex-col border-r border-slate-200 bg-slate-50 overflow-hidden">
+        <div className="w-full md:w-[68%] lg:w-[70%] xl:w-[72%] flex flex-col border-r border-slate-200 bg-slate-50 overflow-hidden pb-16 md:pb-0">
           
           {/* Top Catalog Toolbar: Staff Name/ID & Search */}
           <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between gap-4 shrink-0 shadow-xs">
@@ -1376,7 +1433,7 @@ const ManageCounter = () => {
       {/* ========================================================= */}
       {/* 2. VIEW: KITCHEN AREA (KDS - Kitchen Display System)      */}
       {/* ========================================================= */}
-      {activeView === 'kitchen' && (
+      {effectiveView === 'kitchen' && canAccessKitchen && (
         <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden">
           {/* Kitchen Sub-Toolbar */}
           <div className="p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-xs">
@@ -1612,7 +1669,7 @@ const ManageCounter = () => {
       {/* ========================================================= */}
       {/* 3. VIEW: DELIVERY MONITOR (For Store Delivery Staff)       */}
       {/* ========================================================= */}
-      {activeView === 'delivery' && (
+      {effectiveView === 'delivery' && canAccessDelivery && (
         <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden">
           <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-xs">
             <div className="flex items-center gap-3">
