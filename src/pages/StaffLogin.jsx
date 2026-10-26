@@ -192,6 +192,25 @@ const StaffLogin = () => {
 
   const currentStoreId = staffData?.store?._id || staffData?.store?.storeId || storeData?._id || storeData?.storeId || loginStoreCode;
 
+  const rawStoreCodeCandidate = staffData?.store?.storeId || storeData?.storeId || otpStoreId || loginStoreCode || '';
+  const resolvedStoreCode = (/^[0-9a-fA-F]{24}$/.test(rawStoreCodeCandidate))
+    ? (staffData?.store?.storeSlug || storeData?.storeSlug || rawStoreCodeCandidate)
+    : (rawStoreCodeCandidate || staffData?.store?.storeSlug || storeData?.storeSlug || '');
+
+  // Resolved store metadata for receipts, POS headers, and payments
+  const storeMeta = {
+    storeName: staffData?.store?.storeName || storeData?.storeName || storeData?.name || 'Store POS',
+    name: staffData?.store?.storeName || storeData?.storeName || storeData?.name || 'Store POS',
+    storeId: resolvedStoreCode,
+    storeSlug: staffData?.store?.storeSlug || storeData?.storeSlug || '',
+    locationAddress: staffData?.store?.locationAddress || storeData?.locationAddress || storeData?.address || '',
+    phone: staffData?.store?.phone || staffData?.store?.storePhone || staffData?.store?.whatsappNumber || storeData?.whatsappNumber || storeData?.phone || '',
+    storePhone: staffData?.store?.phone || staffData?.store?.storePhone || staffData?.store?.whatsappNumber || storeData?.whatsappNumber || storeData?.phone || '',
+    whatsappNumber: staffData?.store?.whatsappNumber || storeData?.whatsappNumber || staffData?.store?.phone || storeData?.phone || '',
+    logo: staffData?.store?.logo || storeData?.logo || '',
+    _id: currentStoreId || ''
+  };
+
   // Fetch store checkout & payment settings (to check if online payment / Razorpay is enabled)
   useEffect(() => {
     if (!currentStoreId) return;
