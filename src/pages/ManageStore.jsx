@@ -1501,6 +1501,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
                 {(s.customDomain || s.subdomain) && (
                   <a href={`https://${s.customDomain || s.subdomain}`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline mb-3 truncate block">
+                 <a href={`https://${s.customDomain || s.subdomain}/staff-login`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline mb-3 truncate block"></a>
                     {s.customDomain || s.subdomain}
                   </a>
                 )}
