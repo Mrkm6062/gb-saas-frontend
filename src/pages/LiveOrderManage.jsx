@@ -22,7 +22,10 @@ import {
   Volume2,
   VolumeX,
   Smartphone,
-  BellRing
+  BellRing,
+  ChefHat,
+  AlertTriangle,
+  SendHorizontal
 } from 'lucide-react';
 import { 
   isPushNotificationSupported, 
@@ -49,12 +52,13 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('placed'); // 'placed' | 'shipped'
+  const [activeTab, setActiveTab] = useState('placed'); // 'placed' | 'preparing' | 'shipped' | 'wasted'
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [printingOrderId, setPrintingOrderId] = useState(null);
   const fullscreenRef = useRef(null);
   const [soundTheme, setSoundTheme] = useState(localStorage.getItem('live_order_sound_theme') || 'chime');
   const orderIdsRef = useRef(new Set());
+  const [deliveryStaffList, setDeliveryStaffList] = useState([]);
 
   // Modals state
   const [confirmDeliveredModal, setConfirmDeliveredModal] = useState({ isOpen: false, order: null });
@@ -62,9 +66,10 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
   const [trackingModal, setTrackingModal] = useState({
     isOpen: false,
     orderId: null,
-    ShippingMethod: 'By Shipping Company',
+    ShippingMethod: 'By Store Delivery Staff',
     ShippingCompany: '',
     ShippingTrackingNumber: '',
+    deliveryStaff: '',
     DeliveryPersonName: '',
     DeliveryPersonPhone: ''
   });
@@ -227,6 +232,23 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
     }
   };
 
+  // Fetch delivery staff for store
+  useEffect(() => {
+    if (!currentStore._id) return;
+    const fetchDeliveryStaff = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/store-staff/delivery-staff?storeId=${currentStore._id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDeliveryStaffList(data.deliveryStaff || []);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch delivery staff:', err);
+      }
+    };
+    fetchDeliveryStaff();
+  }, [currentStore._id]);
+
   // Live polling every 5 seconds
   useEffect(() => {
     if (currentStore._id) {
@@ -292,36 +314,61 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
     setTrackingModal({
       isOpen: true,
       orderId,
-      ShippingMethod: 'By Shipping Company',
+      ShippingMethod: 'By Store Delivery Staff',
       ShippingCompany: '',
       ShippingTrackingNumber: '',
+      deliveryStaff: '',
       DeliveryPersonName: '',
       DeliveryPersonPhone: ''
     });
   };
 
   const submitShipped = () => {
-    const finalShippingMethod = trackingModal.ShippingMethod === 'By Store Name' 
-      ? `By ${currentStore.storeName || 'Store'}` 
+    const isOwnDelivery = trackingModal.ShippingMethod === 'By Store Delivery Staff' || trackingModal.ShippingMethod === 'By Store Name';
+    const finalShippingMethod = isOwnDelivery
+      ? `By ${currentStore.storeName || 'Store'} Delivery Staff` 
       : trackingModal.ShippingMethod;
 
     updateOrder(trackingModal.orderId, {
       orderStatus: 'shipped',
       ShippingMethod: finalShippingMethod,
-      ShippingCompany: trackingModal.ShippingCompany || 'N/A',
-      ShippingTrackingNumber: trackingModal.ShippingTrackingNumber || 'N/A',
-      DeliveryPersonName: trackingModal.DeliveryPersonName || 'N/A',
-      DeliveryPersonPhone: trackingModal.DeliveryPersonPhone || 'N/A'
+      ShippingCompany: isOwnDelivery ? (currentStore.storeName || 'Store Staff') : (trackingModal.ShippingCompany || 'N/A'),
+      ShippingTrackingNumber: isOwnDelivery ? 'INTERNAL-DISPATCH' : (trackingModal.ShippingTrackingNumber || 'N/A'),
+      deliveryStaff: trackingModal.deliveryStaff || null,
+      DeliveryPersonName: trackingModal.DeliveryPersonName || 'Store Delivery Staff',
+      DeliveryPersonPhone: trackingModal.DeliveryPersonPhone || ''
     });
     setTrackingModal({ 
       isOpen: false, 
       orderId: null, 
-      ShippingMethod: 'By Shipping Company',
+      ShippingMethod: 'By Store Delivery Staff',
       ShippingCompany: '',
       ShippingTrackingNumber: '',
+      deliveryStaff: '',
       DeliveryPersonName: '',
       DeliveryPersonPhone: ''
     });
+  };
+
+  // Kitchen Area Actions (Preparing / Wasted / Finish)
+  const handleMarkPreparing = (orderId) => {
+    updateOrder(orderId, { orderStatus: 'preparing' });
+  };
+
+  const handleMarkWasted = (orderId) => {
+    const reason = window.prompt("Reason for marking this order as Wasted / Damaged:", "Food damaged / prepared & wasted");
+    if (reason !== null) {
+      updateOrder(orderId, { orderStatus: 'wasted', wastedReason: reason || 'Damaged / Wasted' });
+    }
+  };
+
+  const handleFinishKitchenOrder = (order) => {
+    const isDineIn = order.orderType && order.orderType.toLowerCase() === 'dine-in';
+    if (isDineIn) {
+      updateOrder(order._id, { orderStatus: 'delivered', paymentStatus: 'paid' });
+    } else {
+      handleMarkShipped(order._id);
+    }
   };
 
   // Trigger Delivered flow (with confirmation popup)
@@ -603,6 +650,21 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                 </span>
               </button>
               
+              {/* Preparing (Kitchen) Queue Button */}
+              <button 
+                onClick={() => setActiveTab('preparing')}
+                title="Preparing in Kitchen"
+                className={`w-full py-2.5 px-2 md:px-4 text-xs font-bold transition-all rounded-xl flex flex-col md:flex-row items-center justify-center md:justify-between gap-1.5 md:gap-2 border ${activeTab === 'preparing' ? 'bg-amber-50 text-amber-800 border-amber-300 font-extrabold' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <ChefHat size={18} className={activeTab === 'preparing' ? 'text-amber-600 animate-bounce' : 'text-slate-400'} />
+                  <span className="hidden md:inline">Preparing (Kitchen)</span>
+                </div>
+                <span className="px-1.5 py-0.5 text-[9px] md:text-xs bg-amber-100 text-amber-800 font-bold rounded-full">
+                  {orders.filter(o => o.orderStatus === 'preparing').length}
+                </span>
+              </button>
+
               {/* Shipped Queue Button */}
               <button 
                 onClick={() => setActiveTab('shipped')}
@@ -615,6 +677,21 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                 </div>
                 <span className="px-1.5 py-0.5 text-[9px] md:text-xs bg-indigo-100 text-indigo-700 font-bold rounded-full">
                   {orders.filter(o => o.orderStatus === 'shipped').length}
+                </span>
+              </button>
+
+              {/* Wasted / Damaged Queue Button */}
+              <button 
+                onClick={() => setActiveTab('wasted')}
+                title="Wasted / Damaged Orders"
+                className={`w-full py-2.5 px-2 md:px-4 text-xs font-bold transition-all rounded-xl flex flex-col md:flex-row items-center justify-center md:justify-between gap-1.5 md:gap-2 border ${activeTab === 'wasted' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={18} className={activeTab === 'wasted' ? 'text-rose-600' : 'text-slate-400'} />
+                  <span className="hidden md:inline">Wasted / Damaged</span>
+                </div>
+                <span className="px-1.5 py-0.5 text-[9px] md:text-xs bg-rose-100 text-rose-800 font-bold rounded-full">
+                  {orders.filter(o => o.orderStatus === 'wasted').length}
                 </span>
               </button>
             </div>
@@ -692,6 +769,37 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                               <p className="flex items-start gap-1.5 leading-relaxed mt-1"><MapPin size={12} className="shrink-0 mt-0.5" /> {fullAddress}</p>
                             )}
                           </div>
+
+                          {/* Shipped Delivery Person Name Banner */}
+                          {order.orderStatus === 'shipped' && (order.DeliveryPersonName || order.deliveryStaff) && (
+                            <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between text-xs mt-2">
+                              <div className="flex items-center gap-1.5 font-bold text-indigo-950">
+                                <span>🛵 Delivery Staff:</span>
+                                <span className="font-extrabold text-indigo-700 underline decoration-indigo-300">{order.DeliveryPersonName || (typeof order.deliveryStaff === 'object' ? order.deliveryStaff.name : 'Store Staff')}</span>
+                              </div>
+                              {order.DeliveryPersonPhone && (
+                                <a href={`tel:${order.DeliveryPersonPhone}`} className="text-indigo-600 font-bold hover:underline flex items-center gap-1">
+                                  <Phone size={11} /> {order.DeliveryPersonPhone}
+                                </a>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Preparing Kitchen Banner */}
+                          {order.orderStatus === 'preparing' && (
+                            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 flex items-center gap-2 text-xs text-amber-900 font-bold mt-2">
+                              <ChefHat size={16} className="text-amber-600 animate-bounce" />
+                              <span>🍳 Cooking in Kitchen</span>
+                            </div>
+                          )}
+
+                          {/* Wasted / Damaged Banner */}
+                          {order.orderStatus === 'wasted' && (
+                            <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-900 font-bold mt-2">
+                              <AlertTriangle size={16} className="text-rose-600" />
+                              <span>⚠️ Food Damaged / Wasted {order.wastedReason ? `(${order.wastedReason})` : ''}</span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="border-t border-dashed border-slate-200 pt-3">
@@ -738,65 +846,102 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                         )}
 
                         {/* Status Options */}
-                        <div className="grid grid-cols-2 gap-2 text-xs font-bold">
-                          <button 
-                            disabled={!order.orderConfirmed}
-                            onClick={() => {
-                              if (order.orderStatus === 'shipped') {
-                                const isOwn = order.ShippingMethod && !order.ShippingMethod.startsWith('By Shipping Company');
-                                setTrackingModal({
-                                  isOpen: true,
-                                  orderId: order._id,
-                                  ShippingMethod: isOwn ? 'By Store Name' : 'By Shipping Company',
-                                  ShippingCompany: order.ShippingCompany || '',
-                                  ShippingTrackingNumber: order.ShippingTrackingNumber || '',
-                                  DeliveryPersonName: order.DeliveryPersonName || '',
-                                  DeliveryPersonPhone: order.DeliveryPersonPhone || ''
-                                });
-                              } else {
-                                handleMarkShipped(order._id);
-                              }
-                            }}
-                            className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
-                              !order.orderConfirmed
-                                ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
-                                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
-                            }`}
-                          >
-                            <Truck size={12} />
-                            {order.orderStatus === 'shipped' ? 'Edit Tracking' : 'Mark Shipped'}
-                          </button>
+                        <div className="space-y-2 text-xs font-bold">
+                          {/* If in Kitchen Preparing status: show Finish Button */}
+                          {order.orderStatus === 'preparing' ? (
+                            <button
+                              onClick={() => handleFinishKitchenOrder(order)}
+                              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition shadow flex items-center justify-center gap-1.5"
+                            >
+                              <CheckCircle size={14} /> Finish ({order.orderType === 'Dine-in' ? 'Serve to Table' : 'Ready to Ship'})
+                            </button>
+                          ) : null}
 
-                          <button 
-                            disabled={!order.orderConfirmed}
-                            onClick={() => handleMarkDelivered(order)}
-                            className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
-                              !order.orderConfirmed 
-                                ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
-                                : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'
-                            }`}
-                          >
-                            <CheckCircle size={12} /> {order.orderType === 'Dine-in' ? 'Mark Served' : 'Mark Delivered'}
-                          </button>
+                          <div className="grid grid-cols-2 gap-2">
+                            {order.orderStatus === 'placed' && (
+                              <button 
+                                onClick={() => handleMarkPreparing(order._id)}
+                                className="py-2 rounded-xl border flex items-center justify-center gap-1 transition bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300 font-extrabold"
+                              >
+                                <ChefHat size={13} /> Start Preparing
+                              </button>
+                            )}
 
-                          <button 
-                            onClick={() => handleCancelOrder(order._id)}
-                            className="py-2 rounded-xl border flex items-center justify-center gap-1 transition bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-                          >
-                            <XCircle size={12} /> Cancel Order
-                          </button>
+                            {order.orderStatus === 'shipped' ? (
+                              <button 
+                                onClick={() => {
+                                  const isOwn = order.ShippingMethod && !order.ShippingMethod.startsWith('By Shipping Company');
+                                  setTrackingModal({
+                                    isOpen: true,
+                                    orderId: order._id,
+                                    ShippingMethod: isOwn ? 'By Store Delivery Staff' : 'By Shipping Company',
+                                    ShippingCompany: order.ShippingCompany || '',
+                                    ShippingTrackingNumber: order.ShippingTrackingNumber || '',
+                                    deliveryStaff: order.deliveryStaff?._id || order.deliveryStaff || '',
+                                    DeliveryPersonName: order.DeliveryPersonName || '',
+                                    DeliveryPersonPhone: order.DeliveryPersonPhone || ''
+                                  });
+                                }}
+                                className="py-2 rounded-xl border flex items-center justify-center gap-1 transition bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
+                              >
+                                <Truck size={12} /> Edit Tracking / Staff
+                              </button>
+                            ) : order.orderStatus !== 'preparing' && order.orderStatus !== 'wasted' ? (
+                              <button 
+                                disabled={!order.orderConfirmed}
+                                onClick={() => handleMarkShipped(order._id)}
+                                className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
+                                  !order.orderConfirmed
+                                    ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
+                                    : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+                                }`}
+                              >
+                                <Truck size={12} /> Mark Shipped
+                              </button>
+                            ) : null}
 
-                          <button 
-                            disabled={!order.orderConfirmed}
-                            onClick={() => handleReturnOrder(order._id)}
-                            className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
-                              !order.orderConfirmed 
-                                ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
-                                : 'bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200'
-                            }`}
-                          >
-                            <RotateCcw size={12} /> Mark Returned
-                          </button>
+                            {order.orderStatus !== 'wasted' && (
+                              <button 
+                                disabled={!order.orderConfirmed}
+                                onClick={() => handleMarkDelivered(order)}
+                                className={`py-2 rounded-xl border flex items-center justify-center gap-1 transition ${
+                                  !order.orderConfirmed 
+                                    ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' 
+                                    : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'
+                                }`}
+                              >
+                                <CheckCircle size={12} /> {order.orderType === 'Dine-in' ? 'Mark Served' : 'Mark Delivered'}
+                              </button>
+                            )}
+
+                            {['placed', 'preparing'].includes(order.orderStatus) && (
+                              <button 
+                                onClick={() => handleMarkWasted(order._id)}
+                                className="py-2 rounded-xl border flex items-center justify-center gap-1 transition bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200"
+                              >
+                                <AlertTriangle size={12} /> Mark Wasted
+                              </button>
+                            )}
+
+                            {order.orderStatus !== 'wasted' && (
+                              <button 
+                                onClick={() => handleCancelOrder(order._id)}
+                                className="py-2 rounded-xl border flex items-center justify-center gap-1 transition bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                              >
+                                <XCircle size={12} /> Cancel Order
+                              </button>
+                            )}
+
+                            {order.orderStatus === 'shipped' && (
+                              <button 
+                                disabled={!order.orderConfirmed}
+                                onClick={() => handleReturnOrder(order._id)}
+                                className="py-2 rounded-xl border flex items-center justify-center gap-1 transition bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+                              >
+                                <RotateCcw size={12} /> Mark Returned
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Bottom side Print Bill Button */}
@@ -932,10 +1077,34 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                 ) : (
                   <>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Delivery Person Name</label>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Select Store Delivery Staff</label>
+                      <select
+                        value={trackingModal.deliveryStaff || ''}
+                        onChange={e => {
+                          const selectedId = e.target.value;
+                          const found = deliveryStaffList.find(s => s._id === selectedId);
+                          setTrackingModal({
+                            ...trackingModal,
+                            deliveryStaff: selectedId,
+                            DeliveryPersonName: found ? found.name : trackingModal.DeliveryPersonName,
+                            DeliveryPersonPhone: found ? (found.phone || '') : trackingModal.DeliveryPersonPhone
+                          });
+                        }}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white mb-3"
+                      >
+                        <option value="">-- Choose Registered Delivery Staff --</option>
+                        {deliveryStaffList.map(staff => (
+                          <option key={staff._id} value={staff._id}>
+                            {staff.name} {staff.phone ? `(${staff.phone})` : `[${staff.staffId}]`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Delivery Person Name *</label>
                       <input 
                         type="text" 
-                        placeholder="e.g., John Doe"
+                        placeholder="e.g., Ramesh Kumar"
                         value={trackingModal.DeliveryPersonName}
                         onChange={e => setTrackingModal({...trackingModal, DeliveryPersonName: e.target.value})}
                         className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white"
@@ -945,7 +1114,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                       <label className="block text-sm font-bold text-slate-700 mb-1">Phone Number</label>
                       <input 
                         type="text" 
-                        placeholder="Enter phone number"
+                        placeholder="Enter 10-digit phone number"
                         value={trackingModal.DeliveryPersonPhone}
                         onChange={e => setTrackingModal({...trackingModal, DeliveryPersonPhone: e.target.value})}
                         className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white"

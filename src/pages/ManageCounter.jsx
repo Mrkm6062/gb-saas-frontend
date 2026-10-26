@@ -27,7 +27,14 @@ import {
   RefreshCw,
   Receipt,
   Lock,
-  Store as StoreIcon
+  Store as StoreIcon,
+  ChefHat,
+  Truck,
+  AlertTriangle,
+  Check,
+  Eye,
+  MapPin,
+  ExternalLink
 } from 'lucide-react';
 
 const ManageCounter = () => {
@@ -60,6 +67,57 @@ const ManageCounter = () => {
       setLoginStoreCode(urlStoreId);
     }
   }, [urlStoreId]);
+
+  // -------------------------------------------------------------
+  // Multi-View Navigation (Counter POS vs Kitchen Area vs Delivery)
+  // -------------------------------------------------------------
+  const [activeView, setActiveView] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gb_pos_staff_data');
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (parsed?.role === 'kitchen') return 'kitchen';
+      if (parsed?.role === 'delivery') return 'delivery';
+    } catch (e) {}
+    return 'counter'; // 'counter' | 'kitchen' | 'delivery'
+  });
+
+  // Kitchen Area (KDS) & Delivery State
+  const [kitchenOrders, setKitchenOrders] = useState([]);
+  const [kitchenLoading, setKitchenLoading] = useState(false);
+  const [kitchenFilter, setKitchenFilter] = useState('active'); // 'active' | 'placed' | 'preparing' | 'wasted'
+  const [deliveryStaffList, setDeliveryStaffList] = useState([]);
+  const [shippingModal, setShippingModal] = useState({
+    isOpen: false,
+    order: null,
+    deliveryStaffId: '',
+    DeliveryPersonName: '',
+    DeliveryPersonPhone: ''
+  });
+  const kitchenOrderIdsRef = useRef(new Set());
+
+  // Delivery Staff Assigned Orders State
+  const [myAssignedOrders, setMyAssignedOrders] = useState([]);
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+
+  // Play Kitchen Notification Tone
+  const playKitchenTone = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.25);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } catch (err) {}
+  };
 
   // -------------------------------------------------------------
   // POS & Catalog State
@@ -135,6 +193,13 @@ const ManageCounter = () => {
         setStaffToken(data.token);
         setStaffData(data.staff);
         setLoginPassword('');
+        if (data.staff?.role === 'kitchen') {
+          setActiveView('kitchen');
+        } else if (data.staff?.role === 'delivery') {
+          setActiveView('delivery');
+        } else {
+          setActiveView('counter');
+        }
       } else {
         setLoginError(data.message || 'Login failed. Please check your credentials.');
       }
@@ -151,6 +216,170 @@ const ManageCounter = () => {
     setStaffToken('');
     setStaffData(null);
     setCart([]);
+  };
+
+  // -------------------------------------------------------------
+  // Fetch Kitchen Orders & Active Delivery Staff
+  // -------------------------------------------------------------
+  const fetchKitchenData = async () => {
+    if (!currentStoreId) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/kitchen-orders?storeId=${currentStoreId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const incoming = data.orders || [];
+
+        // Check for new incoming orders to play tone
+        if (kitchenOrderIdsRef.current.size > 0) {
+          const hasNew = incoming.some(o => !kitchenOrderIdsRef.current.has(o._id) && ['placed', 'preparing'].includes(o.orderStatus));
+          if (hasNew) playKitchenTone();
+        }
+        kitchenOrderIdsRef.current = new Set(incoming.map(o => o._id));
+        setKitchenOrders(incoming);
+      }
+    } catch (err) {
+      console.warn('Error fetching kitchen orders:', err);
+    }
+  };
+
+  const fetchDeliveryStaff = async () => {
+    if (!currentStoreId) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/delivery-staff?storeId=${currentStoreId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDeliveryStaffList(data.deliveryStaff || []);
+      }
+    } catch (err) {}
+  };
+
+  // Fetch Delivery Staff assigned orders (when role is delivery or view is delivery)
+  const fetchMyAssignedOrders = async () => {
+    if (!staffToken) return;
+    setDeliveryLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/orders`, {
+        headers: { Authorization: `Bearer ${staffToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMyAssignedOrders(data.orders || []);
+      }
+    } catch (err) {
+      console.warn('Error fetching assigned orders:', err);
+    } finally {
+      setDeliveryLoading(false);
+    }
+  };
+
+  // Polling for Kitchen Orders (every 5 seconds)
+  useEffect(() => {
+    if (currentStoreId) {
+      fetchKitchenData();
+      fetchDeliveryStaff();
+      const interval = setInterval(fetchKitchenData, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [currentStoreId]);
+
+  // Polling for Delivery Staff orders (every 6 seconds if delivery role)
+  useEffect(() => {
+    if (staffToken && (staffData?.role === 'delivery' || activeView === 'delivery')) {
+      fetchMyAssignedOrders();
+      const interval = setInterval(fetchMyAssignedOrders, 6000);
+      return () => clearInterval(interval);
+    }
+  }, [staffToken, activeView, staffData?.role]);
+
+  // Kitchen Actions: Start Preparing, Mark Wasted, Finish
+  const handleStartPreparing = async (orderId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/kitchen-orders/${orderId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderStatus: 'preparing' })
+      });
+      if (res.ok) fetchKitchenData();
+    } catch (err) {
+      alert(`Failed to update: ${err.message}`);
+    }
+  };
+
+  const handleMarkWasted = async (orderId) => {
+    const reason = window.prompt("Reason for marking this order as Wasted / Damaged:", "Food damaged / prepared & wasted");
+    if (reason === null) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/kitchen-orders/${orderId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderStatus: 'wasted', wastedReason: reason || 'Damaged / Wasted' })
+      });
+      if (res.ok) fetchKitchenData();
+    } catch (err) {
+      alert(`Failed to mark wasted: ${err.message}`);
+    }
+  };
+
+  // Finish Kitchen Order:
+  // Dine-in -> Delivered
+  // Delivery -> Shipped (opens modal to select delivery staff or confirms)
+  const handleFinishKitchenOrder = (order) => {
+    const isDineIn = order.orderType && order.orderType.toLowerCase() === 'dine-in';
+    if (isDineIn) {
+      submitFinishOrder(order._id, true);
+    } else {
+      // Delivery order -> open modal to assign delivery staff
+      const defaultStaff = deliveryStaffList.length > 0 ? deliveryStaffList[0] : null;
+      setShippingModal({
+        isOpen: true,
+        order,
+        deliveryStaffId: defaultStaff?._id || '',
+        DeliveryPersonName: defaultStaff?.name || order.DeliveryPersonName || 'Store Delivery Staff',
+        DeliveryPersonPhone: defaultStaff?.phone || order.DeliveryPersonPhone || ''
+      });
+    }
+  };
+
+  const submitFinishOrder = async (orderId, isDineIn, payload = {}) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/kitchen-orders/${orderId}/finish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        fetchKitchenData();
+        setShippingModal({ isOpen: false, order: null, deliveryStaffId: '', DeliveryPersonName: '', DeliveryPersonPhone: '' });
+      } else {
+        const err = await res.json();
+        alert(err.message || 'Failed to finish order');
+      }
+    } catch (err) {
+      alert(`Error finishing order: ${err.message}`);
+    }
+  };
+
+  // Delivery Staff: Mark Assigned Order as Delivered
+  const handleMarkDeliveryDelivered = async (orderId) => {
+    if (!window.confirm("Confirm you have delivered this order to the customer?")) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/store-staff/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${staffToken}`
+        },
+        body: JSON.stringify({ orderStatus: 'delivered' })
+      });
+      if (res.ok) {
+        fetchMyAssignedOrders();
+      } else {
+        const err = await res.json();
+        alert(err.message || 'Failed to update order');
+      }
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   // -------------------------------------------------------------
@@ -344,7 +573,7 @@ const ManageCounter = () => {
         tableNumber: selectedTable || '0',
         orderBy: staffData?.staffId ? `${staffData.name} (${staffData.staffId})` : (staffData?.name || 'Counter Staff'),
         paymentStatus: 'paid',
-        orderStatus: 'delivered'
+        orderStatus: 'placed'
       };
 
       const res = await fetch(`${API_BASE_URL}/api/orders`, {
@@ -653,6 +882,60 @@ const ManageCounter = () => {
           </div>
         </div>
 
+        {/* View Mode Navigation Switcher */}
+        <div className="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
+          <button
+            type="button"
+            onClick={() => setActiveView('counter')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 ${
+              activeView === 'counter'
+                ? 'bg-orange-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            }`}
+          >
+            <CreditCard size={14} />
+            <span>Counter POS</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveView('kitchen')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 relative ${
+              activeView === 'kitchen'
+                ? 'bg-amber-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            }`}
+          >
+            <Utensils size={14} />
+            <span>Kitchen Area</span>
+            {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black leading-none animate-pulse">
+                {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length}
+              </span>
+            )}
+          </button>
+
+          {(staffData?.role === 'delivery' || staffData?.role === 'manager') && (
+            <button
+              type="button"
+              onClick={() => setActiveView('delivery')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 ${
+                activeView === 'delivery'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+              }`}
+            >
+              <Truck size={14} />
+              <span>My Deliveries</span>
+              {myAssignedOrders.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-indigo-400 text-slate-900 text-[10px] font-black leading-none">
+                  {myAssignedOrders.length}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+
         {/* Live Clock */}
         <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs font-mono font-bold text-amber-400">
           <Clock size={14} className="text-amber-400" />
@@ -696,8 +979,9 @@ const ManageCounter = () => {
       </header>
 
       {/* ========================================================= */}
-      {/* MAIN TWO-COLUMN SPLIT UI: 70% Left Catalog / 30% Right Cart */}
+      {/* 1. VIEW: MAIN COUNTER POS                                 */}
       {/* ========================================================= */}
+      {activeView === 'counter' && (
       <div className="flex-1 flex overflow-hidden">
         
         {/* ------------------------------------------------------- */}
@@ -1076,20 +1360,492 @@ const ManageCounter = () => {
                 </>
               ) : paymentType === 'cash' ? (
                 <>
-                  <CheckCircle size={18} /> Cash Collected (₹{finalTotal})
+                  <CheckCircle size={18} /> Cash Collected & Send to Kitchen (₹{finalTotal})
                 </>
               ) : (
                 <>
-                  <CheckCircle size={18} /> Payment Received (₹{finalTotal})
+                  <CheckCircle size={18} /> Payment Received & Send to Kitchen (₹{finalTotal})
                 </>
               )}
             </button>
           </div>
         </div>
       </div>
+      )}
 
       {/* ========================================================= */}
-      {/* 3. DIGITAL BILL SCREEN / MODAL (After Order Creation)     */}
+      {/* 2. VIEW: KITCHEN AREA (KDS - Kitchen Display System)      */}
+      {/* ========================================================= */}
+      {activeView === 'kitchen' && (
+        <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden">
+          {/* Kitchen Sub-Toolbar */}
+          <div className="p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shadow-sm">
+                <Utensils size={18} />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-slate-800">Kitchen Display System (KDS)</h2>
+                <p className="text-xs text-slate-500">Live incoming counter & table orders for preparation</p>
+              </div>
+            </div>
+
+            {/* Kitchen Status Filter Tabs */}
+            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setKitchenFilter('active')}
+                className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  kitchenFilter === 'active'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Active Orders</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs font-black">
+                  {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setKitchenFilter('placed')}
+                className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  kitchenFilter === 'placed'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Placed</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs font-black">
+                  {kitchenOrders.filter(o => o.orderStatus === 'placed').length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setKitchenFilter('preparing')}
+                className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  kitchenFilter === 'preparing'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>🍳 Cooking</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs font-black">
+                  {kitchenOrders.filter(o => o.orderStatus === 'preparing').length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setKitchenFilter('wasted')}
+                className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  kitchenFilter === 'wasted'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>⚠️ Wasted / Damaged</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs font-black">
+                  {kitchenOrders.filter(o => o.orderStatus === 'wasted').length}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Kitchen Orders Grid */}
+          <div className="flex-1 overflow-y-auto p-4 md:p-6">
+            {(() => {
+              const filtered = kitchenOrders.filter(order => {
+                if (kitchenFilter === 'active') return ['placed', 'preparing'].includes(order.orderStatus);
+                return order.orderStatus === kitchenFilter;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-200 rounded-3xl bg-white/50">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mb-3">
+                      <Utensils size={32} />
+                    </div>
+                    <h3 className="text-base font-extrabold text-slate-800">No Orders in this Kitchen Queue</h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      New orders placed from Counter POS or storefront will appear here automatically.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {filtered.map(order => {
+                    const isDineIn = order.orderType && order.orderType.toLowerCase() === 'dine-in';
+                    const isPreparing = order.orderStatus === 'preparing';
+                    const isWasted = order.orderStatus === 'wasted';
+
+                    return (
+                      <div
+                        key={order._id}
+                        className={`bg-white rounded-2xl border shadow-sm flex flex-col overflow-hidden transition ${
+                          isPreparing
+                            ? 'border-amber-400 ring-2 ring-amber-400/30'
+                            : isWasted
+                            ? 'border-rose-300 opacity-80'
+                            : 'border-slate-200'
+                        }`}
+                      >
+                        {/* Order Card Header */}
+                        <div className={`p-3.5 border-b flex items-center justify-between ${
+                          isDineIn ? 'bg-orange-50 border-orange-100' : 'bg-slate-50 border-slate-100'
+                        }`}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-black text-sm text-slate-900">
+                              #{order._id.slice(-6).toUpperCase()}
+                            </span>
+                            {isDineIn ? (
+                              <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white text-[10px] font-black uppercase tracking-wider">
+                                🍽️ Table {order.tableNumber || '1'}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider">
+                                🛵 Delivery
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] font-mono text-slate-400">
+                            {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+
+                        {/* Order Details & Customer */}
+                        <div className="p-4 flex-1 flex flex-col space-y-3">
+                          <div className="flex justify-between items-start text-xs border-b border-slate-100 pb-2">
+                            <div>
+                              <p className="font-extrabold text-slate-800">{order.customerName || 'Walk-in Guest'}</p>
+                              {order.customerPhone && (
+                                <p className="text-[11px] text-slate-400 font-mono">📞 {order.customerPhone}</p>
+                              )}
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                              isPreparing
+                                ? 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse'
+                                : isWasted
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                : 'bg-blue-100 text-blue-800 border border-blue-200'
+                            }`}>
+                              {order.orderStatus}
+                            </span>
+                          </div>
+
+                          {/* Product Items List (Big Bold Kitchen View) */}
+                          <div className="flex-1 space-y-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                              Kitchen Items ({order.orderItems?.length || 0})
+                            </span>
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                              {order.orderItems?.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100 text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-6 h-6 rounded-lg bg-orange-100 text-orange-800 font-black flex items-center justify-center text-xs shrink-0">
+                                      {item.qty}×
+                                    </span>
+                                    <span className="font-extrabold text-slate-800 leading-tight">
+                                      {item.name}
+                                    </span>
+                                  </div>
+                                  <span className="font-bold text-slate-500 font-mono text-[11px]">
+                                    ₹{item.price * item.qty}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {order.wastedReason && (
+                            <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px]">
+                              <strong>Damage/Waste Note:</strong> {order.wastedReason}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Order Card Action Buttons */}
+                        {!isWasted && (
+                          <div className="p-3 bg-slate-50/70 border-t border-slate-100 space-y-2">
+                            {order.orderStatus === 'placed' && (
+                              <button
+                                type="button"
+                                onClick={() => handleStartPreparing(order._id)}
+                                className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+                              >
+                                <Utensils size={13} /> 👨‍🍳 Start Preparing
+                              </button>
+                            )}
+
+                            {/* Prominent Bottom FINISH Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleFinishKitchenOrder(order)}
+                              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition flex items-center justify-center gap-1.5"
+                            >
+                              <CheckCircle size={15} /> Finish ({isDineIn ? 'Served / Deliver' : 'Ship to Customer'})
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleMarkWasted(order._id)}
+                              className="w-full py-1.5 text-rose-600 hover:bg-rose-50 rounded-lg font-bold text-[11px] transition text-center"
+                            >
+                              ⚠️ Mark Damaged / Wasted
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 3. VIEW: DELIVERY MONITOR (For Store Delivery Staff)       */}
+      {/* ========================================================= */}
+      {activeView === 'delivery' && (
+        <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden">
+          <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-sm">
+                <Truck size={18} />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-slate-800">My Assigned Delivery Orders</h2>
+                <p className="text-xs text-slate-500">
+                  Showing shipped orders assigned to <span className="font-extrabold text-slate-700">{staffData?.name}</span>
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={fetchMyAssignedOrders}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1"
+            >
+              <RefreshCw size={13} className={deliveryLoading ? 'animate-spin' : ''} /> Refresh
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 md:p-6">
+            {myAssignedOrders.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-200 rounded-3xl bg-white/50">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mb-3">
+                  <Truck size={32} />
+                </div>
+                <h3 className="text-base font-extrabold text-slate-800">No Assigned Deliveries</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  When the store or kitchen assigns a shipped order to you, it will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {myAssignedOrders.map(order => {
+                  const addr = order.address || {};
+                  const fullAddress = [addr.addressLine1, addr.landmark, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+                  const mapUrl = fullAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}` : '';
+
+                  return (
+                    <div key={order._id} className="bg-white rounded-2xl border border-indigo-200 shadow-sm flex flex-col overflow-hidden">
+                      <div className="p-3.5 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
+                        <span className="font-mono font-black text-indigo-950">
+                          #{order._id.slice(-6).toUpperCase()}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-800 text-[10px] font-black uppercase">
+                          Shipped
+                        </span>
+                      </div>
+
+                      <div className="p-4 flex-1 space-y-3 text-xs">
+                        <div>
+                          <p className="font-black text-slate-800 text-sm">{order.customerName || 'Customer'}</p>
+                          {order.customerPhone && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <a
+                                href={`tel:${order.customerPhone}`}
+                                className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg font-bold flex items-center gap-1 hover:bg-green-100"
+                              >
+                                📞 Call {order.customerPhone}
+                              </a>
+                              <a
+                                href={`https://wa.me/91${order.customerPhone.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg font-bold flex items-center gap-1 hover:bg-emerald-700"
+                              >
+                                💬 WhatsApp
+                              </a>
+                            </div>
+                          )}
+                        </div>
+
+                        {fullAddress && (
+                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-600">
+                            <p className="font-bold text-slate-700 flex items-center gap-1 mb-0.5">
+                              <MapPin size={12} className="text-red-500" /> Delivery Address:
+                            </p>
+                            <p className="leading-relaxed">{fullAddress}</p>
+                            {mapUrl && (
+                              <a
+                                href={mapUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] text-blue-600 font-bold hover:underline mt-1"
+                              >
+                                Open in Google Maps →
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="border-t border-slate-100 pt-2 space-y-1">
+                          <p className="font-bold text-slate-500 text-[10px] uppercase tracking-wider">Items:</p>
+                          {order.orderItems?.map((item, idx) => (
+                            <div key={idx} className="flex justify-between text-slate-700">
+                              <span>{item.qty}× {item.name}</span>
+                              <span className="font-mono">₹{item.price * item.qty}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-100 text-sm font-black">
+                          <span>Amount to Collect:</span>
+                          <span className="text-emerald-700">₹{order.totalAmount} ({String(order.paymentMethod || 'COD').toUpperCase()})</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => handleMarkDeliveryDelivered(order._id)}
+                          className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition flex items-center justify-center gap-1.5"
+                        >
+                          <CheckCircle size={15} /> Mark Delivered & Paid ✓
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 4. MODAL: ASSIGN DELIVERY STAFF (Kitchen -> Shipped)      */}
+      {/* ========================================================= */}
+      {shippingModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Truck size={20} className="text-indigo-600" />
+                <h3 className="font-black text-slate-900 text-base">Assign Delivery Staff & Ship</h3>
+              </div>
+              <button
+                onClick={() => setShippingModal({ isOpen: false, order: null, deliveryStaffId: '', DeliveryPersonName: '', DeliveryPersonPhone: '' })}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-slate-500">
+                Order <span className="font-bold text-slate-800">#{shippingModal.order?._id.slice(-6).toUpperCase()}</span> is finished in kitchen and ready to be shipped. Choose the delivery person to assign:
+              </p>
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
+                  Select Store Delivery Staff
+                </label>
+                <select
+                  value={shippingModal.deliveryStaffId}
+                  onChange={(e) => {
+                    const selId = e.target.value;
+                    const staff = deliveryStaffList.find(s => s._id === selId);
+                    setShippingModal({
+                      ...shippingModal,
+                      deliveryStaffId: selId,
+                      DeliveryPersonName: staff ? staff.name : shippingModal.DeliveryPersonName,
+                      DeliveryPersonPhone: staff ? (staff.phone || '') : shippingModal.DeliveryPersonPhone
+                    });
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500 bg-white"
+                >
+                  <option value="">-- Select Registered Delivery Staff --</option>
+                  {deliveryStaffList.map(staff => (
+                    <option key={staff._id} value={staff._id}>
+                      {staff.name} {staff.phone ? `(${staff.phone})` : `[${staff.staffId}]`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
+                  Delivery Person Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ramesh Kumar"
+                  value={shippingModal.DeliveryPersonName}
+                  onChange={(e) => setShippingModal({ ...shippingModal, DeliveryPersonName: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
+                  Delivery Person Phone
+                </label>
+                <input
+                  type="tel"
+                  placeholder="10-digit mobile number"
+                  value={shippingModal.DeliveryPersonPhone}
+                  onChange={(e) => setShippingModal({ ...shippingModal, DeliveryPersonPhone: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShippingModal({ isOpen: false, order: null, deliveryStaffId: '', DeliveryPersonName: '', DeliveryPersonPhone: '' })}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    submitFinishOrder(shippingModal.order._id, false, {
+                      deliveryStaffId: shippingModal.deliveryStaffId || null,
+                      DeliveryPersonName: shippingModal.DeliveryPersonName || 'Store Delivery Staff',
+                      DeliveryPersonPhone: shippingModal.DeliveryPersonPhone || ''
+                    });
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider shadow transition"
+                >
+                  Confirm & Mark Shipped →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 5. DIGITAL BILL SCREEN / MODAL (After Order Creation)     */}
       {/* ========================================================= */}
       {completedOrder && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">

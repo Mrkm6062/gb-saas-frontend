@@ -476,10 +476,12 @@ const ManageOrders = ({ token, stores, onLogout }) => {
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white font-medium text-slate-700">
               <option value="all">All Statuses</option>
               <option value="placed">Placed</option>
-              <option value="shipped">Shipped</option>
+              <option value="preparing">🍳 Preparing</option>
+              <option value="shipped">🛵 Shipped</option>
               <option value="delivered">Delivered</option>
               <option value="canceled">Canceled</option>
               <option value="returned">Returned</option>
+              <option value="wasted">⚠️ Wasted / Damaged</option>
             </select>
             <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white font-medium text-slate-700">
               <option value="all">All Payments</option>
@@ -583,15 +585,30 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                           <select 
                             value={order.orderStatus} 
                             onChange={(e) => handleStatusChange(order._id, 'order', e.target.value, order)} 
-                            disabled={['canceled', 'returned'].includes(order.orderStatus) || isDeliveredMoreThan10Days(order)}
-                            className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${order.orderStatus === 'delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' : order.orderStatus === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : order.orderStatus === 'canceled' ? 'bg-red-50 text-red-700 border-red-200' : order.orderStatus === 'returned' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}
+                            disabled={['canceled', 'returned', 'wasted'].includes(order.orderStatus) || isDeliveredMoreThan10Days(order)}
+                            className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border cursor-pointer ${
+                              order.orderStatus === 'delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+                              order.orderStatus === 'preparing' ? 'bg-amber-50 text-amber-800 border-amber-300' :
+                              order.orderStatus === 'shipped' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 
+                              order.orderStatus === 'wasted' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                              order.orderStatus === 'canceled' ? 'bg-red-50 text-red-700 border-red-200' : 
+                              order.orderStatus === 'returned' ? 'bg-orange-50 text-orange-700 border-orange-200' : 
+                              'bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
                           >
                             <option value="placed" disabled={order.orderStatus !== 'placed'}>Placed</option>
-                            <option value="shipped" disabled={order.orderStatus !== 'placed'}>Shipped</option>
-                            <option value="delivered" disabled={order.orderStatus !== 'placed' && order.orderStatus !== 'shipped' && order.orderStatus !== 'delivered'}>Delivered</option>
-                            <option value="canceled" disabled={order.orderStatus !== 'placed' && order.orderStatus !== 'shipped'}>Canceled</option>
+                            <option value="preparing" disabled={!['placed', 'preparing'].includes(order.orderStatus)}>Preparing</option>
+                            <option value="shipped" disabled={!['placed', 'preparing', 'shipped'].includes(order.orderStatus)}>Shipped</option>
+                            <option value="delivered" disabled={['canceled', 'returned', 'wasted'].includes(order.orderStatus)}>Delivered</option>
+                            <option value="canceled" disabled={['delivered', 'canceled', 'returned'].includes(order.orderStatus)}>Canceled</option>
                             <option value="returned" disabled={order.orderStatus !== 'delivered' && order.orderStatus !== 'returned'}>Returned</option>
+                            <option value="wasted" disabled={['delivered', 'canceled', 'returned'].includes(order.orderStatus)}>Wasted</option>
                           </select>
+                          {order.orderStatus === 'shipped' && order.DeliveryPersonName && (
+                            <div className="text-[10px] text-indigo-700 font-extrabold flex items-center gap-1 mt-1">
+                              <span>🛵 Staff: {order.DeliveryPersonName}</span>
+                            </div>
+                          )}
                           {order.orderStatus === 'shipped' && (
                             <button 
                               onClick={() => {
@@ -711,12 +728,16 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                             <select 
                               value={order.orderStatus} 
                               onChange={(e) => handleStatusChange(order._id, 'order', e.target.value, order)} 
-                              disabled={['canceled', 'returned'].includes(order.orderStatus) || isDeliveredMoreThan10Days(order)}
+                              disabled={['canceled', 'returned', 'wasted'].includes(order.orderStatus) || isDeliveredMoreThan10Days(order)}
                               className={`w-full text-xs font-bold rounded-lg px-2 py-1.5 outline-none border cursor-pointer ${
                                 order.orderStatus === 'delivered' 
                                   ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                                  : order.orderStatus === 'preparing'
+                                  ? 'bg-amber-50 text-amber-800 border-amber-300'
                                   : order.orderStatus === 'shipped' 
                                   ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
+                                  : order.orderStatus === 'wasted'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
                                   : order.orderStatus === 'canceled' 
                                   ? 'bg-red-50 text-red-700 border-red-200' 
                                   : order.orderStatus === 'returned' 
@@ -725,10 +746,12 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                               }`}
                             >
                               <option value="placed" disabled={order.orderStatus !== 'placed'}>Placed</option>
-                              <option value="shipped" disabled={order.orderStatus !== 'placed'}>Shipped</option>
-                              <option value="delivered" disabled={order.orderStatus !== 'placed' && order.orderStatus !== 'shipped' && order.orderStatus !== 'delivered'}>Delivered</option>
-                              <option value="canceled" disabled={order.orderStatus !== 'placed' && order.orderStatus !== 'shipped'}>Canceled</option>
+                              <option value="preparing" disabled={!['placed', 'preparing'].includes(order.orderStatus)}>Preparing</option>
+                              <option value="shipped" disabled={!['placed', 'preparing', 'shipped'].includes(order.orderStatus)}>Shipped</option>
+                              <option value="delivered" disabled={['canceled', 'returned', 'wasted'].includes(order.orderStatus)}>Delivered</option>
+                              <option value="canceled" disabled={['delivered', 'canceled', 'returned'].includes(order.orderStatus)}>Canceled</option>
                               <option value="returned" disabled={order.orderStatus !== 'delivered' && order.orderStatus !== 'returned'}>Returned</option>
+                              <option value="wasted" disabled={['delivered', 'canceled', 'returned'].includes(order.orderStatus)}>Wasted</option>
                             </select>
                             {order.orderStatus === 'shipped' && (
                               <button 
