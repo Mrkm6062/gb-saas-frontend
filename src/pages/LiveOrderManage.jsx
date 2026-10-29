@@ -42,6 +42,12 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
   const currentStore = stores.find(s => s.storeId === storeId || s._id === storeId) || 
     (stores.length > 0 && !stores.some(s => s.storeId === storeId) ? stores[0] : {});
 
+  // Show Start Preparing only if store type is cafe, restaurant, cloud kitchen, or nasta corner
+  const isKitchenStore = Boolean(
+    currentStore.isRestaurant || 
+    (currentStore.storeType && /restaurant|cafe|nasta|nashta|cloud\s*kitchen/i.test(currentStore.storeType))
+  );
+
   // If the notification or link opened with MongoDB _id, normalize to friendly storeId (e.g. GBS006)
   useEffect(() => {
     if (currentStore && currentStore.storeId && storeId === currentStore._id) {
@@ -53,6 +59,13 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('placed'); // 'placed' | 'preparing' | 'shipped' | 'wasted'
+
+  // If store is not a kitchen store and active tab is set to preparing, fallback to placed queue
+  useEffect(() => {
+    if (!isKitchenStore && activeTab === 'preparing') {
+      setActiveTab('placed');
+    }
+  }, [isKitchenStore, activeTab]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [printingOrderId, setPrintingOrderId] = useState(null);
   const fullscreenRef = useRef(null);
@@ -650,20 +663,22 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                 </span>
               </button>
               
-              {/* Preparing (Kitchen) Queue Button */}
-              <button 
-                onClick={() => setActiveTab('preparing')}
-                title="Preparing in Kitchen"
-                className={`w-full py-2.5 px-2 md:px-4 text-xs font-bold transition-all rounded-xl flex flex-col md:flex-row items-center justify-center md:justify-between gap-1.5 md:gap-2 border ${activeTab === 'preparing' ? 'bg-amber-50 text-amber-800 border-amber-300 font-extrabold' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'}`}
-              >
-                <div className="flex items-center gap-2">
-                  <ChefHat size={18} className={activeTab === 'preparing' ? 'text-amber-600 animate-bounce' : 'text-slate-400'} />
-                  <span className="hidden md:inline">Preparing (Kitchen)</span>
-                </div>
-                <span className="px-1.5 py-0.5 text-[9px] md:text-xs bg-amber-100 text-amber-800 font-bold rounded-full">
-                  {orders.filter(o => o.orderStatus === 'preparing').length}
-                </span>
-              </button>
+              {/* Preparing (Kitchen) Queue Button - Only shown for cafe, restaurant, cloud kitchen, nasta corner */}
+              {isKitchenStore && (
+                <button 
+                  onClick={() => setActiveTab('preparing')}
+                  title="Preparing in Kitchen"
+                  className={`w-full py-2.5 px-2 md:px-4 text-xs font-bold transition-all rounded-xl flex flex-col md:flex-row items-center justify-center md:justify-between gap-1.5 md:gap-2 border ${activeTab === 'preparing' ? 'bg-amber-50 text-amber-800 border-amber-300 font-extrabold' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <ChefHat size={18} className={activeTab === 'preparing' ? 'text-amber-600 animate-bounce' : 'text-slate-400'} />
+                    <span className="hidden md:inline">Preparing (Kitchen)</span>
+                  </div>
+                  <span className="px-1.5 py-0.5 text-[9px] md:text-xs bg-amber-100 text-amber-800 font-bold rounded-full">
+                    {orders.filter(o => o.orderStatus === 'preparing').length}
+                  </span>
+                </button>
+              )}
 
               {/* Shipped Queue Button */}
               <button 
@@ -858,7 +873,7 @@ const LiveOrderManage = ({ token, stores, onLogout }) => {
                           ) : null}
 
                           <div className="grid grid-cols-2 gap-2">
-                            {order.orderStatus === 'placed' && (
+                            {order.orderStatus === 'placed' && isKitchenStore && (
                               <button 
                                 onClick={() => handleMarkPreparing(order._id)}
                                 className="py-2 rounded-xl border flex items-center justify-center gap-1 transition bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300 font-extrabold"

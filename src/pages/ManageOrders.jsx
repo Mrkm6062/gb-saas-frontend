@@ -8,6 +8,12 @@ const ManageOrders = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
   const currentStore = stores.find(s => s.storeId === storeId) || {};
 
+  // Show Preparing status only if store type is cafe, restaurant, cloud kitchen, or nasta corner
+  const isKitchenStore = Boolean(
+    currentStore.isRestaurant || 
+    (currentStore.storeType && /restaurant|cafe|nasta|nashta|cloud\s*kitchen/i.test(currentStore.storeType))
+  );
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -476,7 +482,7 @@ const ManageOrders = ({ token, stores, onLogout }) => {
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] text-sm bg-white font-medium text-slate-700">
               <option value="all">All Statuses</option>
               <option value="placed">Placed</option>
-              <option value="preparing">🍳 Preparing</option>
+              {isKitchenStore && <option value="preparing">🍳 Preparing</option>}
               <option value="shipped">🛵 Shipped</option>
               <option value="delivered">Delivered</option>
               <option value="canceled">Canceled</option>
@@ -597,7 +603,9 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                             }`}
                           >
                             <option value="placed" disabled={order.orderStatus !== 'placed'}>Placed</option>
+                            {isKitchenStore && (
                             <option value="preparing" disabled={!['placed', 'preparing'].includes(order.orderStatus)}>Preparing</option>
+                          )}
                             <option value="shipped" disabled={!['placed', 'preparing', 'shipped'].includes(order.orderStatus)}>Shipped</option>
                             <option value="delivered" disabled={['canceled', 'returned', 'wasted'].includes(order.orderStatus)}>Delivered</option>
                             <option value="canceled" disabled={['delivered', 'canceled', 'returned'].includes(order.orderStatus)}>Canceled</option>
@@ -746,7 +754,9 @@ const ManageOrders = ({ token, stores, onLogout }) => {
                               }`}
                             >
                               <option value="placed" disabled={order.orderStatus !== 'placed'}>Placed</option>
-                              <option value="preparing" disabled={!['placed', 'preparing'].includes(order.orderStatus)}>Preparing</option>
+                              {isKitchenStore && (
+                            <option value="preparing" disabled={!['placed', 'preparing'].includes(order.orderStatus)}>Preparing</option>
+                          )}
                               <option value="shipped" disabled={!['placed', 'preparing', 'shipped'].includes(order.orderStatus)}>Shipped</option>
                               <option value="delivered" disabled={['canceled', 'returned', 'wasted'].includes(order.orderStatus)}>Delivered</option>
                               <option value="canceled" disabled={['delivered', 'canceled', 'returned'].includes(order.orderStatus)}>Canceled</option>
