@@ -2,15 +2,42 @@ import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { Bell, Mail, Key, ShieldCheck, Settings, CheckCircle2 } from 'lucide-react';
+import { 
+  Bell, 
+  Mail, 
+  Key, 
+  ShieldCheck, 
+  Settings, 
+  CheckCircle2, 
+  Zap, 
+  Server, 
+  Truck, 
+  Check, 
+  AlertCircle, 
+  RefreshCw 
+} from 'lucide-react';
 
 const ManageAlerts = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
   const currentStore = stores.find(s => s.storeId === storeId) || {};
 
   const [config, setConfig] = useState({
-    isEmailEnabled: false, provider: 'gmail', smtpHost: 'smtp.gmail.com', smtpPort: 587, emailAddress: '', appPassword: '', templates: []
+    isEmailEnabled: true,
+    useDefaultMail: true,
+    provider: 'system',
+    smtpHost: 'smtp.gmail.com',
+    smtpPort: 587,
+    emailAddress: '',
+    appPassword: '',
+    templates: []
   });
+
+  const [systemMeta, setSystemMeta] = useState({
+    isCustomConfigured: false,
+    isSystemMailAvailable: true,
+    systemSender: 'LandingMailConfig'
+  });
+
   const [status, setStatus] = useState('');
   const [testEmailTo, setTestEmailTo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,32 +52,80 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
     order_placed: {
       name: "Order Placed Template",
       subject: "Order Received - {{storeName}}",
-      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #76b900;">Order Confirmation</h2>\n  <p>Hi {{customerName}},</p>\n  <p>Thank you for shopping with <strong>{{storeName}}</strong>! We have received your order and are currently processing it.</p>\n  <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Order Summary (ID: {{orderId}})</h3>\n  {{orderItems}}\n  <p style="text-align: right; font-size: 16px;"><strong>Total Amount: ₹{{totalAmount}}</strong></p>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via {{storeName}}.</p>\n</div>`
+      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+  <h2 style="color: #76b900;">Order Confirmation</h2>
+  <p>Hi {{customerName}},</p>
+  <p>Thank you for shopping with <strong>{{storeName}}</strong>! We have received your order and are currently processing it.</p>
+  <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Order Summary (ID: {{orderId}})</h3>
+  {{orderItems}}
+  <p style="text-align: right; font-size: 16px;"><strong>Total Amount: ₹{{totalAmount}}</strong></p>
+  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via {{storeName}}.</p>
+</div>`
     },
     order_shipped: {
       name: "Order Shipped Template",
       subject: "Your order has been shipped! - {{storeName}}",
-      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #3b82f6;">Order Shipped</h2>\n  <p>Hi {{customerName}},</p>\n  <p>Good news! Your order <strong>#{{orderId}}</strong> from <strong>{{storeName}}</strong> has been shipped and is on its way to you.</p>\n  {{trackingDetails}}\n  <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Order Details</h3>\n  {{orderItems}}\n  <p style="text-align: right; font-size: 16px;"><strong>Total Amount: ₹{{totalAmount}}</strong></p>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via  {{storeName}}.</p>\n</div>`
+      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+  <h2 style="color: #3b82f6;">Order Shipped</h2>
+  <p>Hi {{customerName}},</p>
+  <p>Good news! Your order <strong>#{{orderId}}</strong> from <strong>{{storeName}}</strong> has been shipped and is on its way to you.</p>
+  {{trackingDetails}}
+  <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Order Details</h3>
+  {{orderItems}}
+  <p style="text-align: right; font-size: 16px;"><strong>Total Amount: ₹{{totalAmount}}</strong></p>
+  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via {{storeName}}.</p>
+</div>`
     },
     order_delivered: {
       name: "Order Delivered Template",
       subject: "Your order has been delivered! - {{storeName}}",
-      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #10b981;">Order Delivered</h2>\n  <p>Hi {{customerName}},</p>\n  <p>Your order <strong>#{{orderId}}</strong> from <strong>{{storeName}}</strong> has been successfully delivered. We hope you enjoy your purchase!</p>\n  <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Order Details</h3>\n  {{orderItems}}\n  <p style="text-align: right; font-size: 16px;"><strong>Total Amount: ₹{{totalAmount}}</strong></p>\n  <div style="margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 12px; text-align: center;">\n    <h3 style="margin-top: 0; color: #333;">How did we do?</h3>\n    <p style="font-size: 14px; color: #555; margin-bottom: 20px;">We would love to hear your feedback on your purchased items:</p>\n    {{reviewLinks}}\n  </div>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via  {{storeName}}.</p>\n</div>`
+      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+  <h2 style="color: #10b981;">Order Delivered</h2>
+  <p>Hi {{customerName}},</p>
+  <p>Your order <strong>#{{orderId}}</strong> from <strong>{{storeName}}</strong> has been successfully delivered. We hope you enjoy your purchase!</p>
+  <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Order Details</h3>
+  {{orderItems}}
+  <p style="text-align: right; font-size: 16px;"><strong>Total Amount: ₹{{totalAmount}}</strong></p>
+  <div style="margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 12px; text-align: center;">
+    <h3 style="margin-top: 0; color: #333;">How did we do?</h3>
+    <p style="font-size: 14px; color: #555; margin-bottom: 20px;">We would love to hear your feedback on your purchased items:</p>
+    {{reviewLinks}}
+  </div>
+  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via {{storeName}}.</p>
+</div>`
     },
     order_canceled: {
       name: "Order Canceled Template",
       subject: "Order Canceled - {{storeName}}",
-      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #ef4444;">Order Canceled</h2>\n  <p>Hi {{customerName}},</p>\n  <p>We're writing to let you know that your order <strong>#{{orderId}}</strong> from <strong>{{storeName}}</strong> has been canceled.</p>\n  <p>If you have any questions, please contact our support team.</p>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via  {{storeName}}.</p>\n</div>`
+      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+  <h2 style="color: #ef4444;">Order Canceled</h2>
+  <p>Hi {{customerName}},</p>
+  <p>We're writing to let you know that your order <strong>#{{orderId}}</strong> from <strong>{{storeName}}</strong> has been canceled.</p>
+  <p>If you have any questions, please contact our support team.</p>
+  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via {{storeName}}.</p>
+</div>`
     },
     order_returned: {
       name: "Order Returned Template",
       subject: "Order Returned - {{storeName}}",
-      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #f59e0b;">Order Returned</h2>\n  <p>Hi {{customerName}},</p>\n  <p>We have received your returned items for order <strong>#{{orderId}}</strong> at <strong>{{storeName}}</strong>.</p>\n  <p>Your refund will be processed shortly according to our store policy.</p>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via  {{storeName}}.</p>\n</div>`
+      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+  <h2 style="color: #f59e0b;">Order Returned</h2>
+  <p>Hi {{customerName}},</p>
+  <p>We have received your returned items for order <strong>#{{orderId}}</strong> at <strong>{{storeName}}</strong>.</p>
+  <p>Your refund will be processed shortly according to our store policy.</p>
+  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via {{storeName}}.</p>
+</div>`
     },
     custom: {
       name: "Custom Template",
       subject: "Update from {{storeName}}",
-      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">\n  <h2 style="color: #76b900;">Store Update</h2>\n  <p>Hi {{customerName}},</p>\n  <p>Here is an update regarding your order <strong>#{{orderId}}</strong>.</p>\n  <p>[Your message here]</p>\n  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via  {{storeName}}.</p>\n</div>`
+      body: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+  <h2 style="color: #76b900;">Store Update</h2>
+  <p>Hi {{customerName}},</p>
+  <p>Here is an update regarding your order <strong>#{{orderId}}</strong>.</p>
+  <p>[Your message here]</p>
+  <p style="margin-top: 30px; color: #777; font-size: 12px; text-align: center;">This is an automated email sent via {{storeName}}.</p>
+</div>`
     },
     bill_receipt: {
       name: "Customer Bill Receipt",
@@ -110,8 +185,6 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
   };
   const [templateForm, setTemplateForm] = useState(initialTemplate);
 
-  
-
   useEffect(() => {
     const fetchConfig = async () => {
       if (!currentStore._id) return;
@@ -121,22 +194,29 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
         });
         if (response.ok) {
           const data = await response.json();
+          const useDefault = data.useDefaultMail !== undefined ? Boolean(data.useDefaultMail) : true;
           setConfig({
-            isEmailEnabled: data.isEmailEnabled || false,
-            provider: data.provider || 'gmail',
+            isEmailEnabled: data.isEmailEnabled !== undefined ? Boolean(data.isEmailEnabled) : true,
+            useDefaultMail: useDefault,
+            provider: useDefault ? 'system' : (data.provider || 'gmail'),
             smtpHost: data.smtpHost || 'smtp.gmail.com',
             smtpPort: data.smtpPort || 587,
             emailAddress: data.emailAddress || '',
             appPassword: data.appPassword || '',
             templates: data.templates || []
           });
+          setSystemMeta({
+            isCustomConfigured: Boolean(data.isCustomConfigured),
+            isSystemMailAvailable: data.isSystemMailAvailable !== false,
+            systemSender: data.systemSender || 'LandingMailConfig'
+          });
         }
       } catch (error) {
-        console.error("Failed to fetch alert config");
+        console.error("Failed to fetch alert config:", error);
       }
     };
     fetchConfig();
-  }, [currentStore._id]);
+  }, [currentStore._id, token]);
 
   const handleProviderChange = (e) => {
     const val = e.target.value;
@@ -145,6 +225,14 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
       provider: val,
       smtpHost: val === 'gmail' ? 'smtp.gmail.com' : prev.smtpHost,
       smtpPort: val === 'gmail' ? 587 : prev.smtpPort
+    }));
+  };
+
+  const handleModeSwitch = (useDefault) => {
+    setConfig(prev => ({
+      ...prev,
+      useDefaultMail: useDefault,
+      provider: useDefault ? 'system' : (prev.provider === 'system' ? 'gmail' : prev.provider)
     }));
   };
 
@@ -157,8 +245,21 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(newConfig)
       });
-      if (response.ok) setStatus('Configuration saved successfully!');
-      else setStatus(`Error: ${(await response.json()).message}`);
+      const data = await response.json();
+      if (response.ok) {
+        setStatus(data.message || 'Configuration saved successfully!');
+        if (data.config) {
+          const isDef = data.config.useDefaultMail !== false;
+          setConfig(prev => ({
+            ...prev,
+            ...data.config,
+            useDefaultMail: isDef,
+            provider: isDef ? 'system' : (data.config.provider || 'gmail')
+          }));
+        }
+      } else {
+        setStatus(`Error: ${data.message || 'Failed to save configuration'}`);
+      }
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     } finally {
@@ -172,18 +273,27 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
   };
 
   const handleTestMail = async () => {
-    if (!testEmailTo) return alert("Please enter an email address to send the test to.");
-    if (!config.emailAddress || !config.appPassword) return alert("Please fill and save your SMTP details first.");
+    if (!testEmailTo) return alert("Please enter a recipient email address to send the test alert.");
+    if (!config.useDefaultMail && (!config.emailAddress || !config.appPassword)) {
+      return alert("Please enter and save your custom email address and app password before testing.");
+    }
     setTesting(true);
     setStatus('Sending test email...');
     try {
       const response = await fetch(`${API_BASE_URL}/api/store-alerts/${currentStore._id}/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ ...config, testEmailTo })
+        body: JSON.stringify({ 
+          useDefaultMail: config.useDefaultMail,
+          smtpHost: config.smtpHost,
+          smtpPort: config.smtpPort,
+          emailAddress: config.emailAddress,
+          appPassword: config.appPassword,
+          testEmailTo 
+        })
       });
       const data = await response.json();
-      setStatus(response.ok ? '✅ Test email sent! Check your inbox.' : `❌ ${data.message}`);
+      setStatus(response.ok ? `✅ ${data.message || 'Test email sent! Check your inbox.'}` : `❌ ${data.message}`);
     } catch (err) {
       setStatus(`❌ Network Error: ${err.message}`);
     } finally {
@@ -267,8 +377,9 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
       <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 20px;">
         <h4 style="margin-top: 0; color: #3b82f6;">Tracking Information</h4>
         <p style="margin: 5px 0; font-size: 14px;"><strong>Shipping Method:</strong> By Shipping Company</p>
-        <p style="margin: 5px 0; font-size: 14px;"><strong>Shipping Company:</strong> FedEx</p>
+        <p style="margin: 5px 0; font-size: 14px;"><strong>Shipping Company:</strong> Blue Dart / FedEx</p>
         <p style="margin: 5px 0; font-size: 14px;"><strong>Tracking Number:</strong> FDX123456789</p>
+        <p style="margin: 5px 0; font-size: 14px;"><strong>Delivery Person:</strong> Rahul Sharma (+91 9876543210)</p>
       </div>
     `;
 
@@ -295,33 +406,29 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
 
   return (
     <AdminLayout stores={stores} onLogout={onLogout} headerTitle="Manage Alerts">
-      <div className="w-full px-6 py-10">
-        {/* <div className="mb-8">
-           <h2 className="text-3xl font-extrabold mb-2 text-slate-800 flex items-center gap-3"><Bell className="text-[#76b900]" /> Notifications & Alerts</h2>
-          <p className="text-slate-500">Configure automated order confirmation emails for customers of <span className="font-bold text-slate-700">{currentStore.storeName}</span>.</p> *
-        </div> */}
-
+      <div className="w-full px-6 py-10 max-w-5xl mx-auto">
         {status && (
-          <div className={`p-4 mb-6 rounded-xl font-bold text-sm border ${status.includes('Error') || status.includes('❌') ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-            {status}
+          <div className={`p-4 mb-6 rounded-xl font-medium text-sm flex items-center justify-between ${status.includes('Error') || status.includes('❌') ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+            <span>{status}</span>
+            <button onClick={() => setStatus('')} className="text-slate-400 hover:text-slate-600 font-bold ml-4">✕</button>
           </div>
         )}
 
-        {/* Navigation Tabs */}
-        <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
+        {/* Tab Switcher */}
+        <div className="flex gap-4 mb-6 overflow-x-auto pb-1">
           <button 
             type="button"
             onClick={() => setActiveTab('config')} 
-            className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'config' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+            className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'config' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
           >
             Alerts Configuration
           </button>
           <button 
             type="button"
             onClick={() => setActiveTab('templates')} 
-            className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'templates' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+            className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'templates' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
           >
-            Email Templates
+            Email Templates ({config.templates.length})
           </button>
         </div>
 
@@ -329,41 +436,280 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
           {activeTab === 'config' && (
             <>
               <form onSubmit={handleSave} className="p-6 sm:p-8">
+                {/* Master Email Automation Toggle */}
                 <div className="flex items-center justify-between border-b border-slate-100 pb-6 mb-6">
-                  <div><h3 className="font-bold text-lg text-slate-800">Email Automation</h3><p className="text-sm text-slate-500">Send an automatic invoice receipt to your customers.</p></div>
+                  <div>
+                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                      <Bell size={20} className="text-[#76b900]" />
+                      Customer Email Automation
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                      Automatically send order confirmation, bill receipts, and delivery status updates to customers.
+                    </p>
+                  </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" checked={config.isEmailEnabled} onChange={e => setConfig({...config, isEmailEnabled: e.target.checked})} />
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={config.isEmailEnabled} 
+                      onChange={e => setConfig({...config, isEmailEnabled: e.target.checked})} 
+                    />
                     <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#76b900]"></div>
                   </label>
                 </div>
 
-                <div className={`space-y-5 transition-opacity ${!config.isEmailEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2"><Settings size={16}/> Mail Provider</label><select value={config.provider} onChange={handleProviderChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] bg-white text-sm"><option value="gmail">Gmail / Google Workspace</option><option value="custom">Custom SMTP Server</option></select></div>
-                    {config.provider === 'custom' && (<>
-                      <div><label className="block text-sm font-bold text-slate-700 mb-1">SMTP Host</label><input required type="text" value={config.smtpHost} onChange={e=>setConfig({...config, smtpHost: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="mail.yourdomain.com" /></div>
-                      <div><label className="block text-sm font-bold text-slate-700 mb-1">SMTP Port</label><input required type="number" value={config.smtpPort} onChange={e=>setConfig({...config, smtpPort: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="465 or 587" /></div>
-                    </>)}
-                  </div>
-                  
-                  <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2"><Mail size={16}/> Sending Email Address</label><input required type="email" value={config.emailAddress} onChange={e=>setConfig({...config, emailAddress: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="support@yourstore.com" /></div>
-                  <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2"><Key size={16}/> App Password</label><input required type="password" value={config.appPassword} onChange={e=>setConfig({...config, appPassword: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" placeholder="••••••••••••" />
-                    {config.provider === 'gmail' && <p className="text-xs text-slate-500 mt-2 flex items-start gap-1"><ShieldCheck size={14} className="shrink-0 text-blue-500" /> Since you are using Gmail, do not use your standard password. You must generate a 16-digit "App Password" inside your Google Account Security Settings.</p>}
+                <div className={`space-y-6 transition-opacity ${!config.isEmailEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
+                  {/* Current Active Mode Alert Banner */}
+                  {config.useDefaultMail ? (
+                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3">
+                      <Zap className="text-emerald-600 shrink-0 mt-0.5" size={20} />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-emerald-900 text-sm">System Default Mail Active (Enabled by Default)</h4>
+                          <span className="bg-emerald-200 text-emerald-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full">Active</span>
+                        </div>
+                        <p className="text-xs text-emerald-700 mt-1 leading-relaxed">
+                          Your store is automatically powered by the platform default mail service (<strong>LandingMailConfig</strong>). When customers place orders or staff updates shipping and delivery status, emails are sent out instantly with zero SMTP setup.
+                        </p>
+                        <p className="text-[11px] text-emerald-800 font-medium mt-1">
+                          Sender Address: <span className="font-mono bg-emerald-100 px-1.5 py-0.5 rounded">{systemMeta.systemSender}</span>
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3">
+                      <Server className="text-blue-600 shrink-0 mt-0.5" size={20} />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-blue-900 text-sm">Custom Mail Configuration Active</h4>
+                          <span className="bg-blue-200 text-blue-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full">Custom SMTP</span>
+                        </div>
+                        <p className="text-xs text-blue-700 mt-1 leading-relaxed">
+                          System default mail is <strong>disabled</strong> because your custom email credentials are saved. All order and delivery alerts are dispatched directly via your own email (<strong className="font-mono">{config.emailAddress || 'custom SMTP'}</strong>).
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mode Selector Cards */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2.5">
+                      Select Email Delivery Method
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Option 1: System Default Mail */}
+                      <div 
+                        onClick={() => handleModeSwitch(true)}
+                        className={`p-5 rounded-xl border-2 cursor-pointer transition-all relative ${config.useDefaultMail ? 'border-[#76b900] bg-emerald-50/30 shadow-md ring-1 ring-[#76b900]' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${config.useDefaultMail ? 'bg-[#76b900] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                              <Zap size={18} />
+                            </div>
+                            <span className="font-bold text-slate-800 text-sm">System Default Mail</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                            By Default (ON)
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          Powered by platform mail (LandingMailConfig). Sends delivery & order status emails with zero setup needed.
+                        </p>
+                        {config.useDefaultMail && (
+                          <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-[#76b900]">
+                            <Check size={14} /> Currently in use
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Option 2: Custom Mail Configuration */}
+                      <div 
+                        onClick={() => handleModeSwitch(false)}
+                        className={`p-5 rounded-xl border-2 cursor-pointer transition-all relative ${!config.useDefaultMail ? 'border-[#76b900] bg-emerald-50/30 shadow-md ring-1 ring-[#76b900]' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${!config.useDefaultMail ? 'bg-[#76b900] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                              <Server size={18} />
+                            </div>
+                            <span className="font-bold text-slate-800 text-sm">Custom Mail Config</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                            Custom SMTP
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          Use your own Gmail or custom domain SMTP. When saved, system default mail is automatically disabled.
+                        </p>
+                        {!config.useDefaultMail && (
+                          <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-[#76b900]">
+                            <Check size={14} /> Currently in use
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  <button type="submit" disabled={loading} className="w-full md:w-auto px-8 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition mt-6 disabled:opacity-50">
-                    {loading ? 'Saving...' : 'Save Configuration'}
-                  </button>
+                  {/* Mode-Specific Settings */}
+                  {config.useDefaultMail ? (
+                    <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                      <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                        <Truck size={16} className="text-[#76b900]" />
+                        Automated Delivery Status Events Included:
+                      </h4>
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-600">
+                        <li className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                          <span><strong>Order Placed:</strong> Instant confirmation receipt</span>
+                        </li>
+                        <li className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                          <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+                          <span><strong>Order Shipped:</strong> Tracking details & shipping company</span>
+                        </li>
+                        <li className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                          <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
+                          <span><strong>Out for Delivery:</strong> Delivery agent phone & name</span>
+                        </li>
+                        <li className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                          <span className="w-2 h-2 rounded-full bg-green-500 shrink-0"></span>
+                          <span><strong>Order Delivered:</strong> Delivery confirmation + review links</span>
+                        </li>
+                      </ul>
+                      <p className="text-[11px] text-slate-500 pt-1">
+                        ℹ️ Need to customize HTML content or email text? Head over to the <strong>Email Templates</strong> tab.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 p-5 bg-slate-50 border border-slate-200 rounded-2xl">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                            <Settings size={15}/> Mail Provider
+                          </label>
+                          <select 
+                            value={config.provider} 
+                            onChange={handleProviderChange} 
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] bg-white text-sm"
+                          >
+                            <option value="gmail">Gmail / Google Workspace</option>
+                            <option value="custom">Custom SMTP Server</option>
+                          </select>
+                        </div>
+
+                        {config.provider === 'custom' && (
+                          <>
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-1">SMTP Host</label>
+                              <input 
+                                required 
+                                type="text" 
+                                value={config.smtpHost} 
+                                onChange={e=>setConfig({...config, smtpHost: e.target.value})} 
+                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm bg-white" 
+                                placeholder="mail.yourdomain.com" 
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-1">SMTP Port</label>
+                              <input 
+                                required 
+                                type="number" 
+                                value={config.smtpPort} 
+                                onChange={e=>setConfig({...config, smtpPort: e.target.value})} 
+                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm bg-white" 
+                                placeholder="465 or 587" 
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                          <Mail size={15}/> Sending Email Address
+                        </label>
+                        <input 
+                          required 
+                          type="email" 
+                          value={config.emailAddress} 
+                          onChange={e=>setConfig({...config, emailAddress: e.target.value})} 
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm bg-white" 
+                          placeholder="support@yourstore.com" 
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                          <Key size={15}/> App Password
+                        </label>
+                        <input 
+                          required 
+                          type="password" 
+                          value={config.appPassword} 
+                          onChange={e=>setConfig({...config, appPassword: e.target.value})} 
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm bg-white" 
+                          placeholder="••••••••••••" 
+                        />
+                        {config.provider === 'gmail' && (
+                          <p className="text-xs text-slate-500 mt-2 flex items-start gap-1">
+                            <ShieldCheck size={14} className="shrink-0 text-blue-500 mt-0.5" /> 
+                            Since you are using Gmail, do not use your standard Google password. You must generate a 16-character "App Password" inside your Google Account Security Settings.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <button 
+                      type="submit" 
+                      disabled={loading} 
+                      className="px-8 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition disabled:opacity-50 text-sm shadow-md"
+                    >
+                      {loading ? 'Saving...' : (config.useDefaultMail ? 'Save Default Alert Settings' : 'Save Custom Mail Configuration')}
+                    </button>
+                    {!config.useDefaultMail && (
+                      <button 
+                        type="button" 
+                        onClick={() => handleModeSwitch(true)}
+                        className="px-5 py-3 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center gap-1.5"
+                      >
+                        <RefreshCw size={14} /> Switch Back to System Default Mail
+                      </button>
+                    )}
+                  </div>
                 </div>
               </form>
 
               {/* Test Mail Section */}
-              <div className={`border-t border-slate-100 bg-slate-50 p-6 sm:p-8 transition-opacity ${!config.isEmailEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
-                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><CheckCircle2 size={18} className="text-[#76b900]"/> Test Your Connection</h4>
+              <div className={`border-t border-slate-100 bg-slate-50 p-6 sm:p-8 transition-opacity ${!config.isEmailEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
+                <div className="mb-4">
+                  <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                    <CheckCircle2 size={18} className="text-[#76b900]"/> 
+                    Test Your Email Connection
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {config.useDefaultMail 
+                      ? 'Send a real delivery status test email using the GaliBrand System Default Mail (LandingMailConfig).' 
+                      : 'Send a test email using your configured Custom SMTP server to verify credentials.'}
+                  </p>
+                </div>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <input type="email" placeholder="Enter recipient email address..." value={testEmailTo} onChange={e => setTestEmailTo(e.target.value)} className="flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm" />
-                  <button onClick={handleTestMail} type="button" disabled={testing || !testEmailTo} className="px-6 py-3 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition whitespace-nowrap disabled:opacity-50 shadow-lg shadow-green-100">
-                    {testing ? 'Sending...' : 'Send Test Mail'}
+                  <input 
+                    type="email" 
+                    placeholder="Enter recipient email address..." 
+                    value={testEmailTo} 
+                    onChange={e => setTestEmailTo(e.target.value)} 
+                    className="flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm bg-white" 
+                  />
+                  <button 
+                    onClick={handleTestMail} 
+                    type="button" 
+                    disabled={testing || !testEmailTo} 
+                    className="px-6 py-3 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition whitespace-nowrap disabled:opacity-50 shadow-lg shadow-green-100 text-sm"
+                  >
+                    {testing ? 'Sending...' : (config.useDefaultMail ? 'Send Test Alert via Default Mail' : 'Send Test Mail via Custom SMTP')}
                   </button>
                 </div>
               </div>
@@ -371,28 +717,42 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
           )}
 
           {activeTab === 'templates' && (
-            <div className={`p-6 sm:p-8 transition-opacity ${!config.isEmailEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className={`p-6 sm:p-8 transition-opacity ${!config.isEmailEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
               <div className="flex justify-between items-center mb-6">
                  <div>
                    <h4 className="font-bold text-slate-800 text-lg">Email Templates</h4>
-                   <p className="text-sm text-slate-500 mt-1">Customize the emails sent to your customers for various events.</p>
+                   <p className="text-sm text-slate-500 mt-1">Customize the email content sent to your customers for various order and delivery events.</p>
                  </div>
-                 <button type="button" onClick={handleAddTemplate} className="px-4 py-2 bg-[#76b900] text-white font-bold rounded-lg hover:bg-[#659e00] transition text-sm whitespace-nowrap shadow-md">+ Add Template</button>
+                 <button 
+                   type="button" 
+                   onClick={handleAddTemplate} 
+                   className="px-4 py-2 bg-[#76b900] text-white font-bold rounded-lg hover:bg-[#659e00] transition text-sm whitespace-nowrap shadow-md"
+                 >
+                   + Add Template
+                 </button>
               </div>
               
               <div className="space-y-4">
                  {config.templates.length === 0 ? (
-                   <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-500 font-medium">No custom templates created. Standard default emails will be used.</div>
+                   <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-500 font-medium">
+                     No custom templates created. Standard default emails will be used.
+                   </div>
                  ) : (
                    config.templates.map((tpl, idx) => (
                      <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-5 border border-slate-200 rounded-xl bg-white shadow-sm hover:shadow-md transition">
                         <div className="mb-4 sm:mb-0">
                           <div className="flex items-center gap-3 mb-1">
                             <p className="font-bold text-slate-800 text-lg">{tpl.name}</p>
-                            <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold ${tpl.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{tpl.isActive ? 'Active' : 'Inactive'}</span>
+                            <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold ${tpl.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                              {tpl.isActive ? 'Active' : 'Inactive'}
+                            </span>
                           </div>
-                          <p className="text-sm text-slate-600 mb-1"><span className="font-semibold">Event:</span> <span className="bg-slate-100 px-2 py-0.5 rounded font-mono text-xs">{tpl.eventType}</span></p>
-                          <p className="text-sm text-slate-600"><span className="font-semibold">Subject:</span> {tpl.subject}</p>
+                          <p className="text-sm text-slate-600 mb-1">
+                            <span className="font-semibold">Event:</span> <span className="bg-slate-100 px-2 py-0.5 rounded font-mono text-xs">{tpl.eventType}</span>
+                          </p>
+                          <p className="text-sm text-slate-600">
+                            <span className="font-semibold">Subject:</span> {tpl.subject}
+                          </p>
                         </div>
                         <div className="flex gap-3">
                           <button type="button" onClick={() => handleEditTemplate(idx)} className="px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">Edit</button>
@@ -465,7 +825,7 @@ const ManageAlerts = ({ token, stores, onLogout }) => {
                        {isPreviewMode ? 'Edit Code' : 'Preview HTML'}
                      </button>
                    </div>
-                 <p className="text-xs text-slate-500 mb-2 font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">Variables: {'{{storeName}}'}, {'{{customerName}}'}, {'{{customerPhone}}'}, {'{{customerEmail}}'}, {'{{customerAddress}}'}, {'{{orderDate}}'}, {'{{orderId}}'}, {'{{orderItems}}'}, {'{{billItems}}'}, {'{{subTotal}}'}, {'{{totalAmount}}'}, {'{{discountAmount}}'}, {'{{shippingCharge}}'}, {'{{trackingDetails}}'}, {'{{ShippingMethod}}'}, {'{{ShippingCompany}}'}, {'{{ShippingTrackingNumber}}'}, {'{{DeliveryPersonName}}'}, {'{{DeliveryPersonPhone}}'}, {'{{paymentMethod}}'}, {'{{orderStatus}}'}</p>
+                   <p className="text-xs text-slate-500 mb-2 font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">Variables: {'{{storeName}}'}, {'{{customerName}}'}, {'{{customerPhone}}'}, {'{{customerEmail}}'}, {'{{customerAddress}}'}, {'{{orderDate}}'}, {'{{orderId}}'}, {'{{orderItems}}'}, {'{{billItems}}'}, {'{{subTotal}}'}, {'{{totalAmount}}'}, {'{{discountAmount}}'}, {'{{shippingCharge}}'}, {'{{trackingDetails}}'}, {'{{ShippingMethod}}'}, {'{{ShippingCompany}}'}, {'{{ShippingTrackingNumber}}'}, {'{{DeliveryPersonName}}'}, {'{{DeliveryPersonPhone}}'}, {'{{paymentMethod}}'}, {'{{orderStatus}}'}</p>
                    {isPreviewMode ? (
                      <div className="w-full px-4 py-4 border border-slate-200 rounded-xl bg-white min-h-[200px] max-h-[400px] overflow-y-auto" dangerouslySetInnerHTML={{ __html: getPreviewHtml(templateForm.body) }}></div>
                    ) : (
