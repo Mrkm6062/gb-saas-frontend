@@ -2,6 +2,7 @@ import { API_BASE_URL } from '../api';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import PlatformFooter from '../components/PlatformFooter';
+import { formatPolicyHtml } from '../utils/policyFormatter';
 
 const PlatformPolicy = () => {
   const { type } = useParams();
@@ -12,7 +13,6 @@ const PlatformPolicy = () => {
     const fetchPolicy = async () => {
       setLoading(true);
       try {
-        
         const response = await fetch(`${API_BASE_URL}/api/platform-policies/public`);
         if (response.ok) {
           const data = await response.json();
@@ -45,12 +45,26 @@ const PlatformPolicy = () => {
           <div className="flex justify-center py-20 text-slate-400 font-bold animate-pulse">Loading Policy...</div>
         ) : policy ? (
           <div className="bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200">
+            <span className="block text-[11px] font-extrabold uppercase tracking-widest text-[#76b900] mb-2">
+              Legal Policy
+            </span>
             <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-2">{policy.title}</h1>
-            <p className="text-sm font-bold text-slate-400 mb-8 uppercase tracking-wider">Version {policy.version} • Last Updated: {new Date(policy.updatedAt).toLocaleDateString()}</p>
-            <div className="text-slate-600 whitespace-pre-wrap leading-relaxed">{policy.content}</div>
+            <p className="text-xs font-bold text-slate-400 mb-8 uppercase tracking-wider">
+              Version {policy.version || '1.0'} • Last Updated: {new Date(policy.updatedAt || policy.createdAt).toLocaleDateString()}
+            </p>
+            <div 
+              className="policy-rendered-content text-slate-700 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: formatPolicyHtml(policy.content) }}
+            />
           </div>
         ) : (
-          <div className="text-center py-20 bg-white rounded-2xl border border-slate-200"><h2 className="text-2xl font-bold text-slate-800 mb-2">Policy Not Found</h2><p className="text-slate-500 mb-6">The policy you are looking for does not exist or has been removed.</p><Link to="/login" className="px-6 py-3 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition">Return Home</Link></div>
+          <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Policy Not Found</h2>
+            <p className="text-slate-500 mb-6">The policy you are looking for does not exist or has been removed.</p>
+            <Link to="/login" className="px-6 py-3 bg-[#76b900] text-white font-bold rounded-xl hover:bg-[#659e00] transition">
+              Return Home
+            </Link>
+          </div>
         )}
       </main>
 
@@ -58,4 +72,5 @@ const PlatformPolicy = () => {
     </div>
   );
 };
+
 export default PlatformPolicy;
