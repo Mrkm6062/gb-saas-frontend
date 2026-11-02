@@ -341,9 +341,11 @@ const ManageStaff = ({ token, stores, onLogout }) => {
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                             : staff.role === 'manager'
                             ? 'bg-purple-50 text-purple-800 border-purple-200'
+                            : staff.role === 'ordermanagement'
+                            ? 'bg-blue-50 text-blue-800 border-blue-200'
                             : 'bg-indigo-50 text-indigo-700 border-indigo-200'
                         }`}>
-                          {staff.role === 'kitchen' ? '🍳 Kitchen' : staff.role === 'delivery' ? '🛵 Delivery' : staff.role}
+                          {staff.role === 'kitchen' ? '🍳 Kitchen' : staff.role === 'delivery' ? '🛵 Delivery' : staff.role === 'ordermanagement' ? '📦 Order Management' : staff.role}
                         </span>
                       </td>
                       <td className="py-3.5 px-4">
@@ -438,6 +440,7 @@ const ManageStaff = ({ token, stores, onLogout }) => {
                       className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 bg-white"
                     >
                       <option value="counter">Counter POS</option>
+                      <option value="ordermanagement">📦 Order Management</option>
                       <option value="kitchen">🍳 Kitchen / Chef</option>
                       <option value="delivery">🛵 Delivery Staff</option>
                       <option value="cashier">Cashier</option>
@@ -539,6 +542,7 @@ const ManageStaff = ({ token, stores, onLogout }) => {
                       className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 bg-white"
                     >
                       <option value="counter">Counter POS</option>
+                      <option value="ordermanagement">📦 Order Management</option>
                       <option value="kitchen">🍳 Kitchen / Chef</option>
                       <option value="delivery">🛵 Delivery Staff</option>
                       <option value="cashier">Cashier</option>
