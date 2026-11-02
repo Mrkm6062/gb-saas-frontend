@@ -448,6 +448,16 @@ const StaffLogin = () => {
   };
 
   const handleStaffLogout = () => {
+    try {
+      if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === 'function') {
+        window.ReactNativeWebView.postMessage(
+          JSON.stringify({
+            type: 'STAFF_LOGOUT',
+          })
+        );
+      }
+    } catch (e) {}
+
     localStorage.removeItem('gb_pos_staff_token');
     localStorage.removeItem('gb_pos_staff_data');
     setStaffToken('');
@@ -455,6 +465,71 @@ const StaffLogin = () => {
     setCart([]);
     navigate('/staff-login', { replace: true });
   };
+
+  // -------------------------------------------------------------
+  // React Native WebView Bridge & Native FCM Token Registration
+  // -------------------------------------------------------------
+  useEffect(() => {
+    if (!staffData || !staffToken) return;
+
+    // Helper to send registration to backend
+    const registerFcmToBackend = async (fcmToken) => {
+      if (!fcmToken || !staffData) return;
+      try {
+        await fetch(`${API_BASE}/api/store-staff/register-fcm`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${staffToken}`,
+          },
+          body: JSON.stringify({
+            fcmToken,
+            staffId: staffData._id || staffData.staffId,
+            storeId: staffData.store?._id || staffData.store || '',
+            role: (staffData.role || 'kitchen').toLowerCase(),
+            platform: 'android',
+          }),
+        });
+        console.log('[FCM Bridge] Device token successfully registered for', staffData.name);
+      } catch (err) {
+        console.warn('[FCM Bridge] Error registering device token:', err);
+      }
+    };
+
+    // 1. Post auth event to native React Native WebView app wrapper
+    try {
+      if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === 'function') {
+        window.ReactNativeWebView.postMessage(
+          JSON.stringify({
+            type: 'STAFF_AUTH',
+            staff: staffData,
+            token: staffToken,
+            storeId: staffData.store?._id || staffData.store || '',
+          })
+        );
+      }
+    } catch (e) {
+      console.warn('[FCM Bridge] postMessage failed:', e);
+    }
+
+    // 2. If native app already injected the token into window.__STAFF_NATIVE_FCM_TOKEN__
+    if (window.__STAFF_NATIVE_FCM_TOKEN__) {
+      registerFcmToBackend(window.__STAFF_NATIVE_FCM_TOKEN__);
+    }
+
+    // 3. Listen for token ready event if native app injects it asynchronously
+    const handleNativeFcmToken = (event) => {
+      const token = event?.detail?.fcmToken || window.__STAFF_NATIVE_FCM_TOKEN__;
+      if (token) {
+        registerFcmToBackend(token);
+      }
+    };
+
+    window.addEventListener('nativeFcmTokenReady', handleNativeFcmToken);
+    return () => {
+      window.removeEventListener('nativeFcmTokenReady', handleNativeFcmToken);
+    };
+  }, [staffData, staffToken]);
 
   // -------------------------------------------------------------
   // Fetch POS Catalog (Products & Categories)
