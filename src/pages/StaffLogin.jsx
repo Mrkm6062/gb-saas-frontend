@@ -213,11 +213,35 @@ const StaffLogin = () => {
           'x-store-domain': window.location.hostname,
           'x-forwarded-host': window.location.hostname
         };
+        const storeIdToFetch = staffData?.store?._id || staffData?.store?.storeId || loginStoreCode || localStorage.getItem('gb_pos_store_code');
+        if (storeIdToFetch) {
+          headers['x-store-id'] = storeIdToFetch;
+        }
         const res = await fetch(`${API_BASE}/api/store/data`, { headers });
         if (res.ok) {
           const data = await res.json();
           setStoreData(data);
           if (data.storeId) setLoginStoreCode(data.storeId);
+
+          // If staffData lacks storeType or isRestaurant, sync it into staffData state & localStorage
+          if (staffData && staffData.store) {
+            const isRest = Boolean(
+              data.isRestaurant ||
+              (data.storeType && /restaurant|cafe|nasta|nashta|food|dine|bistro|dhaba|eatery|cloud\s*kitchen/i.test(data.storeType))
+            );
+            if (!staffData.store.storeType || staffData.store.isRestaurant !== isRest) {
+              const updatedStaff = {
+                ...staffData,
+                store: {
+                  ...staffData.store,
+                  storeType: data.storeType || staffData.store.storeType || '',
+                  isRestaurant: isRest
+                }
+              };
+              setStaffData(updatedStaff);
+              localStorage.setItem('gb_pos_staff_data', JSON.stringify(updatedStaff));
+            }
+          }
         }
       } catch (e) {
         console.warn('Failed to load store data:', e);
@@ -226,7 +250,7 @@ const StaffLogin = () => {
       }
     };
     fetchStore();
-  }, []);
+  }, [staffData?.store?._id, staffData?.store?.storeId]);
 
   const currentStoreId = staffData?.store?._id || staffData?.store?.storeId || storeData?._id || storeData?.storeId || loginStoreCode;
 
@@ -254,12 +278,12 @@ const StaffLogin = () => {
     typeof staffData?.store?.storeType === 'object' ? staffData?.store?.storeType?.name : staffData?.store?.storeType
   ) || (
     typeof storeData?.storeType === 'object' ? storeData?.storeType?.name : storeData?.storeType
-  ) || staffData?.store?.storeTypeName || storeData?.storeTypeName || '';
+  ) || staffData?.store?.storeTypeName || storeData?.storeTypeName || storeData?.businessType || '';
 
   const isKitchenStoreType = Boolean(
     staffData?.store?.isRestaurant ||
     storeData?.isRestaurant ||
-    (storeTypeCandidate && /restaurant|cafe|nasta|nashta|clouds*kitchen/i.test(String(storeTypeCandidate)))
+    (storeTypeCandidate && /restaurant|cafe|nasta|nashta|food|dine|bistro|dhaba|eatery|cloud\s*kitchen/i.test(String(storeTypeCandidate)))
   );
 
   // Fetch store checkout & payment settings (to check if online payment / Razorpay is enabled)
@@ -291,9 +315,8 @@ const StaffLogin = () => {
     if (!staffToken || !staffData) return;
     const userRole = (staffData.role || 'counter').toLowerCase();
     const isManager = userRole === 'manager';
-    const isOrderManagement = userRole === 'ordermanagement';
 
-    if (isManager || isOrderManagement) {
+    if (isManager) {
       if (urlRole === 'kitchen') {
         if (isKitchenStoreType) {
           setActiveView('kitchen');
@@ -309,22 +332,27 @@ const StaffLogin = () => {
         setActiveView('counter');
       } else if (urlRole === 'manager') {
         setActiveView('counter');
-      } else if (urlRole === 'ordermanagement') {
-        setActiveView('placed');
       } else {
-        const fallback = isOrderManagement ? 'placed' : 'counter';
-        navigate(`/staff-login/${fallback}`, { replace: true });
-        setActiveView(fallback);
+        navigate('/staff-login/counter', { replace: true });
+        setActiveView('counter');
       }
     } else {
-      let expectedRole = (userRole === 'waiter' || userRole === 'cashier') ? 'counter' : userRole;
-      if (expectedRole === 'kitchen' && !isKitchenStoreType) {
+      // Non-manager staff are strictly confined to their single assigned role's route
+      let expectedRole = 'counter';
+      if (userRole === 'kitchen') {
+        expectedRole = isKitchenStoreType ? 'kitchen' : 'placed';
+      } else if (userRole === 'delivery') {
+        expectedRole = 'delivery';
+      } else if (userRole === 'ordermanagement') {
         expectedRole = 'placed';
+      } else if (userRole === 'waiter' || userRole === 'cashier') {
+        expectedRole = 'counter';
       }
+
       if (urlRole !== expectedRole) {
         navigate(`/staff-login/${expectedRole}`, { replace: true });
       }
-      setActiveView(expectedRole === 'counter' ? 'counter' : expectedRole);
+      setActiveView(expectedRole);
     }
   }, [staffToken, staffData, urlRole, navigate, isKitchenStoreType]);
 
@@ -730,15 +758,18 @@ const StaffLogin = () => {
       const isManager = (staffData?.role || '').toLowerCase() === 'manager';
       if (isManager) {
         params.append('view', 'delivery');
-      }
-      if (deliveryDateFilter) {
-        params.append('date', deliveryDateFilter);
-      }
-      if (deliverySearchQuery.trim()) {
-        params.append('search', deliverySearchQuery.trim());
-      }
-      if (deliveryStatusFilter !== 'all') {
-        params.append('status', deliveryStatusFilter);
+        if (deliveryDateFilter) {
+          params.append('date', deliveryDateFilter);
+        }
+        if (deliverySearchQuery.trim()) {
+          params.append('search', deliverySearchQuery.trim());
+        }
+        if (deliveryStatusFilter !== 'all') {
+          params.append('status', deliveryStatusFilter);
+        }
+      } else {
+        // Delivery staff: strictly fetch active in-transit orders
+        params.append('status', 'shipped');
       }
 
       const qs = params.toString() ? `?${params.toString()}` : '';
@@ -1416,30 +1447,23 @@ const StaffLogin = () => {
   const userRole = (staffData?.role || 'counter').toLowerCase();
   const isManager = userRole === 'manager';
   const isOrderManagement = userRole === 'ordermanagement';
-  const canAccessCounter = isManager || ['counter', 'cashier', 'waiter'].includes(userRole);
-  // Kitchen is strictly hidden if store type is not restaurant, cafe, nasta, or cloud kitchen
-  const canAccessKitchen = isKitchenStoreType && (isManager || isOrderManagement || userRole === 'kitchen');
-  const canAccessPlaced = isManager || isOrderManagement || ['counter', 'cashier'].includes(userRole);
-  const canAccessDelivery = isManager || isOrderManagement || userRole === 'delivery';
 
-  // Force active view to role-permitted section (cannot access unauthorized views)
+  // Strict role permissions: non-managers can ONLY access their specific assigned terminal
+  const canAccessCounter = isManager || ['counter', 'cashier', 'waiter'].includes(userRole);
+  const canAccessKitchen = isKitchenStoreType && (isManager || userRole === 'kitchen');
+  const canAccessPlaced = isManager || userRole === 'ordermanagement';
+  const canAccessDelivery = isManager || userRole === 'delivery';
+
+  // Effective view is strictly bounded to the staff member's single assigned role (only manager can switch)
   const effectiveView = (() => {
-    if (userRole === 'kitchen') return isKitchenStoreType ? 'kitchen' : 'placed';
-    if (userRole === 'delivery') return 'delivery';
-    if (userRole === 'ordermanagement') {
-      if (activeView === 'delivery') return 'delivery';
-      if (activeView === 'kitchen' && canAccessKitchen) return 'kitchen';
-      return 'placed';
-    }
     if (isManager) {
       if (activeView === 'kitchen' && !isKitchenStoreType) return 'placed';
       return activeView;
     }
-    if (activeView === 'kitchen' && !canAccessKitchen) return canAccessPlaced ? 'placed' : 'counter';
-    if (activeView === 'placed' && canAccessPlaced) return 'placed';
-    if (activeView === 'delivery' && canAccessDelivery) return 'delivery';
-    if (activeView === 'kitchen' && canAccessKitchen) return 'kitchen';
-    return canAccessCounter ? 'counter' : 'placed';
+    if (userRole === 'kitchen') return isKitchenStoreType ? 'kitchen' : 'placed';
+    if (userRole === 'delivery') return 'delivery';
+    if (userRole === 'ordermanagement') return 'placed';
+    return 'counter'; // counter, cashier, waiter
   })();
 
   const filteredProducts = products.filter((p) => {
@@ -1466,7 +1490,7 @@ const StaffLogin = () => {
         
         {/* LEFT: View Selector (Counter POS, Placed Terminal, Kitchen Area [if kitchen store], Delivery Orders) with Dropdown */}
         <div className="flex items-center shrink-0 min-w-0">
-          {(isManager || isOrderManagement) ? (
+          {isManager ? (
             <div className="relative shrink-0" ref={viewDropdownRef}>
               <button
                 type="button"
@@ -1627,7 +1651,13 @@ const StaffLogin = () => {
               {effectiveView === 'delivery' && <Truck size={14} className="text-indigo-400 shrink-0" />}
               {effectiveView === 'counter' && <CreditCard size={14} className="text-orange-400 shrink-0" />}
               <span className="truncate max-w-[75px] sm:max-w-none text-xs font-bold">
-                {effectiveView === 'kitchen' ? 'Kitchen Area' : effectiveView === 'placed' ? 'Placed Terminal' : effectiveView === 'delivery' ? 'Delivery Orders' : 'Counter POS'}
+                {effectiveView === 'kitchen'
+                  ? 'Kitchen Area'
+                  : effectiveView === 'placed'
+                  ? 'Placed Terminal'
+                  : effectiveView === 'delivery'
+                  ? 'In-Transit Delivery'
+                  : 'Counter POS'}
               </span>
               {effectiveView === 'placed' && placedOrders.length > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-blue-500 text-white text-[9px] font-black leading-none">
@@ -1639,9 +1669,9 @@ const StaffLogin = () => {
                   {kitchenOrders.filter(o => o.orderStatus === 'preparing').length}
                 </span>
               )}
-              {effectiveView === 'delivery' && myAssignedOrders.length > 0 && (
+              {effectiveView === 'delivery' && myAssignedOrders.filter(o => o.orderStatus === 'shipped').length > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-indigo-400 text-slate-900 text-[9px] font-black leading-none">
-                  {myAssignedOrders.length}
+                  {myAssignedOrders.filter(o => o.orderStatus === 'shipped').length}
                 </span>
               )}
             </div>
@@ -2571,8 +2601,11 @@ const StaffLogin = () => {
           {(() => {
             const isManagerRole = (staffData?.role || '').toLowerCase() === 'manager';
 
-            // Filter orders locally for instant feedback
+            // Filter orders locally: delivery staff sees ONLY assigned in-transit orders
             const displayedDeliveryOrders = myAssignedOrders.filter((order) => {
+              if (!isManagerRole) {
+                return order.orderStatus === 'shipped';
+              }
               // 1. Status Filter
               if (deliveryStatusFilter !== 'all') {
                 if (order.orderStatus !== deliveryStatusFilter) return false;
@@ -2609,12 +2642,12 @@ const StaffLogin = () => {
                       </div>
                       <div>
                         <h2 className="text-sm sm:text-base font-black text-slate-800 leading-tight">
-                          {isManagerRole ? 'Delivery Orders Management' : 'My Assigned Delivery Orders'}
+                          {isManagerRole ? 'Delivery Orders Management' : 'In-Transit Orders'}
                         </h2>
                         <p className="text-[11px] text-slate-500">
                           {isManagerRole
                             ? `All store delivery orders (${displayedDeliveryOrders.length} shown)`
-                            : `Showing orders assigned to ${staffData?.name}`}
+                            : `Assigned orders out for delivery (${displayedDeliveryOrders.length} active in-transit)`}
                         </p>
                       </div>
                     </div>
@@ -2628,86 +2661,88 @@ const StaffLogin = () => {
                     </button>
                   </div>
 
-                  {/* Manager Controls: Search, Date Picker, Status Filter Pills */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                    {/* Search by Order ID, Phone, Customer */}
-                    <div className="relative flex-1 min-w-[160px] sm:max-w-xs">
-                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={deliverySearchQuery}
-                        onChange={(e) => setDeliverySearchQuery(e.target.value)}
-                        placeholder="Search Order ID (#), phone, name..."
-                        className="w-full pl-7 pr-6 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-500"
-                      />
-                      {deliverySearchQuery && (
-                        <button onClick={() => setDeliverySearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                          <X size={11} />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Date Selector & Status Filters */}
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {/* Date Input */}
-                      <div className="flex items-center gap-1">
+                  {/* Manager Controls: ONLY VISIBLE TO STORE MANAGER. HIDDEN FOR DELIVERY STAFF */}
+                  {isManagerRole && (
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                      {/* Search by Order ID, Phone, Customer */}
+                      <div className="relative flex-1 min-w-[160px] sm:max-w-xs">
+                        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
-                          type="date"
-                          value={deliveryDateFilter}
-                          onChange={(e) => setDeliveryDateFilter(e.target.value)}
-                          className="px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
+                          type="text"
+                          value={deliverySearchQuery}
+                          onChange={(e) => setDeliverySearchQuery(e.target.value)}
+                          placeholder="Search Order ID (#), phone, name..."
+                          className="w-full pl-7 pr-6 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-500"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setDeliveryDateFilter(new Date().toISOString().slice(0, 10))}
-                          className={`px-2 py-1 rounded-lg text-xs font-bold transition border ${
-                            deliveryDateFilter === new Date().toISOString().slice(0, 10)
-                              ? 'bg-indigo-600 text-white border-indigo-600'
-                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                          }`}
-                        >
-                          Today
-                        </button>
-                        {deliveryDateFilter && (
-                          <button
-                            type="button"
-                            onClick={() => setDeliveryDateFilter('')}
-                            className="px-1.5 py-1 rounded-lg text-[11px] font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition"
-                          >
-                            All
+                        {deliverySearchQuery && (
+                          <button onClick={() => setDeliverySearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <X size={11} />
                           </button>
                         )}
                       </div>
 
-                      {/* Status Tabs */}
-                      <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-bold">
-                        <button
-                          onClick={() => setDeliveryStatusFilter('all')}
-                          className={`px-2 py-1 rounded-md transition text-xs whitespace-nowrap ${
-                            deliveryStatusFilter === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          All ({myAssignedOrders.length})
-                        </button>
-                        <button
-                          onClick={() => setDeliveryStatusFilter('shipped')}
-                          className={`px-2 py-1 rounded-md transition text-xs whitespace-nowrap ${
-                            deliveryStatusFilter === 'shipped' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          In-Transit ({myAssignedOrders.filter(o => o.orderStatus === 'shipped').length})
-                        </button>
-                        <button
-                          onClick={() => setDeliveryStatusFilter('delivered')}
-                          className={`px-2 py-1 rounded-md transition text-xs whitespace-nowrap ${
-                            deliveryStatusFilter === 'delivered' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          Delivered ({myAssignedOrders.filter(o => o.orderStatus === 'delivered').length})
-                        </button>
+                      {/* Date Selector & Status Filters */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {/* Date Input */}
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="date"
+                            value={deliveryDateFilter}
+                            onChange={(e) => setDeliveryDateFilter(e.target.value)}
+                            className="px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setDeliveryDateFilter(new Date().toISOString().slice(0, 10))}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold transition border ${
+                              deliveryDateFilter === new Date().toISOString().slice(0, 10)
+                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            Today
+                          </button>
+                          {deliveryDateFilter && (
+                            <button
+                              type="button"
+                              onClick={() => setDeliveryDateFilter('')}
+                              className="px-1.5 py-1 rounded-lg text-[11px] font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition"
+                            >
+                              All
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Status Tabs */}
+                        <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-bold">
+                          <button
+                            onClick={() => setDeliveryStatusFilter('all')}
+                            className={`px-2 py-1 rounded-md transition text-xs whitespace-nowrap ${
+                              deliveryStatusFilter === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            All ({myAssignedOrders.length})
+                          </button>
+                          <button
+                            onClick={() => setDeliveryStatusFilter('shipped')}
+                            className={`px-2 py-1 rounded-md transition text-xs whitespace-nowrap ${
+                              deliveryStatusFilter === 'shipped' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            In-Transit ({myAssignedOrders.filter(o => o.orderStatus === 'shipped').length})
+                          </button>
+                          <button
+                            onClick={() => setDeliveryStatusFilter('delivered')}
+                            className={`px-2 py-1 rounded-md transition text-xs whitespace-nowrap ${
+                              deliveryStatusFilter === 'delivered' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            Delivered ({myAssignedOrders.filter(o => o.orderStatus === 'delivered').length})
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Orders Content - Compact Small Order List */}

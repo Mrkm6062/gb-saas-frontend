@@ -9,7 +9,7 @@ import ManageProduct from './pages/ManageProduct';
 import UpgradePlan from './pages/UpgradePlan';
 import ManageOrders from './pages/ManageOrders';
 import ManageStaff from './pages/ManageStaff';
-import ManageCounter from './pages/ManageCounter';
+import ManageCounter from './pages/StaffLogin';
 import LiveOrderManage from './pages/LiveOrderManage';
 import ManagePolicy from './pages/ManagePolicy';
 import ManageCustomer from './pages/ManageCustomer';
