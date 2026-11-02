@@ -28,12 +28,15 @@ import {
   Tag,
   ArrowRight,
   ChevronUp,
+  ChevronDown,
   Navigation,
   QrCode,
   Download,
   FileText,
   MessageCircle,
-  ShieldCheck
+  ShieldCheck,
+  Calendar,
+  Filter
 } from 'lucide-react';
 import { generateReceiptPdf, downloadReceiptPdf, sendWhatsAppWithReceiptPdf } from '../utils/receiptPdf';
 
@@ -104,6 +107,21 @@ const StaffLogin = () => {
     } catch (e) {}
     return 'counter';
   });
+  const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
+  const viewDropdownRef = useRef(null);
+
+  // Close view dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (viewDropdownRef.current && !viewDropdownRef.current.contains(e.target)) {
+        setIsViewDropdownOpen(false);
+      }
+    };
+    if (isViewDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isViewDropdownOpen]);
 
   // Live Clock
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
@@ -133,6 +151,7 @@ const StaffLogin = () => {
   // -------------------------------------------------------------
   const [kitchenOrders, setKitchenOrders] = useState([]);
   const [kitchenFilter, setKitchenFilter] = useState('active'); // 'active' | 'placed' | 'preparing' | 'wasted'
+  const [kitchenSearchQuery, setKitchenSearchQuery] = useState('');
   const [deliveryStaffList, setDeliveryStaffList] = useState([]);
   const [shippingModal, setShippingModal] = useState({
     isOpen: false,
@@ -148,6 +167,9 @@ const StaffLogin = () => {
   // -------------------------------------------------------------
   const [myAssignedOrders, setMyAssignedOrders] = useState([]);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [deliverySearchQuery, setDeliverySearchQuery] = useState('');
+  const [deliveryDateFilter, setDeliveryDateFilter] = useState(''); // 'YYYY-MM-DD'
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState('all'); // 'all' | 'shipped' | 'delivered'
   const [checkoutSettings, setCheckoutSettings] = useState(null);
   const [upiModal, setUpiModal] = useState({
     isOpen: false,
@@ -591,12 +613,28 @@ const StaffLogin = () => {
     } catch (err) {}
   };
 
-  // Fetch Delivery staff assigned orders
+  // Fetch Delivery staff assigned orders (or all delivery orders for manager)
   const fetchMyAssignedOrders = async () => {
     if (!staffToken) return;
     setDeliveryLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/store-staff/orders`, {
+      const params = new URLSearchParams();
+      const isManager = (staffData?.role || '').toLowerCase() === 'manager';
+      if (isManager) {
+        params.append('view', 'delivery');
+      }
+      if (deliveryDateFilter) {
+        params.append('date', deliveryDateFilter);
+      }
+      if (deliverySearchQuery.trim()) {
+        params.append('search', deliverySearchQuery.trim());
+      }
+      if (deliveryStatusFilter !== 'all') {
+        params.append('status', deliveryStatusFilter);
+      }
+
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetch(`${API_BASE}/api/store-staff/orders${qs}`, {
         headers: { Authorization: `Bearer ${staffToken}` }
       });
       if (res.ok) {
@@ -609,6 +647,22 @@ const StaffLogin = () => {
       setDeliveryLoading(false);
     }
   };
+
+  // Re-fetch when date or status filters change
+  useEffect(() => {
+    if (staffToken && (staffData?.role === 'delivery' || activeView === 'delivery')) {
+      fetchMyAssignedOrders();
+    }
+  }, [deliveryDateFilter, deliveryStatusFilter]);
+
+  // Debounced search for delivery orders
+  useEffect(() => {
+    if (!staffToken || (staffData?.role !== 'delivery' && activeView !== 'delivery')) return;
+    const timer = setTimeout(() => {
+      fetchMyAssignedOrders();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [deliverySearchQuery]);
 
   // Live polling for Kitchen (every 5 seconds)
   useEffect(() => {
@@ -1272,134 +1326,183 @@ const StaffLogin = () => {
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans select-none">
       
-      {/* Header (Responsive on Mobile & Desktop) */}
-      <header className="min-h-16 bg-slate-900 text-white px-3 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-800 shrink-0 shadow-md z-30">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center font-black shadow-md shrink-0">
-            {effectiveView === 'kitchen' ? <ChefHat size={20} /> : effectiveView === 'delivery' ? <Truck size={20} /> : <CreditCard size={18} />}
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xs md:text-base font-black truncate max-w-[140px] sm:max-w-[200px] md:max-w-xs leading-tight">
-              {activeStoreName}
-            </h1>
-            {storeCustomId && (
-              <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-orange-500/20 text-orange-400 font-mono text-[9px] md:text-[10px] font-black border border-orange-500/30">
-                ID: {storeCustomId}
-              </span>
-            )}
-          </div>
-        </div>
+      {/* Header: Unified Single Bar for Mobile & Desktop */}
+      <header className="h-14 sm:h-16 bg-slate-900 text-white px-2.5 sm:px-4 md:px-6 flex items-center justify-between gap-1.5 sm:gap-3 border-b border-slate-800 shrink-0 shadow-md z-30">
+        
+        {/* LEFT: View Selector (Counter POS, Kitchen Area, Delivery Orders) with Dropdown */}
+        <div className="flex items-center shrink-0 min-w-0">
+          {isManager ? (
+            <div className="relative shrink-0" ref={viewDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsViewDropdownOpen(prev => !prev)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-black transition shadow-xs ${
+                  effectiveView === 'counter'
+                    ? 'bg-orange-600 hover:bg-orange-700 border-orange-500 text-white'
+                    : effectiveView === 'kitchen'
+                    ? 'bg-amber-600 hover:bg-amber-700 border-amber-500 text-white'
+                    : 'bg-indigo-600 hover:bg-indigo-700 border-indigo-500 text-white'
+                }`}
+                title="Switch between Counter POS, Kitchen Area, and Delivery Orders"
+              >
+                {effectiveView === 'counter' && <CreditCard size={14} className="shrink-0" />}
+                {effectiveView === 'kitchen' && <ChefHat size={14} className="shrink-0" />}
+                {effectiveView === 'delivery' && <Truck size={14} className="shrink-0" />}
 
-        {/* View Switcher: Manager can switch; non-managers only see their assigned role terminal */}
-        {isManager ? (
-          <div className="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
-            <button
-              type="button"
-              onClick={() => { setActiveView('counter'); navigate('/staff-login/counter'); }}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 ${
-                effectiveView === 'counter'
-                  ? 'bg-orange-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              <CreditCard size={14} />
-              <span>Counter POS</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setActiveView('kitchen'); navigate('/staff-login/kitchen'); }}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 relative ${
-                effectiveView === 'kitchen'
-                  ? 'bg-amber-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              <Utensils size={14} />
-              <span>Kitchen Area</span>
-              {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px] font-black leading-none animate-pulse">
-                  {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length}
+                <span className="font-bold text-xs truncate max-w-[70px] sm:max-w-none">
+                  {effectiveView === 'counter' ? 'Counter POS' : effectiveView === 'kitchen' ? 'Kitchen Area' : 'Delivery Orders'}
                 </span>
-              )}
-            </button>
 
-            <button
-              type="button"
-              onClick={() => { setActiveView('delivery'); navigate('/staff-login/delivery'); }}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 ${
-                effectiveView === 'delivery'
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              <Truck size={14} />
-              <span>Delivery Orders</span>
-              {myAssignedOrders.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-indigo-400 text-slate-900 text-[10px] font-black leading-none">
-                  {myAssignedOrders.length}
-                </span>
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center">
-            {canAccessKitchen && (
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-black shadow-xs">
-                <ChefHat size={16} />
-                <span>Kitchen Display Terminal (KDS)</span>
-                {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px] font-black leading-none animate-pulse">
+                {effectiveView === 'kitchen' && kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[9px] font-black leading-none animate-pulse">
                     {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length}
                   </span>
                 )}
-              </div>
-            )}
-            {canAccessDelivery && (
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-xs font-black shadow-xs">
-                <Truck size={16} />
-                <span>Delivery Staff Terminal</span>
-                {myAssignedOrders.length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-indigo-400 text-slate-900 text-[10px] font-black leading-none">
+                {effectiveView === 'delivery' && myAssignedOrders.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-indigo-200 text-indigo-950 text-[9px] font-black leading-none">
                     {myAssignedOrders.length}
                   </span>
                 )}
-              </div>
-            )}
-            {canAccessCounter && !canAccessKitchen && !canAccessDelivery && (
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-orange-500/20 text-orange-300 border border-orange-500/40 text-xs font-black shadow-xs">
-                <CreditCard size={16} />
-                <span>Counter Sale POS Terminal</span>
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* Staff Profile & Logout */}
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div className="text-xs font-black text-slate-100 flex items-center gap-1.5 justify-end">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>{staffData.name}</span>
+                <ChevronDown size={13} className={`text-white/80 transition-transform duration-200 shrink-0 ${isViewDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown Menu Popup */}
+              {isViewDropdownOpen && (
+                <div className="absolute left-0 top-full mt-1.5 w-52 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="px-3 py-1 text-[10px] uppercase font-bold text-slate-400 tracking-wider border-b border-slate-700/60 mb-1">
+                    Terminal Views
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveView('counter');
+                      navigate('/staff-login/counter');
+                      setIsViewDropdownOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 flex items-center justify-between text-xs font-bold transition hover:bg-slate-700/70 ${
+                      effectiveView === 'counter' ? 'text-orange-400 bg-orange-500/10' : 'text-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <CreditCard size={14} className="text-orange-400" />
+                      <span>Counter POS</span>
+                    </div>
+                    {effectiveView === 'counter' && <Check size={14} className="text-orange-400" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveView('kitchen');
+                      navigate('/staff-login/kitchen');
+                      setIsViewDropdownOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 flex items-center justify-between text-xs font-bold transition hover:bg-slate-700/70 ${
+                      effectiveView === 'kitchen' ? 'text-amber-400 bg-amber-500/10' : 'text-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <ChefHat size={14} className="text-amber-400" />
+                      <span>Kitchen Area</span>
+                      {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[9px] font-black leading-none animate-pulse">
+                          {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length}
+                        </span>
+                      )}
+                    </div>
+                    {effectiveView === 'kitchen' && <Check size={14} className="text-amber-400" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveView('delivery');
+                      navigate('/staff-login/delivery');
+                      setIsViewDropdownOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 flex items-center justify-between text-xs font-bold transition hover:bg-slate-700/70 ${
+                      effectiveView === 'delivery' ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Truck size={14} className="text-indigo-400" />
+                      <span>Delivery Orders</span>
+                      {myAssignedOrders.length > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full bg-indigo-400 text-slate-900 text-[9px] font-black leading-none">
+                          {myAssignedOrders.length}
+                        </span>
+                      )}
+                    </div>
+                    {effectiveView === 'delivery' && <Check size={14} className="text-indigo-400" />}
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1.5 justify-end mt-0.5">
-              <span className="px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-300 font-mono text-[10px] font-bold">
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black shadow-xs bg-slate-800 border border-slate-700 text-slate-200 shrink-0">
+              {effectiveView === 'kitchen' && <ChefHat size={14} className="text-amber-400 shrink-0" />}
+              {effectiveView === 'delivery' && <Truck size={14} className="text-indigo-400 shrink-0" />}
+              {effectiveView === 'counter' && <CreditCard size={14} className="text-orange-400 shrink-0" />}
+              <span className="truncate max-w-[75px] sm:max-w-none text-xs font-bold">
+                {effectiveView === 'kitchen' ? 'Kitchen Area' : effectiveView === 'delivery' ? 'Delivery Orders' : 'Counter POS'}
+              </span>
+              {effectiveView === 'kitchen' && kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[9px] font-black leading-none animate-pulse">
+                  {kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length}
+                </span>
+              )}
+              {effectiveView === 'delivery' && myAssignedOrders.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-indigo-400 text-slate-900 text-[9px] font-black leading-none">
+                  {myAssignedOrders.length}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* CENTER: Shop Name & Shop ID */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-1 sm:px-2 min-w-0">
+          <h1 className="text-xs sm:text-sm md:text-base font-black truncate max-w-[110px] sm:max-w-[200px] md:max-w-xs text-white leading-tight">
+            {activeStoreName}
+          </h1>
+          {storeCustomId && (
+            <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-orange-500/20 text-orange-400 font-mono text-[9px] sm:text-[10px] font-bold border border-orange-500/30 leading-none">
+              ID: {storeCustomId}
+            </span>
+          )}
+        </div>
+
+        {/* RIGHT: Logined Staff Name (Top), Employee Code, Role, Logout Button */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 justify-end">
+          <div className="text-right flex flex-col items-end justify-center leading-tight">
+            {/* Top: Staff Name */}
+            <div className="text-[11px] sm:text-xs font-black text-slate-100 flex items-center gap-1 justify-end">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+              <span className="truncate max-w-[70px] sm:max-w-[120px] md:max-w-[160px]">{staffData.name}</span>
+            </div>
+            {/* Employee Code & Role */}
+            <div className="flex items-center gap-1 justify-end mt-0.5">
+              <span className="px-1 py-0.2 rounded bg-indigo-500/30 text-indigo-300 font-mono text-[9px] font-bold">
                 {staffData.staffId}
               </span>
-              <span className="capitalize text-[10px] text-slate-400">
+              <span className="capitalize text-[9px] text-slate-400 font-medium">
                 {staffData.role}
               </span>
             </div>
           </div>
 
+          {/* Logout Button */}
           <button
             onClick={handleStaffLogout}
             title="Log Out"
-            className="p-2.5 rounded-xl bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-700 transition"
+            className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-700 transition shrink-0"
           >
-            <LogOut size={16} />
+            <LogOut size={15} />
           </button>
         </div>
+
       </header>
 
       {/* ========================================================= */}
@@ -1791,74 +1894,126 @@ const StaffLogin = () => {
       {effectiveView === 'kitchen' && canAccessKitchen && (
         <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden">
           {/* Sub Toolbar */}
-          <div className="p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shadow-sm">
-                <ChefHat size={20} />
+          <div className="p-3 sm:p-4 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shadow-sm shrink-0">
+                  <ChefHat size={18} />
+                </div>
+                <div>
+                  <h2 className="text-sm sm:text-base font-black text-slate-800 leading-tight">Kitchen Display System</h2>
+                  <p className="text-[11px] text-slate-500 hidden sm:block">Live incoming counter & table orders for preparation</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base font-black text-slate-800">Kitchen Display System (KDS)</h2>
-                <p className="text-xs text-slate-500">Live incoming counter & table orders for kitchen preparation</p>
-              </div>
+              <button
+                onClick={fetchKitchenOrders}
+                className="sm:hidden p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1"
+                title="Refresh Kitchen Orders"
+              >
+                <RefreshCw size={13} />
+              </button>
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+            {/* Search & Filter Pills */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              {/* Quick Search */}
+              <div className="relative">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={kitchenSearchQuery}
+                  onChange={(e) => setKitchenSearchQuery(e.target.value)}
+                  placeholder="Filter by Order #, table..."
+                  className="w-full sm:w-44 pl-7 pr-6 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-amber-500"
+                />
+                {kitchenSearchQuery && (
+                  <button onClick={() => setKitchenSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Pills with Horizontal Scroll on Mobile */}
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold overflow-x-auto scrollbar-none max-w-full">
+                <button
+                  onClick={() => setKitchenFilter('active')}
+                  className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap text-xs ${
+                    kitchenFilter === 'active' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  Active ({kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length})
+                </button>
+                <button
+                  onClick={() => setKitchenFilter('placed')}
+                  className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap text-xs ${
+                    kitchenFilter === 'placed' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  Placed ({kitchenOrders.filter(o => o.orderStatus === 'placed').length})
+                </button>
+                <button
+                  onClick={() => setKitchenFilter('preparing')}
+                  className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap text-xs ${
+                    kitchenFilter === 'preparing' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  🍳 Cooking ({kitchenOrders.filter(o => o.orderStatus === 'preparing').length})
+                </button>
+                <button
+                  onClick={() => setKitchenFilter('wasted')}
+                  className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap text-xs ${
+                    kitchenFilter === 'wasted' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  ⚠️ Wasted ({kitchenOrders.filter(o => o.orderStatus === 'wasted').length})
+                </button>
+              </div>
+
               <button
-                onClick={() => setKitchenFilter('active')}
-                className={`px-3 py-1.5 rounded-lg transition ${
-                  kitchenFilter === 'active' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600'
-                }`}
+                onClick={fetchKitchenOrders}
+                className="hidden sm:flex p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition items-center gap-1 shrink-0"
               >
-                Active ({kitchenOrders.filter(o => ['placed', 'preparing'].includes(o.orderStatus)).length})
-              </button>
-              <button
-                onClick={() => setKitchenFilter('placed')}
-                className={`px-3 py-1.5 rounded-lg transition ${
-                  kitchenFilter === 'placed' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600'
-                }`}
-              >
-                Placed ({kitchenOrders.filter(o => o.orderStatus === 'placed').length})
-              </button>
-              <button
-                onClick={() => setKitchenFilter('preparing')}
-                className={`px-3 py-1.5 rounded-lg transition ${
-                  kitchenFilter === 'preparing' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600'
-                }`}
-              >
-                🍳 Cooking ({kitchenOrders.filter(o => o.orderStatus === 'preparing').length})
-              </button>
-              <button
-                onClick={() => setKitchenFilter('wasted')}
-                className={`px-3 py-1.5 rounded-lg transition ${
-                  kitchenFilter === 'wasted' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600'
-                }`}
-              >
-                ⚠️ Wasted ({kitchenOrders.filter(o => o.orderStatus === 'wasted').length})
+                <RefreshCw size={13} /> Refresh
               </button>
             </div>
           </div>
 
-          {/* Orders Grid */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          {/* Orders Grid - Small compact cards */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
             {(() => {
               const filtered = kitchenOrders.filter((order) => {
-                if (kitchenFilter === 'active') return ['placed', 'preparing'].includes(order.orderStatus);
-                return order.orderStatus === kitchenFilter;
+                if (kitchenFilter === 'active') {
+                  if (!['placed', 'preparing'].includes(order.orderStatus)) return false;
+                } else if (order.orderStatus !== kitchenFilter) {
+                  return false;
+                }
+
+                if (kitchenSearchQuery.trim()) {
+                  const q = kitchenSearchQuery.trim().toLowerCase();
+                  const shortId = (order._id || '').slice(-6).toLowerCase();
+                  const fullId = (order._id || '').toLowerCase();
+                  const name = (order.customerName || '').toLowerCase();
+                  const phone = (order.customerPhone || '').toLowerCase();
+                  const table = String(order.tableNumber || '').toLowerCase();
+                  if (!shortId.includes(q) && !fullId.includes(q) && !name.includes(q) && !phone.includes(q) && !table.includes(q)) {
+                    return false;
+                  }
+                }
+                return true;
               });
 
               if (filtered.length === 0) {
                 return (
                   <div className="h-full flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-200 rounded-3xl bg-white/50">
-                    <Utensils size={36} className="text-amber-400 mb-2" />
-                    <h3 className="text-base font-extrabold text-slate-800">No Orders in this Kitchen Queue</h3>
-                    <p className="text-xs text-slate-400 mt-1">Orders placed from counter or storefront appear here live.</p>
+                    <Utensils size={32} className="text-amber-400 mb-2" />
+                    <h3 className="text-sm font-extrabold text-slate-800">No Orders in this Kitchen Queue</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Orders placed from counter or storefront appear here live.</p>
                   </div>
                 );
               }
 
               return (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {filtered.map((order) => {
                     const isDineIn = order.orderType && order.orderType.toLowerCase() === 'dine-in';
                     const isPrep = order.orderStatus === 'preparing';
@@ -1867,101 +2022,100 @@ const StaffLogin = () => {
                     return (
                       <div
                         key={order._id}
-                        className={`bg-white rounded-2xl border shadow-sm flex flex-col overflow-hidden ${
-                          isPrep ? 'border-amber-400 ring-2 ring-amber-400/30' : isWasted ? 'border-rose-300' : 'border-slate-200'
+                        className={`bg-white rounded-xl border shadow-xs flex flex-col overflow-hidden transition ${
+                          isPrep ? 'border-amber-400 ring-2 ring-amber-400/25' : isWasted ? 'border-rose-300' : 'border-slate-200'
                         }`}
                       >
-                        {/* Header */}
-                        <div className={`p-3.5 border-b flex items-center justify-between ${
-                          isDineIn ? 'bg-orange-50 border-orange-100' : 'bg-slate-50 border-slate-100'
+                        {/* Compact Header */}
+                        <div className={`px-3 py-1.5 border-b flex items-center justify-between ${
+                          isDineIn ? 'bg-orange-50/80 border-orange-100' : 'bg-slate-50 border-slate-100'
                         }`}>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-black text-sm text-slate-900">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-black text-xs text-slate-900">
                               #{order._id.slice(-6).toUpperCase()}
                             </span>
                             {isDineIn ? (
-                              <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white text-[10px] font-black uppercase">
-                                🍽️ Table {order.tableNumber || '1'}
+                              <span className="px-1.5 py-0.2 rounded bg-orange-500 text-white text-[10px] font-black uppercase">
+                                🍽️ T-{order.tableNumber || '1'}
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white text-[10px] font-black uppercase">
+                              <span className="px-1.5 py-0.2 rounded bg-indigo-600 text-white text-[10px] font-black uppercase">
                                 🛵 Delivery
                               </span>
                             )}
                           </div>
-                          <span className="text-[11px] font-mono text-slate-400">
+                          <span className="text-[10px] font-mono text-slate-400">
                             {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
 
-                        {/* Customer & Status */}
-                        <div className="p-4 flex-1 flex flex-col space-y-3">
-                          <div className="flex justify-between items-start text-xs border-b border-slate-100 pb-2">
-                            <div>
-                              <p className="font-extrabold text-slate-800">{order.customerName || 'Walk-in Guest'}</p>
-                              {order.customerPhone && (
-                                <p className="text-[11px] text-slate-400 font-mono">📞 {order.customerPhone}</p>
-                              )}
-                            </div>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                              isPrep ? 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse' : isWasted ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {order.orderStatus}
-                            </span>
+                        {/* Customer & Status Bar */}
+                        <div className="px-3 pt-2 pb-1.5 flex justify-between items-center text-xs border-b border-slate-100">
+                          <div className="min-w-0 pr-2">
+                            <p className="font-black text-slate-800 text-xs truncate">{order.customerName || 'Walk-in Guest'}</p>
+                            {order.customerPhone && (
+                              <p className="text-[10px] text-slate-400 font-mono">📞 {order.customerPhone}</p>
+                            )}
                           </div>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase shrink-0 ${
+                            isPrep ? 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse' : isWasted ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {order.orderStatus}
+                          </span>
+                        </div>
 
-                          {/* Items List */}
-                          <div className="flex-1 space-y-1.5">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                              Kitchen Items ({order.orderItems?.length || 0})
-                            </span>
-                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                              {order.orderItems?.map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100 text-xs">
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-6 h-6 rounded-lg bg-orange-100 text-orange-800 font-black flex items-center justify-center text-xs shrink-0">
-                                      {item.qty}×
-                                    </span>
-                                    <span className="font-extrabold text-slate-800">{item.name}</span>
-                                  </div>
-                                  <span className="font-bold text-slate-500 font-mono text-[11px]">₹{item.price * item.qty}</span>
+                        {/* Items List - Compact scrollable */}
+                        <div className="p-2.5 flex-1 flex flex-col space-y-1.5">
+                          <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-slate-400">
+                            <span>Items ({order.orderItems?.length || 0})</span>
+                            <span>Total: ₹{order.totalAmount}</span>
+                          </div>
+                          <div className="space-y-1 max-h-32 overflow-y-auto pr-0.5">
+                            {order.orderItems?.map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 text-xs">
+                                <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                                  <span className="w-5 h-5 rounded bg-orange-100 text-orange-800 font-black flex items-center justify-center text-[10px] shrink-0">
+                                    {item.qty}×
+                                  </span>
+                                  <span className="font-bold text-slate-800 truncate text-[11px]">{item.name}</span>
                                 </div>
-                              ))}
-                            </div>
+                                <span className="font-mono text-slate-500 text-[10px] shrink-0">₹{item.price * item.qty}</span>
+                              </div>
+                            ))}
                           </div>
 
                           {order.wastedReason && (
-                            <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px]">
+                            <div className="p-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[10px]">
                               <strong>Damage/Waste:</strong> {order.wastedReason}
                             </div>
                           )}
                         </div>
 
-                        {/* Action Buttons */}
+                        {/* Compact Action Buttons */}
                         {!isWasted && (
-                          <div className="p-3 bg-slate-50/70 border-t border-slate-100 space-y-2">
+                          <div className="p-2 bg-slate-50/80 border-t border-slate-100 space-y-1.5">
                             {order.orderStatus === 'placed' && (
                               <button
                                 onClick={() => handleStartPreparing(order._id)}
-                                className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+                                className="w-full py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider rounded-lg shadow-2xs transition flex items-center justify-center gap-1"
                               >
-                                <ChefHat size={14} /> 👨‍🍳 Start Preparing
+                                <ChefHat size={13} /> 👨‍🍳 Start Preparing
                               </button>
                             )}
 
                             {/* FINISH BUTTON */}
                             <button
                               onClick={() => handleFinishKitchenOrder(order)}
-                              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition flex items-center justify-center gap-1.5"
+                              className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-lg shadow-2xs transition flex items-center justify-center gap-1"
                             >
-                              <CheckCircle size={15} /> Finish ({isDineIn ? 'Served / Deliver' : 'Ship to Customer'})
+                              <CheckCircle size={14} /> Finish ({isDineIn ? 'Served' : 'Ship'})
                             </button>
 
                             <button
                               onClick={() => handleMarkWasted(order._id)}
-                              className="w-full py-1 text-rose-600 hover:bg-rose-50 rounded-lg font-bold text-[11px] transition text-center"
+                              className="w-full py-0.5 text-rose-600 hover:bg-rose-50 rounded font-semibold text-[10px] transition text-center"
                             >
-                              ⚠️ Mark Damaged / Wasted
+                              Mark Damaged / Wasted
                             </button>
                           </div>
                         )}
@@ -1976,145 +2130,349 @@ const StaffLogin = () => {
       )}
 
       {/* ========================================================= */}
-      {/* VIEW 3: DELIVERY MONITOR (Assigned Delivery Staff)        */}
+      {/* VIEW 3: DELIVERY MONITOR & MANAGEMENT                     */}
       {/* ========================================================= */}
       {effectiveView === 'delivery' && canAccessDelivery && (
         <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden">
-          <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-sm">
-                <Truck size={18} />
-              </div>
-              <div>
-                <h2 className="text-base font-black text-slate-800">My Assigned Delivery Orders</h2>
-                <p className="text-xs text-slate-500">
-                  Showing shipped orders assigned to <span className="font-extrabold text-slate-700">{staffData?.name}</span>
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={fetchMyAssignedOrders}
-              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1"
-            >
-              <RefreshCw size={13} className={deliveryLoading ? 'animate-spin' : ''} /> Refresh
-            </button>
-          </div>
+          {(() => {
+            const isManagerRole = (staffData?.role || '').toLowerCase() === 'manager';
 
-          <div className="flex-1 overflow-y-auto p-4 md:p-6">
-            {myAssignedOrders.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-200 rounded-3xl bg-white/50">
-                <Truck size={36} className="text-indigo-400 mb-2" />
-                <h3 className="text-base font-extrabold text-slate-800">No Assigned Deliveries</h3>
-                <p className="text-xs text-slate-400 mt-1">Orders assigned to you for delivery will show here.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {myAssignedOrders.map((order) => {
-                  const addr = order.address || {};
-                  const fullAddress = [addr.addressLine1, addr.landmark, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
-                  const mapUrl = fullAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}` : '';
+            // Filter orders locally for instant feedback
+            const displayedDeliveryOrders = myAssignedOrders.filter((order) => {
+              // 1. Status Filter
+              if (deliveryStatusFilter !== 'all') {
+                if (order.orderStatus !== deliveryStatusFilter) return false;
+              }
+              // 2. Date Filter
+              if (deliveryDateFilter) {
+                const orderDate = new Date(order.createdAt).toISOString().slice(0, 10);
+                if (orderDate !== deliveryDateFilter) return false;
+              }
+              // 3. Search Query
+              if (deliverySearchQuery.trim()) {
+                const q = deliverySearchQuery.trim().toLowerCase();
+                const shortId = (order._id || '').slice(-6).toLowerCase();
+                const fullId = (order._id || '').toLowerCase();
+                const name = (order.customerName || '').toLowerCase();
+                const phone = (order.customerPhone || '').toLowerCase();
+                const riderName = (order.deliveryStaff?.name || order.DeliveryPersonName || '').toLowerCase();
+                const addr = JSON.stringify(order.address || {}).toLowerCase();
+                if (!shortId.includes(q) && !fullId.includes(q) && !name.includes(q) && !phone.includes(q) && !riderName.includes(q) && !addr.includes(q)) {
+                  return false;
+                }
+              }
+              return true;
+            });
 
-                  return (
-                    <div key={order._id} className="bg-white rounded-2xl border border-indigo-200 shadow-sm flex flex-col overflow-hidden">
-                      <div className="p-3.5 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
-                        <span className="font-mono font-black text-indigo-950">#{order._id.slice(-6).toUpperCase()}</span>
-                        <span className="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-800 text-[10px] font-black uppercase">
-                          Shipped
-                        </span>
+            return (
+              <>
+                {/* Header Toolbar */}
+                <div className="p-3 sm:p-4 bg-white border-b border-slate-200 shrink-0 shadow-xs space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-sm shrink-0">
+                        <Truck size={18} />
                       </div>
-
-                      <div className="p-4 flex-1 space-y-3 text-xs">
-                        <div>
-                          <p className="font-black text-slate-800 text-sm">{order.customerName || 'Customer'}</p>
-                          {order.customerPhone && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <a
-                                href={`tel:${order.customerPhone}`}
-                                className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg font-bold flex items-center gap-1 hover:bg-green-100"
-                              >
-                                📞 Call {order.customerPhone}
-                              </a>
-                              <a
-                                href={`https://wa.me/91${order.customerPhone.replace(/[^0-9]/g, '')}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg font-bold flex items-center gap-1 hover:bg-emerald-700"
-                              >
-                                💬 WhatsApp
-                              </a>
-                            </div>
-                          )}
-                        </div>
-
-                        {fullAddress && (
-                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-600">
-                            <p className="font-bold text-slate-700 flex items-center gap-1 mb-0.5">
-                              <MapPin size={12} className="text-red-500" /> Delivery Address:
-                            </p>
-                            <p className="leading-relaxed">{fullAddress}</p>
-                            {mapUrl && (
-                              <a
-                                href={mapUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-[11px] text-blue-600 font-bold hover:underline mt-1"
-                              >
-                                Open in Google Maps →
-                              </a>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="border-t border-slate-100 pt-2 space-y-1">
-                          <p className="font-bold text-slate-500 text-[10px] uppercase tracking-wider">Items:</p>
-                          {order.orderItems?.map((item, idx) => (
-                            <div key={idx} className="flex justify-between text-slate-700">
-                              <span>{item.qty}× {item.name}</span>
-                              <span className="font-mono">₹{item.price * item.qty}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="flex justify-between items-center pt-2 border-t border-slate-100 text-xs font-black">
-                          <span className="text-slate-600">Payment Status:</span>
-                          {order.paymentStatus === 'paid' ? (
-                            <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-extrabold flex items-center gap-1">
-                              ✓ PAID (₹{order.totalAmount} • {String(order.paymentMethod || 'UPI').toUpperCase()})
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-[11px] font-extrabold flex items-center gap-1">
-                              PENDING (₹{order.totalAmount} • {String(order.paymentMethod || 'COD').toUpperCase()})
-                            </span>
-                          )}
-                        </div>
+                      <div>
+                        <h2 className="text-sm sm:text-base font-black text-slate-800 leading-tight">
+                          {isManagerRole ? 'Delivery Orders Management' : 'My Assigned Delivery Orders'}
+                        </h2>
+                        <p className="text-[11px] text-slate-500">
+                          {isManagerRole
+                            ? `All store delivery orders (${displayedDeliveryOrders.length} shown)`
+                            : `Showing orders assigned to ${staffData?.name}`}
+                        </p>
                       </div>
+                    </div>
+                    <button
+                      onClick={fetchMyAssignedOrders}
+                      className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1"
+                      title="Refresh Delivery Orders"
+                    >
+                      <RefreshCw size={13} className={deliveryLoading ? 'animate-spin' : ''} />
+                      <span className="hidden sm:inline">Refresh</span>
+                    </button>
+                  </div>
 
-                      <div className="p-3 bg-slate-50 border-t border-slate-100 space-y-2">
-                        {/* Collect UPI Payment Button (Available ONLY if store owner enabled online payment & order is not yet paid) */}
-                        {isOnlinePaymentEnabled && order.paymentStatus !== 'paid' && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenUpiModal(order)}
-                            className="w-full py-2.5 px-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition flex items-center justify-center gap-2"
-                          >
-                            <QrCode size={15} /> Collect UPI Payment (₹{order.totalAmount})
-                          </button>
-                        )}
+                  {/* Manager Controls: Search, Date Picker, Status Filter Pills */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                    {/* Search by Order ID, Phone, Customer */}
+                    <div className="relative flex-1 min-w-[160px] sm:max-w-xs">
+                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={deliverySearchQuery}
+                        onChange={(e) => setDeliverySearchQuery(e.target.value)}
+                        placeholder="Search Order ID (#), phone, name..."
+                        className="w-full pl-7 pr-6 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-500"
+                      />
+                      {deliverySearchQuery && (
+                        <button onClick={() => setDeliverySearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                          <X size={11} />
+                        </button>
+                      )}
+                    </div>
 
+                    {/* Date Selector & Status Filters */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {/* Date Input */}
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="date"
+                          value={deliveryDateFilter}
+                          onChange={(e) => setDeliveryDateFilter(e.target.value)}
+                          className="px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
+                        />
                         <button
                           type="button"
-                          onClick={() => handleMarkDeliveryDelivered(order._id)}
-                          className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow transition flex items-center justify-center gap-1.5"
+                          onClick={() => setDeliveryDateFilter(new Date().toISOString().slice(0, 10))}
+                          className={`px-2 py-1 rounded-lg text-xs font-bold transition border ${
+                            deliveryDateFilter === new Date().toISOString().slice(0, 10)
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
                         >
-                          <CheckCircle size={15} /> {order.paymentStatus === 'paid' ? 'Mark Delivered ✓' : 'Mark Delivered & Paid ✓'}
+                          Today
+                        </button>
+                        {deliveryDateFilter && (
+                          <button
+                            type="button"
+                            onClick={() => setDeliveryDateFilter('')}
+                            className="px-1.5 py-1 rounded-lg text-[11px] font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition"
+                          >
+                            All
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Status Tabs */}
+                      <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-bold">
+                        <button
+                          onClick={() => setDeliveryStatusFilter('all')}
+                          className={`px-2 py-1 rounded-md transition text-xs whitespace-nowrap ${
+                            deliveryStatusFilter === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          All ({myAssignedOrders.length})
+                        </button>
+                        <button
+                          onClick={() => setDeliveryStatusFilter('shipped')}
+                          className={`px-2 py-1 rounded-md transition text-xs whitespace-nowrap ${
+                            deliveryStatusFilter === 'shipped' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          In-Transit ({myAssignedOrders.filter(o => o.orderStatus === 'shipped').length})
+                        </button>
+                        <button
+                          onClick={() => setDeliveryStatusFilter('delivered')}
+                          className={`px-2 py-1 rounded-md transition text-xs whitespace-nowrap ${
+                            deliveryStatusFilter === 'delivered' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Delivered ({myAssignedOrders.filter(o => o.orderStatus === 'delivered').length})
                         </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                  </div>
+                </div>
+
+                {/* Orders Content - Compact Small Order List */}
+                <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+                  {displayedDeliveryOrders.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-white/50">
+                      <Truck size={32} className="text-indigo-400 mb-2" />
+                      <h3 className="text-sm font-extrabold text-slate-800">No Delivery Orders Found</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {deliverySearchQuery || deliveryDateFilter || deliveryStatusFilter !== 'all'
+                          ? 'No orders match your selected filters. Try clearing search or date.'
+                          : 'Orders assigned for delivery will show here.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {displayedDeliveryOrders.map((order) => {
+                        const addr = order.address || {};
+                        const fullAddress = [addr.addressLine1, addr.landmark, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+                        const mapUrl = fullAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}` : '';
+                        const isDelivered = order.orderStatus === 'delivered';
+                        const isShipped = order.orderStatus === 'shipped';
+
+                        return (
+                          <div
+                            key={order._id}
+                            className={`bg-white rounded-xl border shadow-xs flex flex-col overflow-hidden transition ${
+                              isDelivered ? 'border-emerald-200' : 'border-indigo-200'
+                            }`}
+                          >
+                            {/* Card Header: Order #, Date, Status */}
+                            <div className={`px-3 py-1.5 border-b flex items-center justify-between ${
+                              isDelivered ? 'bg-emerald-50/70 border-emerald-100' : 'bg-indigo-50/70 border-indigo-100'
+                            }`}>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-black text-xs text-indigo-950">
+                                  #{order._id.slice(-6).toUpperCase()}
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-400">
+                                  {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+
+                              {/* Status Badge */}
+                              {isDelivered ? (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase flex items-center gap-1">
+                                  <CheckCircle size={10} /> Delivered
+                                </span>
+                              ) : isShipped ? (
+                                <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-black uppercase flex items-center gap-1">
+                                  <Truck size={10} /> In-Transit
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 text-[10px] font-black uppercase">
+                                  {order.orderStatus}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Assigned Rider Info (Shown for Manager) */}
+                            {isManagerRole && (
+                              <div className="px-3 py-1 bg-slate-50 border-b border-slate-100 text-[11px] font-medium text-slate-500 flex items-center justify-between">
+                                <span>Rider:</span>
+                                <span className="font-extrabold text-indigo-700">
+                                  {order.deliveryStaff?.name || order.DeliveryPersonName || 'Unassigned'}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Card Body */}
+                            <div className="p-3 flex-1 space-y-2 text-xs">
+                              {/* Customer Name, Phone & Quick Actions */}
+                              <div className="flex items-center justify-between gap-1">
+                                <div className="min-w-0 pr-1">
+                                  <p className="font-black text-slate-800 text-xs truncate">{order.customerName || 'Customer'}</p>
+                                  {order.customerPhone && (
+                                    <p className="text-[10px] font-mono text-slate-500">{order.customerPhone}</p>
+                                  )}
+                                </div>
+                                {order.customerPhone && (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <a
+                                      href={`tel:${order.customerPhone}`}
+                                      className="px-2 py-0.5 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-md font-bold text-[10px] flex items-center gap-1"
+                                      title="Call customer"
+                                    >
+                                      📞 Call
+                                    </a>
+                                    <a
+                                      href={`https://wa.me/91${order.customerPhone.replace(/[^0-9]/g, '')}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-bold text-[10px] flex items-center gap-1"
+                                      title="Chat on WhatsApp"
+                                    >
+                                      💬 WA
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Delivery Address */}
+                              {fullAddress && (
+                                <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px] text-slate-600">
+                                  <div className="flex items-start justify-between gap-1">
+                                    <p className="line-clamp-2 leading-tight">
+                                      <MapPin size={11} className="inline text-red-500 mr-0.5 shrink-0" />
+                                      {fullAddress}
+                                    </p>
+                                    {mapUrl && (
+                                      <a
+                                        href={mapUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center text-[10px] text-blue-600 font-bold hover:underline shrink-0 ml-1"
+                                      >
+                                        Maps →
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Order Items Compact */}
+                              <div className="border-t border-slate-100 pt-1.5 space-y-1">
+                                <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                  <span>Items ({order.orderItems?.length || 0})</span>
+                                  <span>Total</span>
+                                </div>
+                                <div className="max-h-20 overflow-y-auto space-y-0.5 text-xs text-slate-700 pr-0.5">
+                                  {order.orderItems?.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between py-0.5 text-[11px]">
+                                      <span className="truncate pr-1">{item.qty}× {item.name}</span>
+                                      <span className="font-mono text-slate-500 shrink-0">₹{item.price * item.qty}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Price & Payment Status */}
+                              <div className="flex justify-between items-center pt-1.5 border-t border-slate-100 text-xs font-black">
+                                <span className="text-slate-800">Total: ₹{order.totalAmount}</span>
+                                {order.paymentStatus === 'paid' ? (
+                                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                                    ✓ PAID ({String(order.paymentMethod || 'UPI').toUpperCase()})
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-black">
+                                    PENDING ({String(order.paymentMethod || 'COD').toUpperCase()})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Action Footer:
+                                - IF DELIVERED: Show ONLY order status badge, NO "Mark Delivered" button!
+                                - IF NOT DELIVERED: Show Mark Delivered button & optional UPI Collect button
+                            */}
+                            {isDelivered ? (
+                              <div className="p-2.5 bg-emerald-50/80 border-t border-emerald-100 flex items-center justify-between text-xs font-black text-emerald-800">
+                                <span className="flex items-center gap-1.5">
+                                  <CheckCircle size={14} className="text-emerald-600" /> Successfully Delivered
+                                </span>
+                                {order.deliveredAt && (
+                                  <span className="text-[10px] font-bold text-emerald-700 font-mono">
+                                    {new Date(order.deliveredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="p-2.5 bg-slate-50 border-t border-slate-100 space-y-1.5">
+                                {isOnlinePaymentEnabled && order.paymentStatus !== 'paid' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenUpiModal(order)}
+                                    className="w-full py-1.5 px-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-lg shadow-2xs transition flex items-center justify-center gap-1.5"
+                                  >
+                                    <QrCode size={13} /> Collect UPI Payment (₹{order.totalAmount})
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleMarkDeliveryDelivered(order._id)}
+                                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-lg shadow-2xs transition flex items-center justify-center gap-1.5"
+                                >
+                                  <CheckCircle size={14} /> {order.paymentStatus === 'paid' ? 'Mark Delivered ✓' : 'Mark Delivered & Paid ✓'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
 
