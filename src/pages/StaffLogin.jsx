@@ -65,6 +65,68 @@ const StaffLogin = () => {
       return null;
     }
   });
+  const [isValidatingSession, setIsValidatingSession] = useState(() => Boolean(localStorage.getItem('gb_pos_staff_token')));
+
+  // -------------------------------------------------------------
+  // Verify previous/cached session token with gb-backend on startup
+  // -------------------------------------------------------------
+  useEffect(() => {
+    const cachedToken = localStorage.getItem('gb_pos_staff_token');
+    if (!cachedToken) {
+      setIsValidatingSession(false);
+      return;
+    }
+
+    let isMounted = true;
+    const verifyCachedToken = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/store-staff/verify-token`, {
+          headers: {
+            Authorization: `Bearer ${cachedToken}`,
+          },
+        });
+
+        if (!isMounted) return;
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.valid && data?.staff) {
+            // Update staffData with fresh server-side details (role, status, store)
+            setStaffData(data.staff);
+            localStorage.setItem('gb_pos_staff_data', JSON.stringify(data.staff));
+          } else {
+            wipeSession();
+          }
+        } else {
+          // Token is expired, invalid, staff was deleted, or account is deactivated
+          console.warn('[StaffAuth] Previous staff token is invalid or expired. Session wiped.');
+          wipeSession();
+        }
+      } catch (err) {
+        console.warn('[StaffAuth] Error verifying staff token:', err);
+      } finally {
+        if (isMounted) {
+          setIsValidatingSession(false);
+        }
+      }
+    };
+
+    const wipeSession = () => {
+      localStorage.removeItem('gb_pos_staff_token');
+      localStorage.removeItem('gb_pos_staff_data');
+      setStaffToken('');
+      setStaffData(null);
+      if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === 'function') {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'STAFF_LOGOUT' }));
+      }
+    };
+
+    verifyCachedToken();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
 
   // -------------------------------------------------------------
@@ -1327,8 +1389,17 @@ const StaffLogin = () => {
   };
 
   // -------------------------------------------------------------
-  // 1. RENDER LOGIN FORM IF NOT AUTHENTICATED
+  // 1. RENDER LOGIN FORM IF NOT AUTHENTICATED OR VALIDATING
   // -------------------------------------------------------------
+  if (isValidatingSession) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
+        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-white text-xs font-semibold tracking-wider uppercase">Verifying Staff Session...</p>
+      </div>
+    );
+  }
+
   if (!staffToken || !staffData) {
     const brandName = storeData?.storeName || 'Store Staff Portal';
     const brandLogo = storeData?.logo || null;
