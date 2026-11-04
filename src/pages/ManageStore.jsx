@@ -63,8 +63,23 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [mapLocation, setMapLocation] = useState(currentStore.mapLocation || '');
   const [status, setStatus] = useState('');
   
+  // Helper to determine if a store type represents a dining establishment (restaurant, cafe, cloud kitchen, nasta corner, etc.)
+  const isDiningStoreType = (type) => {
+    if (!type || typeof type !== 'string') return false;
+    return /restaurant|resturant|cafe|cloud\s*kitchen|nasta|nashta|food|dine|bistro|dhaba|eatery/i.test(type.trim());
+  };
+
+  const isDiningStore = Boolean(
+    storeType
+      ? isDiningStoreType(storeType)
+      : (isDiningStoreType(currentStore.storeType) || (currentStore.isRestaurant && !currentStore.storeType))
+  );
+
   // Restaurant & Dining Tables configuration
-  const [isRestaurant, setIsRestaurant] = useState(Boolean(currentStore.isRestaurant || (currentStore.storeType && /restaurant|cafe|food|dine|bistro|dhaba|eatery/i.test(currentStore.storeType))));
+  const [isRestaurant, setIsRestaurant] = useState(Boolean(
+    (currentStore.storeType && isDiningStoreType(currentStore.storeType)) ||
+    (currentStore.isRestaurant && (!currentStore.storeType || isDiningStoreType(currentStore.storeType)))
+  ));
   const [tablesList, setTablesList] = useState(
     Array.isArray(currentStore.tables) && currentStore.tables.length > 0 
       ? currentStore.tables 
@@ -429,7 +444,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
     setLocationAddress(currentStore.locationAddress || '');
     setMapLocation(currentStore.mapLocation || '');
     setStatus('');
-    setIsRestaurant(Boolean(currentStore.isRestaurant || (currentStore.storeType && /restaurant|cafe|food|dine|bistro|dhaba|eatery/i.test(currentStore.storeType))));
+    setIsRestaurant(Boolean(
+      (currentStore.storeType && isDiningStoreType(currentStore.storeType)) ||
+      (currentStore.isRestaurant && (!currentStore.storeType || isDiningStoreType(currentStore.storeType)))
+    ));
     if (Array.isArray(currentStore.tables) && currentStore.tables.length > 0) {
       setTablesList(currentStore.tables);
       if ([5, 10, 15, 20, 25, 30, 50].includes(currentStore.tables.length)) {
@@ -439,6 +457,13 @@ const ManageStore = ({ token, stores, onLogout }) => {
       }
     }
   }, [storeId, currentStore.storeName, currentStore.storeType, currentStore.websiteTitle, currentStore.logo, currentStore.favicon, currentStore.banner, currentStore.supportPhoneNumbers, currentStore.supportEmail, currentStore.locationAddress, currentStore.mapLocation, storeTypes]);
+
+  // Fallback to settings if user is on table-qr tab and store is not a dining store
+  useEffect(() => {
+    if (activeTab === 'table-qr' && !isDiningStore) {
+      setActiveTab('settings');
+    }
+  }, [activeTab, isDiningStore]);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -550,8 +575,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
           supportEmail,
           locationAddress,
           mapLocation,
-          tables: tablesList,
-          isRestaurant
+          tables: isDiningStore ? tablesList : [],
+          isRestaurant: isDiningStore ? Boolean(isRestaurant) : false
         })
       });
 
@@ -1087,17 +1112,19 @@ const ManageStore = ({ token, stores, onLogout }) => {
         >
           Store QR Code
         </button>
-        <button 
-          type="button"
-          onClick={() => setActiveTab('table-qr')} 
-          className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'table-qr' ? 'bg-orange-600 text-white shadow-lg shadow-orange-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
-        >
-          <QrCode size={16} />
-          <span>Table QR Codes</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${activeTab === 'table-qr' ? 'bg-white text-orange-600' : 'bg-orange-100 text-orange-700'}`}>
-            {tablesList.length}
-          </span>
-        </button>
+        {isDiningStore && (
+          <button 
+            type="button"
+            onClick={() => setActiveTab('table-qr')} 
+            className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'table-qr' ? 'bg-orange-600 text-white shadow-lg shadow-orange-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+          >
+            <QrCode size={16} />
+            <span>Table QR Codes</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${activeTab === 'table-qr' ? 'bg-white text-orange-600' : 'bg-orange-100 text-orange-700'}`}>
+              {tablesList.length}
+            </span>
+          </button>
+        )}
         <button 
           type="button"
           onClick={() => setActiveTab('billing')} 
@@ -1147,7 +1174,15 @@ const ManageStore = ({ token, stores, onLogout }) => {
             <label className="block text-sm font-semibold text-slate-700 mb-1">Store Type</label>
             <select 
               value={storeType}
-              onChange={(e) => setStoreType(e.target.value)}
+              onChange={(e) => {
+                const nextType = e.target.value;
+                setStoreType(nextType);
+                if (isDiningStoreType(nextType)) {
+                  setIsRestaurant(true);
+                } else {
+                  setIsRestaurant(false);
+                }
+              }}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none transition bg-white"
             >
               {storeType && !storeTypes.some(cat => cat.name.toLowerCase() === storeType.toLowerCase()) && (
@@ -1163,8 +1198,9 @@ const ManageStore = ({ token, stores, onLogout }) => {
             </select>
           </div>
 
-          {/* Restaurant & Dining Table Settings */}
-          <div className="p-5 bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-white border-2 border-orange-200/80 rounded-2xl space-y-4">
+          {/* Restaurant & Dining Table Settings (Only for cafe, cloud kitchen, restaurant, nasta corner, etc.) */}
+          {isDiningStore && (
+            <div className="p-5 bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-white border-2 border-orange-200/80 rounded-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <span className="text-2xl">🍽️</span>
@@ -1278,6 +1314,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
               </div>
             )}
           </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Website Title (SEO)</label>
@@ -1633,23 +1670,25 @@ const ManageStore = ({ token, stores, onLogout }) => {
             Download A4 Poster
           </button>
 
-          <div className="mt-8 w-full pt-6 border-t border-slate-200 flex flex-col items-center">
-            <h3 className="font-extrabold text-base text-slate-800 mb-1">Looking for Dining Table QR Codes?</h3>
-            <p className="text-xs text-slate-500 mb-4 max-w-md">Generate individual QR codes for Table 1 to Table {tablesList.length} so restaurant customers can scan from their table and order.</p>
-            <button
-              type="button"
-              onClick={() => setActiveTab('table-qr')}
-              className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition flex items-center gap-2 shadow-md cursor-pointer"
-            >
-              <QrCode size={16} />
-              <span>Go to Table QR Codes ({tablesList.length} Tables) &rarr;</span>
-            </button>
-          </div>
+          {isDiningStore && (
+            <div className="mt-8 w-full pt-6 border-t border-slate-200 flex flex-col items-center">
+              <h3 className="font-extrabold text-base text-slate-800 mb-1">Looking for Dining Table QR Codes?</h3>
+              <p className="text-xs text-slate-500 mb-4 max-w-md">Generate individual QR codes for Table 1 to Table {tablesList.length} so restaurant customers can scan from their table and order.</p>
+              <button
+                type="button"
+                onClick={() => setActiveTab('table-qr')}
+                className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition flex items-center gap-2 shadow-md cursor-pointer"
+              >
+                <QrCode size={16} />
+                <span>Go to Table QR Codes ({tablesList.length} Tables) &rarr;</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* Table-wise QR Codes Tab View */}
-      {activeTab === 'table-qr' && (
+      {activeTab === 'table-qr' && isDiningStore && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn space-y-6">
           {/* Header */}
           <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-200">

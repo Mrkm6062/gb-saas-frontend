@@ -422,7 +422,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     {
       group: 'Dashboard',
       items: [
-        { name: 'Overview', icon: <Store size={18} />, path: activeStoreId ? `/store/${activeStoreId}` : '#' },
+        { name: 'Manage Store', icon: <Store size={18} />, path: activeStoreId ? `/store/${activeStoreId}` : '#' },
         ...(!isCustomWebsite ? [{ name: 'Live Dashboard', icon: <LayoutGrid size={18} />, path: '/' }] : [])
       ]
     },
