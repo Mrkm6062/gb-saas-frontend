@@ -386,6 +386,12 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [uploadSpeed, setUploadSpeed] = useState('');
   const [activeXhr, setActiveXhr] = useState(null);
   
+  // Media Library states
+  const [mediaTarget, setMediaTarget] = useState('banner');
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
+  const [mediaImages, setMediaImages] = useState([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
+  
   // Social Media states
   const [socialLinks, setSocialLinks] = useState([]);
   const [newPlatform, setNewPlatform] = useState('Facebook');
@@ -681,6 +687,44 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const cancelUpload = () => {
     if (activeXhr) {
       activeXhr.abort();
+    }
+  };
+
+  const fetchMedia = async () => {
+    if (!currentStore?._id) return;
+    setLoadingMedia(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upload?storeId=${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (response.ok) setMediaImages(data.images || []);
+    } catch (err) {
+      console.error('Failed to fetch media:', err);
+    } finally {
+      setLoadingMedia(false);
+    }
+  };
+
+  const handleDeleteMedia = async (filename) => {
+    if (!window.confirm("Delete this image permanently from cloud storage?")) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename }),
+        credentials: 'include'
+      });
+      if (response.ok) {
+        showToast('Image deleted successfully', 'success');
+        fetchMedia();
+      } else {
+        showToast('Failed to delete image', 'error');
+      }
+    } catch (err) {
+      console.error('Error deleting media:', err);
+      showToast('Error deleting media', 'error');
     }
   };
 
@@ -1327,7 +1371,16 @@ const ManageStore = ({ token, stores, onLogout }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Logo URL</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-semibold text-slate-700">Logo URL</label>
+              <button 
+                type="button" 
+                onClick={() => { setMediaTarget('logo'); setIsMediaLibraryOpen(true); fetchMedia(); }} 
+                className="text-xs font-bold text-[#76b900] hover:underline transition cursor-pointer"
+              >
+                View Media Library
+              </button>
+            </div>
             <div className="flex gap-2">
               <input 
                 type="text" 
@@ -1358,7 +1411,16 @@ const ManageStore = ({ token, stores, onLogout }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Favicon URL</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-semibold text-slate-700">Favicon URL</label>
+              <button 
+                type="button" 
+                onClick={() => { setMediaTarget('favicon'); setIsMediaLibraryOpen(true); fetchMedia(); }} 
+                className="text-xs font-bold text-[#76b900] hover:underline transition cursor-pointer"
+              >
+                View Media Library
+              </button>
+            </div>
             <div className="flex gap-2">
               <input 
                 type="text" 
@@ -1389,7 +1451,16 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-semibold text-slate-700">Banner Images (Carousel)</label>
+              <div className="flex items-center gap-3">
+                <label className="block text-sm font-semibold text-slate-700">Banner Images (Carousel)</label>
+                <button 
+                  type="button" 
+                  onClick={() => { setMediaTarget('banner'); setIsMediaLibraryOpen(true); fetchMedia(); }} 
+                  className="text-xs font-bold text-[#76b900] hover:underline transition cursor-pointer"
+                >
+                  View Media Library
+                </button>
+              </div>
               <label className={`cursor-pointer px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-lg hover:bg-blue-100 transition flex items-center justify-center whitespace-nowrap ${uploadingField === 'banner' ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 {uploadingField === 'banner' ? 'Uploading...' : 'Upload Banners'}
                 <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleImageUpload(e, 'banner')} disabled={uploadingField !== null} />
@@ -2193,6 +2264,70 @@ const ManageStore = ({ token, stores, onLogout }) => {
                     </button>
                   )}
                 </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media Library Modal */}
+      {isMediaLibraryOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-[85vh]">
+            <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
+              <div>
+                <h3 className="text-2xl font-extrabold text-slate-800">Store Media Library</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Selecting for: <span className="font-bold text-[#76b900] capitalize">{mediaTarget === 'banner' ? 'Banner Carousel' : mediaTarget === 'logo' ? 'Store Logo' : 'Store Favicon'}</span>
+                </p>
+              </div>
+              <button onClick={() => setIsMediaLibraryOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors text-3xl leading-none">&times;</button>
+            </div>
+            <div className="p-8 overflow-y-auto flex-1">
+              {loadingMedia ? (
+                <div className="flex justify-center py-10"><span className="text-slate-500 font-medium">Loading media...</span></div>
+              ) : mediaImages.length === 0 ? (
+                <div className="text-center py-20 text-slate-500 font-medium">No media found. Upload images to populate.</div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  {mediaImages.map((img) => (
+                    <div key={img.name} className="relative group rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 aspect-square shadow-sm hover:shadow-md transition-shadow">
+                      <img src={img.url} alt="media" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            if (mediaTarget === 'banner') {
+                              if (banner.includes(img.url)) {
+                                showToast('This image is already in your banner list.', 'error');
+                              } else {
+                                setBanner(prev => [...prev, img.url]);
+                                showToast('Banner added from media library!', 'success');
+                              }
+                            } else if (mediaTarget === 'logo') {
+                              setLogo(img.url);
+                              showToast('Store logo updated from media library!', 'success');
+                            } else if (mediaTarget === 'favicon') {
+                              setFavicon(img.url);
+                              showToast('Store favicon updated from media library!', 'success');
+                            }
+                            setIsMediaLibraryOpen(false);
+                          }} 
+                          className="bg-white text-slate-900 px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-100 shadow-sm w-3/4"
+                        >
+                          Select
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => handleDeleteMedia(img.name)} 
+                          className="bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 shadow-sm w-3/4"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
