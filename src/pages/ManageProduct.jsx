@@ -16,6 +16,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   
   const [categories, setCategories] = useState([]);
+  const [offerCategories, setOfferCategories] = useState([]);
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [mediaImages, setMediaImages] = useState([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
@@ -37,6 +38,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const [hideImported, setHideImported] = useState(true);
   const [stockFilter, setStockFilter] = useState('all');
   const [stockThreshold, setStockThreshold] = useState(5);
+  const [offerFilter, setOfferFilter] = useState('all');
   const [plans, setPlans] = useState([]);
   const [storeTypesList, setStoreTypesList] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -44,7 +46,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [stockFilter, stockThreshold]);
+  }, [stockFilter, stockThreshold, offerFilter]);
   
   // Bulk Edit States
   const [isBulkEditing, setIsBulkEditing] = useState(false);
@@ -59,7 +61,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     name: '', description: '', category: '', foodtype: '', unitType: 'piece',
     brand: '', subCategory: '', discount: '', isActive: true,
     basePrice: '', totalStock: '', images: [], variants: [], isCustomizable: false, allowCustomText: false,
-    customizableArea: { x: 25, y: 30, width: 50, height: 40 }
+    customizableArea: { x: 25, y: 30, width: 50, height: 40 },
+    offerCategories: []
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -174,10 +177,26 @@ const ManageProduct = ({ token, stores, onLogout }) => {
     }
   };
 
+  const fetchOfferCategories = async () => {
+    if (!currentStore._id) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/offercategories?storeId=${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setOfferCategories(data || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch offer categories:", error);
+    }
+  };
+
   useEffect(() => {
     if (currentStore._id) {
       fetchProducts();
       fetchCategories();
+      fetchOfferCategories();
     }
   }, [currentStore._id]);
 
@@ -322,6 +341,7 @@ const ManageProduct = ({ token, stores, onLogout }) => {
           customizableArea: formData.customizableArea,
           isCustomizable: formData.isCustomizable || false,
           allowCustomText: formData.allowCustomText || false,
+          offerCategories: Array.isArray(formData.offerCategories) ? formData.offerCategories : [],
           storeId: currentStore._id // Explicitly bind product to this store
         })
       });
@@ -345,10 +365,15 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   };
 
   const handleEdit = (product) => {
+    const rawOfferCats = product.offerCategories || [];
+    const normalizedOfferCats = Array.isArray(rawOfferCats)
+      ? rawOfferCats.map(oc => (typeof oc === 'object' && oc !== null ? oc._id : oc)).filter(Boolean)
+      : [];
+
     setFormData({
       name: product.name || '',
       description: product.description || '',
-      category: product.category || '',
+      category: typeof product.category === 'object' && product.category ? (product.category._id || '') : (product.category || ''),
       foodtype: product.foodtype || product.foodType || '',
       unitType: product.unitType || 'piece',
       brand: product.Brand || product.brand || '',
@@ -361,7 +386,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
       variants: product.variants || [],
       isCustomizable: product.isCustomizable || false,
       allowCustomText: product.allowCustomText || false,
-      customizableArea: product.customizableArea || { x: 25, y: 30, width: 50, height: 40 }
+      customizableArea: product.customizableArea || { x: 25, y: 30, width: 50, height: 40 },
+      offerCategories: normalizedOfferCats
     });
     setEditingId(product._id);
     setIsFormOpen(true);
@@ -787,11 +813,20 @@ const ManageProduct = ({ token, stores, onLogout }) => {
   const displayedProducts = products.filter(p => {
     const stock = p.totalStock !== undefined ? p.totalStock : (p.stock || 0);
     if (stockFilter === 'out_of_stock') {
-      const stock = p.totalStock !== undefined ? p.totalStock : (p.stock || 0);
-      return stock <= 0;
+      if (stock > 0) return false;
+    } else if (stockFilter === 'low_stock') {
+      if (stock > stockThreshold) return false;
     }
-    if (stockFilter === 'low_stock') {
-      return stock <= stockThreshold;
+
+    if (offerFilter === 'has_offer') {
+      return p.offerCategories && p.offerCategories.length > 0;
+    }
+    if (offerFilter === 'no_offer') {
+      return !p.offerCategories || p.offerCategories.length === 0;
+    }
+    if (offerFilter !== 'all') {
+      const pOffers = p.offerCategories || [];
+      return pOffers.some(oc => (typeof oc === 'object' && oc !== null ? oc._id === offerFilter : oc === offerFilter));
     }
     return true;
   });
@@ -848,6 +883,21 @@ const ManageProduct = ({ token, stores, onLogout }) => {
               />
             )}
           </div>
+
+          {offerCategories.length > 0 && (
+            <select
+              value={offerFilter}
+              onChange={(e) => setOfferFilter(e.target.value)}
+              className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#76b900] text-sm font-bold text-slate-600 bg-white"
+            >
+              <option value="all">All Offers</option>
+              <option value="has_offer">Has Any Offer</option>
+              <option value="no_offer">No Offer</option>
+              {offerCategories.map(oc => (
+                <option key={oc._id} value={oc._id}>🏷️ {oc.name}</option>
+              ))}
+            </select>
+          )}
 
           <button onClick={handleExportCSV} className="px-4 py-2.5 bg-white text-blue-600 border-2 border-blue-200 font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap">
             <DownloadCloud size={18} /> Export Stock CSV
@@ -955,7 +1005,25 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                   </div>
                 </div>
                 <div className="col-span-2 text-slate-600 text-sm font-medium">
-                  {categories.find(c => c._id === p.category)?.name || <span className="text-slate-400 italic">None</span>}
+                  <div>
+                    {categories.find(c => c._id === p.category || c._id === p.category?._id)?.name || <span className="text-slate-400 italic">None</span>}
+                  </div>
+                  {p.offerCategories && p.offerCategories.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {p.offerCategories.map(oc => {
+                        const ocObj = typeof oc === 'object' && oc !== null ? oc : offerCategories.find(o => o._id === oc);
+                        return ocObj ? (
+                          <span
+                            key={ocObj._id || oc}
+                            className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200"
+                            title={ocObj.offerType && ocObj.offerType !== 'NONE' ? `Offer: ${ocObj.offerType}` : undefined}
+                          >
+                            🏷️ {ocObj.name}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div className="col-span-2 text-green-600 font-bold">
                   {isBulkEditing && (!p.variants || p.variants.length === 0) ? (
@@ -1107,6 +1175,19 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                         <span className="text-[10px] bg-white text-slate-600 font-semibold px-2 py-0.5 rounded border border-slate-200 truncate max-w-[130px]">
                           {categories.find(c => c._id === p.category)?.name || 'Uncategorized'}
                         </span>
+                        {p.offerCategories && p.offerCategories.length > 0 && (
+                          p.offerCategories.map(oc => {
+                            const ocObj = typeof oc === 'object' && oc !== null ? oc : offerCategories.find(o => o._id === oc);
+                            return ocObj ? (
+                              <span
+                                key={ocObj._id || oc}
+                                className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 font-semibold px-1.5 py-0.5 rounded truncate max-w-[120px]"
+                              >
+                                🏷️ {ocObj.name}
+                              </span>
+                            ) : null;
+                          })
+                        )}
                         {p.Brand && (
                           <span className="text-[10px] bg-slate-200/80 text-slate-600 font-bold px-1.5 py-0.5 rounded truncate max-w-[100px]">
                             {p.Brand}
@@ -1324,6 +1405,105 @@ const ManageProduct = ({ token, stores, onLogout }) => {
                         <option key={c._id} value={c._id}>{c.name}</option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-semibold text-slate-700">
+                        Offer Category
+                        <span className="text-xs font-normal text-slate-400 ml-1.5">(Deals & Offers)</span>
+                      </label>
+                      {formData.offerCategories && formData.offerCategories.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, offerCategories: [] }))}
+                          className="text-[11px] text-slate-400 hover:text-red-500 font-semibold transition-colors cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) return;
+                        setFormData(prev => {
+                          const current = prev.offerCategories || [];
+                          if (current.includes(val)) return prev;
+                          return { ...prev, offerCategories: [...current, val] };
+                        });
+                      }}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow bg-white text-slate-700 text-sm"
+                    >
+                      <option value="">
+                        {offerCategories.length === 0
+                          ? "-- No Offer Categories Created --"
+                          : formData.offerCategories && formData.offerCategories.length > 0
+                          ? "+ Add Another Offer Category"
+                          : "Select Offer Category"}
+                      </option>
+                      {offerCategories.map(oc => {
+                        const isSelected = formData.offerCategories?.includes(oc._id);
+                        return (
+                          <option key={oc._id} value={oc._id} disabled={isSelected}>
+                            {oc.name} {oc.offerType && oc.offerType !== 'NONE' ? `(${oc.offerType})` : ''} {isSelected ? '✓ (Selected)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+
+                    {/* Selected Offer Categories badges */}
+                    {formData.offerCategories && formData.offerCategories.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {formData.offerCategories.map(id => {
+                          const oc = offerCategories.find(o => o._id === id);
+                          return (
+                            <span
+                              key={id}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold shadow-2xs"
+                            >
+                              <span>🏷️ {oc ? oc.name : id}</span>
+                              {oc?.offerType && oc.offerType !== 'NONE' && (
+                                <span className="text-[10px] bg-amber-200/70 text-amber-900 px-1 py-0.5 rounded font-bold">
+                                  {oc.offerType}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    offerCategories: (prev.offerCategories || []).filter(x => x !== id)
+                                  }));
+                                }}
+                                className="text-amber-500 hover:text-red-600 transition-colors ml-0.5 font-bold cursor-pointer text-sm leading-none"
+                                title="Remove offer category"
+                              >
+                                &times;
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        {offerCategories.length === 0 ? (
+                          <>
+                            No offer categories yet.{' '}
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/store/${storeId}/categories`)}
+                              className="text-[#76b900] underline hover:text-[#5a8d00]"
+                            >
+                              Create in Categories
+                            </button>
+                          </>
+                        ) : (
+                          "Assign this product to offer deals (e.g., B1G1, Special Discount)."
+                        )}
+                      </p>
+                    )}
                   </div>
                   <div><label className="block text-sm font-semibold mb-1 text-slate-700">Brand</label><input value={formData.brand} onChange={e=>setFormData({...formData, brand: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Nestlé, Apple" /></div>
                   <div><label className="block text-sm font-semibold mb-1 text-slate-700">Sub Category</label><input value={formData.subCategory} onChange={e=>setFormData({...formData, subCategory: e.target.value})} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#76b900] transition-shadow" placeholder="e.g. Dairy, Smartphones" /></div>
