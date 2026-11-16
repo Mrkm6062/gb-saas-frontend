@@ -1684,8 +1684,8 @@ const ManageProduct = ({ token, stores, onLogout }) => {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                 {mediaImages.map((img) => (
-                  <div key={img.name} className="relative group rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 aspect-square shadow-sm hover:shadow-md transition-shadow">
-                    <img src={img.url} alt="media" className="w-full h-full object-cover" />
+                  <div key={img.name} className="relative group rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 aspect-square shadow-sm hover:shadow-md transition-shadow flex items-center justify-center p-2">
+                    <img src={img.url} alt="media" className="w-full h-full object-contain" />
                     <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
                       <button onClick={() => { if (!formData.images.includes(img.url)) setFormData({...formData, images: [...formData.images, img.url]}); setIsMediaLibraryOpen(false); }} className="bg-white text-slate-900 px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-100 shadow-sm w-3/4">
                         Select
