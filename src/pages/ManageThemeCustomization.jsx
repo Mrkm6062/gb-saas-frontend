@@ -491,14 +491,6 @@ const ManageThemeCustomization = ({ token, stores, onLogout }) => {
                     <input type="text" value={formData.global.borderRadius} onChange={(e) => handleNestedChange('global', 'borderRadius', e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#76b900] outline-none" placeholder="e.g. 12px or 0.5rem" />
                   </div>
                 </div>
-                <div className="pt-4 border-t border-slate-100">
-                  <h4 className="font-bold text-slate-800 mb-4">SEO & Metadata</h4>
-                  {renderImageUpload('global', 'officialfaviconimage', 'Favicon (Browser Tab Icon)')}
-                  <div className="space-y-4">
-                    <div><label className="block text-sm font-semibold text-slate-700 mb-1">Meta Title</label><input type="text" value={formData.global.metaTitle} onChange={(e) => handleNestedChange('global', 'metaTitle', e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none" /></div>
-                    <div><label className="block text-sm font-semibold text-slate-700 mb-1">Meta Description</label><textarea rows="3" value={formData.global.metaDescription} onChange={(e) => handleNestedChange('global', 'metaDescription', e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none resize-none" /></div>
-                  </div>
-                </div>
               </div>
             )}
 
