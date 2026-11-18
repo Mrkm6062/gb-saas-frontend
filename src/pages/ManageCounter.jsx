@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../api';
-import { generateReceiptPdf, downloadReceiptPdf, sendWhatsAppWithReceiptPdf } from '../utils/receiptPdf';
+import { generateReceiptPdf, downloadReceiptPdf, sendWhatsAppWithReceiptPdf, getStoreReceiptUrl } from '../utils/receiptPdf';
 import { 
   CreditCard, 
   Search, 
@@ -688,7 +688,7 @@ const ManageCounter = () => {
     setIsGeneratingPdf(true);
     setWaStatusMsg({ text: '', type: '' });
     try {
-      const receiptUrl = `${API_BASE_URL}/api/orders/receipt/${completedOrder._id}`;
+      const receiptUrl = getStoreReceiptUrl(completedOrder, activeStore);
       const res = await sendWhatsAppWithReceiptPdf({
         order: completedOrder,
         store: activeStore,

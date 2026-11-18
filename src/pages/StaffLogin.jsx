@@ -39,7 +39,7 @@ import {
   Filter,
   Package
 } from 'lucide-react';
-import { generateReceiptPdf, downloadReceiptPdf, sendWhatsAppWithReceiptPdf } from '../utils/receiptPdf';
+import { generateReceiptPdf, downloadReceiptPdf, sendWhatsAppWithReceiptPdf, getStoreReceiptUrl } from '../utils/receiptPdf';
 
 const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3011' : 'https://api.galibrand.cloud');
 
@@ -1285,7 +1285,7 @@ const StaffLogin = () => {
     setIsGeneratingPdf(true);
     setWaStatusMsg({ text: '', type: '' });
     try {
-      const receiptUrl = `${API_BASE}/api/orders/receipt/${completedOrder._id}`;
+      const receiptUrl = getStoreReceiptUrl(completedOrder, storeMeta);
       const res = await sendWhatsAppWithReceiptPdf({
         order: completedOrder,
         store: storeMeta,
