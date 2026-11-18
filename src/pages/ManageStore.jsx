@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../api';
 import AdminLayout from '../components/AdminLayout';
-import { Link as LinkIcon, Trash2, Plus, CreditCard, Download, Store, Package, Wallet, Building, MapPin, Upload, ArrowRight, CheckCircle, X, ChevronRight, ChevronLeft, Printer, Copy, ExternalLink, Search, QrCode } from 'lucide-react';
+import { Link as LinkIcon, Trash2, Plus, CreditCard, Download, Store, Package, Wallet, Building, MapPin, Upload, ArrowRight, CheckCircle, X, ChevronRight, ChevronLeft, Printer, Copy, ExternalLink, Search, QrCode, Clock, Calendar, AlertCircle } from 'lucide-react';
 
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
@@ -391,6 +391,29 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [mediaImages, setMediaImages] = useState([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
+
+  // Store Active Hours states
+  const [storeHoursMode, setStoreHoursMode] = useState('24x7'); // '24x7' or 'custom'
+  const [storeTimezone, setStoreTimezone] = useState('Asia/Kolkata');
+  const [weeklySchedule, setWeeklySchedule] = useState([
+    { day: 'monday', enabled: true, slots: [{ open: '09:00', close: '22:00' }] },
+    { day: 'tuesday', enabled: true, slots: [{ open: '09:00', close: '22:00' }] },
+    { day: 'wednesday', enabled: true, slots: [{ open: '09:00', close: '22:00' }] },
+    { day: 'thursday', enabled: true, slots: [{ open: '09:00', close: '22:00' }] },
+    { day: 'friday', enabled: true, slots: [{ open: '09:00', close: '22:00' }] },
+    { day: 'saturday', enabled: true, slots: [{ open: '09:00', close: '22:00' }] },
+    { day: 'sunday', enabled: true, slots: [{ open: '09:00', close: '22:00' }] }
+  ]);
+  const [temporaryClosure, setTemporaryClosure] = useState({
+    enabled: false,
+    reason: '',
+    startDate: '',
+    endDate: ''
+  });
+  const [displayStoreStatus, setDisplayStoreStatus] = useState(true);
+  const [loadingHours, setLoadingHours] = useState(false);
+  const [savingHours, setSavingHours] = useState(false);
+  const [liveStoreStatus, setLiveStoreStatus] = useState(null);
   
   // Social Media states
   const [socialLinks, setSocialLinks] = useState([]);
@@ -529,6 +552,158 @@ const ManageStore = ({ token, stores, onLogout }) => {
     }
   };
   useEffect(() => { fetchSocialLinks(); }, [currentStore._id]);
+
+  const fetchStoreHours = async () => {
+    if (!currentStore?._id) return;
+    setLoadingHours(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/store-hours?storeId=${currentStore._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          setStoreHoursMode(data.mode || '24x7');
+          setStoreTimezone(data.timezone || 'Asia/Kolkata');
+          if (Array.isArray(data.weeklySchedule) && data.weeklySchedule.length > 0) {
+            const allDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            const normalized = allDays.map(dayName => {
+              const existing = data.weeklySchedule.find(s => s.day?.toLowerCase() === dayName);
+              if (existing) {
+                return {
+                  day: dayName,
+                  enabled: existing.enabled !== false,
+                  slots: Array.isArray(existing.slots) && existing.slots.length > 0
+                    ? existing.slots
+                    : [{ open: '09:00', close: '22:00' }]
+                };
+              }
+              return { day: dayName, enabled: true, slots: [{ open: '09:00', close: '22:00' }] };
+            });
+            setWeeklySchedule(normalized);
+          }
+          if (data.temporaryClosure) {
+            setTemporaryClosure({
+              enabled: Boolean(data.temporaryClosure.enabled),
+              reason: data.temporaryClosure.reason || '',
+              startDate: data.temporaryClosure.startDate ? new Date(data.temporaryClosure.startDate).toISOString().slice(0, 16) : '',
+              endDate: data.temporaryClosure.endDate ? new Date(data.temporaryClosure.endDate).toISOString().slice(0, 16) : ''
+            });
+          }
+          if (data.displayStoreStatus !== undefined) {
+            setDisplayStoreStatus(data.displayStoreStatus);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch store hours', err);
+    } finally {
+      setLoadingHours(false);
+    }
+
+    try {
+      const statusRes = await fetch(`${API_BASE_URL}/api/store-hours/public/status?storeId=${currentStore._id}`);
+      if (statusRes.ok) {
+        setLiveStoreStatus(await statusRes.json());
+      }
+    } catch (err) {
+      console.error('Failed to fetch store live status', err);
+    }
+  };
+  useEffect(() => { fetchStoreHours(); }, [currentStore?._id]);
+
+  const handleToggleDay = (dayIndex) => {
+    setWeeklySchedule(prev => {
+      const copy = [...prev];
+      copy[dayIndex] = { ...copy[dayIndex], enabled: !copy[dayIndex].enabled };
+      return copy;
+    });
+  };
+
+  const handleSlotChange = (dayIndex, slotIndex, field, value) => {
+    setWeeklySchedule(prev => {
+      const copy = [...prev];
+      const slots = [...copy[dayIndex].slots];
+      slots[slotIndex] = { ...slots[slotIndex], [field]: value };
+      copy[dayIndex] = { ...copy[dayIndex], slots };
+      return copy;
+    });
+  };
+
+  const handleAddSlot = (dayIndex) => {
+    setWeeklySchedule(prev => {
+      const copy = [...prev];
+      const slots = [...copy[dayIndex].slots, { open: '17:00', close: '22:00' }];
+      copy[dayIndex] = { ...copy[dayIndex], slots };
+      return copy;
+    });
+  };
+
+  const handleRemoveSlot = (dayIndex, slotIndex) => {
+    setWeeklySchedule(prev => {
+      const copy = [...prev];
+      const slots = copy[dayIndex].slots.filter((_, idx) => idx !== slotIndex);
+      copy[dayIndex] = { ...copy[dayIndex], slots: slots.length > 0 ? slots : [{ open: '09:00', close: '22:00' }] };
+      return copy;
+    });
+  };
+
+  const handleCopyMondayToAll = () => {
+    if (weeklySchedule.length === 0) return;
+    const monday = weeklySchedule[0];
+    setWeeklySchedule(prev => prev.map((item, idx) => {
+      if (idx === 0) return item;
+      return {
+        ...item,
+        enabled: monday.enabled,
+        slots: monday.slots.map(s => ({ ...s }))
+      };
+    }));
+    showToast("Monday's hours copied to all days!", 'success');
+  };
+
+  const handleSaveStoreHours = async (e) => {
+    if (e) e.preventDefault();
+    if (!currentStore?._id) return;
+    setSavingHours(true);
+    try {
+      const payload = {
+        storeId: currentStore._id,
+        mode: storeHoursMode,
+        timezone: storeTimezone,
+        weeklySchedule,
+        temporaryClosure: {
+          enabled: temporaryClosure.enabled,
+          reason: temporaryClosure.reason || '',
+          startDate: temporaryClosure.startDate ? new Date(temporaryClosure.startDate) : null,
+          endDate: temporaryClosure.endDate ? new Date(temporaryClosure.endDate) : null
+        },
+        displayStoreStatus
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/store-hours`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        showToast('Store active hours updated successfully!', 'success');
+        fetchStoreHours();
+      } else {
+        const data = await res.json();
+        showToast(data.message || 'Failed to update store hours', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving store hours:', err);
+      showToast('Error saving store hours: ' + err.message, 'error');
+    } finally {
+      setSavingHours(false);
+    }
+  };
 
   useEffect(() => {
     if (!newStoreSlug) {
@@ -1144,6 +1319,14 @@ const ManageStore = ({ token, stores, onLogout }) => {
         </button>
         <button 
           type="button"
+          onClick={() => { setActiveTab('hours'); fetchStoreHours(); }} 
+          className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'hours' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+        >
+          <Clock size={16} />
+          <span>Active Hours</span>
+        </button>
+        <button 
+          type="button"
           onClick={() => setActiveTab('social')} 
           className={`px-6 py-2.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeTab === 'social' ? 'bg-[#76b900] text-white shadow-lg shadow-green-100' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
         >
@@ -1661,6 +1844,336 @@ const ManageStore = ({ token, stores, onLogout }) => {
         )}
       </div>
       </div>
+      )}
+
+      {/* Store Active Hours Manager */}
+      {activeTab === 'hours' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 animate-fadeIn">
+          {/* Header & Live Status */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100 mb-8">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-50 text-[#76b900] flex items-center justify-center font-bold">
+                  <Clock size={22} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-slate-800">Store Active Hours</h2>
+                  <p className="text-sm text-slate-500 mt-0.5">Control when your store is open for orders and browsing. The store status is shown on your storefront.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Status Pill */}
+            <div className="flex items-center gap-2 self-start md:self-auto">
+              {liveStoreStatus ? (
+                liveStoreStatus.isOpen ? (
+                  <span className="px-4 py-2 rounded-full font-bold text-xs bg-green-50 text-green-700 border border-green-200 flex items-center gap-2 shadow-xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                    <span>Store is Currently OPEN</span>
+                  </span>
+                ) : (
+                  <span className="px-4 py-2 rounded-full font-bold text-xs bg-red-50 text-red-700 border border-red-200 flex items-center gap-2 shadow-xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                    <span>Store is Currently CLOSED {liveStoreStatus.reason ? `(${liveStoreStatus.reason})` : ''}</span>
+                  </span>
+                )
+              ) : (
+                <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+                  Checking status...
+                </span>
+              )}
+            </div>
+          </div>
+
+          {loadingHours ? (
+            <div className="py-20 text-center text-slate-500 font-semibold animate-pulse">
+              Loading store operating schedule...
+            </div>
+          ) : (
+            <form onSubmit={handleSaveStoreHours} className="space-y-8">
+              {/* Section 1: Operating Mode */}
+              <div className="bg-slate-50/70 p-6 rounded-2xl border border-slate-200/80">
+                <h3 className="text-base font-extrabold text-slate-800 mb-3 flex items-center gap-2">
+                  <span>Operating Mode</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* 24x7 Option */}
+                  <label 
+                    onClick={() => setStoreHoursMode('24x7')}
+                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-3.5 ${
+                      storeHoursMode === '24x7' 
+                        ? 'border-[#76b900] bg-green-50/40 shadow-xs' 
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <input 
+                      type="radio" 
+                      name="storeHoursMode" 
+                      value="24x7" 
+                      checked={storeHoursMode === '24x7'} 
+                      onChange={() => setStoreHoursMode('24x7')} 
+                      className="mt-1 accent-[#76b900]"
+                    />
+                    <div>
+                      <div className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                        <span>Always Open (24x7)</span>
+                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-[10px] font-black">Recommended</span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">Accept orders and customers 24 hours a day, 7 days a week without restrictions.</p>
+                    </div>
+                  </label>
+
+                  {/* Custom Hours Option */}
+                  <label 
+                    onClick={() => setStoreHoursMode('custom')}
+                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-3.5 ${
+                      storeHoursMode === 'custom' 
+                        ? 'border-[#76b900] bg-green-50/40 shadow-xs' 
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <input 
+                      type="radio" 
+                      name="storeHoursMode" 
+                      value="custom" 
+                      checked={storeHoursMode === 'custom'} 
+                      onChange={() => setStoreHoursMode('custom')} 
+                      className="mt-1 accent-[#76b900]"
+                    />
+                    <div>
+                      <div className="font-extrabold text-slate-800 text-sm">
+                        Custom Weekly Schedule
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">Define specific operating days and open/close timing slots for each day of the week.</p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Timezone Configuration */}
+                <div className="mt-5 pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block">Store Timezone</label>
+                    <span className="text-[11px] text-slate-500">Your store hours will follow this local timezone clock.</span>
+                  </div>
+                  <select
+                    value={storeTimezone}
+                    onChange={(e) => setStoreTimezone(e.target.value)}
+                    className="px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 bg-white focus:ring-2 focus:ring-[#76b900] outline-none"
+                  >
+                    <option value="Asia/Kolkata">Asia/Kolkata (IST - India +05:30)</option>
+                    <option value="Asia/Dubai">Asia/Dubai (GST - UAE +04:00)</option>
+                    <option value="Asia/Riyadh">Asia/Riyadh (AST - Saudi Arabia +03:00)</option>
+                    <option value="Asia/Singapore">Asia/Singapore (SGT +08:00)</option>
+                    <option value="Asia/Bangkok">Asia/Bangkok (ICT +07:00)</option>
+                    <option value="America/New_York">America/New_York (EST/EDT)</option>
+                    <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+                    <option value="Europe/London">Europe/London (GMT/BST)</option>
+                    <option value="Europe/Paris">Europe/Paris (CET +01:00)</option>
+                    <option value="Australia/Sydney">Australia/Sydney (AEST +10:00)</option>
+                    <option value="UTC">UTC (Universal Coordinated Time)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Section 2: Custom Weekly Schedule (if mode === 'custom') */}
+              {storeHoursMode === 'custom' && (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-800">Weekly Operating Hours</h3>
+                      <p className="text-xs text-slate-500">Toggle days and adjust open/close time slots.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyMondayToAll}
+                      className="text-xs font-bold text-[#76b900] hover:text-[#5f9600] px-3.5 py-1.5 rounded-lg border border-[#76b900]/40 bg-green-50/50 hover:bg-green-100/50 transition cursor-pointer self-start sm:self-auto"
+                    >
+                      📋 Copy Monday's Hours to All Days
+                    </button>
+                  </div>
+
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+                    {weeklySchedule.map((dayItem, dIdx) => (
+                      <div key={dayItem.day} className={`p-4 sm:p-5 transition-colors ${dayItem.enabled ? 'bg-white' : 'bg-slate-50/60'}`}>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          {/* Day Toggle */}
+                          <div className="flex items-center gap-3 w-44 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleDay(dIdx)}
+                              className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
+                                dayItem.enabled ? 'bg-[#76b900]' : 'bg-slate-300'
+                              }`}
+                            >
+                              <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${
+                                dayItem.enabled ? 'left-7' : 'left-1'
+                              }`}></span>
+                            </button>
+                            <span className={`text-sm font-black capitalize ${dayItem.enabled ? 'text-slate-800' : 'text-slate-400'}`}>
+                              {dayItem.day}
+                            </span>
+                          </div>
+
+                          {/* Slots or Closed indicator */}
+                          <div className="flex-1">
+                            {dayItem.enabled ? (
+                              <div className="space-y-2.5">
+                                {dayItem.slots.map((slot, sIdx) => (
+                                  <div key={sIdx} className="flex flex-wrap items-center gap-2 text-xs">
+                                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                                      <span className="font-bold text-slate-500 text-[11px]">Opens:</span>
+                                      <input
+                                        type="time"
+                                        value={slot.open}
+                                        onChange={(e) => handleSlotChange(dIdx, sIdx, 'open', e.target.value)}
+                                        className="font-bold text-slate-800 bg-transparent outline-none cursor-pointer"
+                                      />
+                                    </div>
+                                    <span className="text-slate-400 font-bold">to</span>
+                                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                                      <span className="font-bold text-slate-500 text-[11px]">Closes:</span>
+                                      <input
+                                        type="time"
+                                        value={slot.close}
+                                        onChange={(e) => handleSlotChange(dIdx, sIdx, 'close', e.target.value)}
+                                        className="font-bold text-slate-800 bg-transparent outline-none cursor-pointer"
+                                      />
+                                    </div>
+
+                                    {dayItem.slots.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveSlot(dIdx, sIdx)}
+                                        className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 font-bold transition"
+                                        title="Remove this slot"
+                                      >
+                                        <X size={14} />
+                                      </button>
+                                    )}
+
+                                    {sIdx === dayItem.slots.length - 1 && dayItem.slots.length < 3 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAddSlot(dIdx)}
+                                        className="text-[11px] font-bold text-blue-600 hover:text-blue-800 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 transition flex items-center gap-1"
+                                      >
+                                        <Plus size={12} /> Add Interval
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-600">
+                                Closed All Day
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Section 3: Temporary Closure */}
+              <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertCircle size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold text-slate-800">Temporary Store Closure</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Quickly close your store for a specific time or emergency (e.g. renovation, vacation, private event).</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTemporaryClosure(prev => ({ ...prev, enabled: !prev.enabled }))}
+                    className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                      temporaryClosure.enabled ? 'bg-red-500' : 'bg-slate-300'
+                    }`}
+                  >
+                    <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${
+                      temporaryClosure.enabled ? 'left-7' : 'left-1'
+                    }`}></span>
+                  </button>
+                </div>
+
+                {temporaryClosure.enabled && (
+                  <div className="pt-4 border-t border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fadeIn">
+                    <div className="md:col-span-3">
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Reason Shown to Customers</label>
+                      <input
+                        type="text"
+                        value={temporaryClosure.reason}
+                        onChange={(e) => setTemporaryClosure(prev => ({ ...prev, reason: e.target.value }))}
+                        placeholder="e.g. Store is temporarily closed for renovation. We will be back tomorrow at 10 AM!"
+                        className="w-full px-4 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-red-400 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Start Date & Time (Optional)</label>
+                      <input
+                        type="datetime-local"
+                        value={temporaryClosure.startDate}
+                        onChange={(e) => setTemporaryClosure(prev => ({ ...prev, startDate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-red-400 outline-none bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">End Date & Time (Optional)</label>
+                      <input
+                        type="datetime-local"
+                        value={temporaryClosure.endDate}
+                        onChange={(e) => setTemporaryClosure(prev => ({ ...prev, endDate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-red-400 outline-none bg-white"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Section 4: Customer Display Setting */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                <div>
+                  <h4 className="text-xs font-extrabold text-slate-800">Display Store Open/Closed Status on Storefront</h4>
+                  <p className="text-[11px] text-slate-500">When enabled, customers will see a badge or popup in the header indicating whether the store is open or closed.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDisplayStoreStatus(!displayStoreStatus)}
+                  className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                    displayStoreStatus ? 'bg-[#76b900]' : 'bg-slate-300'
+                  }`}
+                >
+                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${
+                    displayStoreStatus ? 'left-7' : 'left-1'
+                  }`}></span>
+                </button>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end pt-4">
+                <button
+                  type="submit"
+                  disabled={savingHours}
+                  className="px-8 py-3 bg-[#76b900] hover:bg-[#68a500] text-white font-extrabold rounded-xl transition shadow-lg shadow-green-100 disabled:opacity-50 flex items-center gap-2 text-sm cursor-pointer active:scale-95"
+                >
+                  {savingHours ? (
+                    <>Saving Active Hours...</>
+                  ) : (
+                    <>
+                      <CheckCircle size={16} /> Save Active Hours
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       )}
 
       {/* Social Media Links Manager */}
