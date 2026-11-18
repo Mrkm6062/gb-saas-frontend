@@ -85,7 +85,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
       Orders: location.pathname.includes('/orders') || location.pathname.includes('/live-orders'),
       Settings: location.pathname.includes('/alerts') || location.pathname.includes('/delivery') || location.pathname.includes('/checkout') || location.pathname.includes('/policies') || location.pathname.includes('/seo'),
       Themes: location.pathname.includes('/themes') || location.pathname.includes('/theme-customization'),
-      'Website Builder': location.pathname.includes('/custom-pages') || location.pathname.includes('/navigation-menus') || location.pathname.includes('/assets'),
+      'Custom Website': location.pathname.includes('/custom-website') || location.pathname.includes('/custom-pages'),
       'Store Configurations': location.pathname.includes('/alerts') || location.pathname.includes('/delivery') || location.pathname.includes('/checkout') || location.pathname.includes('/policies') || location.pathname.includes('/seo')
     };
   });
@@ -157,10 +157,10 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
     currentStoreInfo.storeType.toLowerCase().includes("custom website")
   );
 
-  // Redirect custom website to newsletter page when landing on the root Overview page
+  // Redirect custom website to custom website files page when landing on the root Overview page
   useEffect(() => {
     if (isCustomWebsite && activeStoreId && location.pathname === '/') {
-      navigate(`/store/${activeStoreId}/newsletter`);
+      navigate(`/store/${activeStoreId}/custom-website`);
     }
   }, [isCustomWebsite, activeStoreId, location.pathname, navigate]);
 
@@ -464,9 +464,7 @@ const AdminLayout = ({ stores, onLogout, headerTitle = "Overview Dashboard", chi
           { name: 'Customize Theme', icon: <Settings size={18} />, path: activeStoreId ? `/store/${activeStoreId}/theme-customization` : '#' }
         ] : []),
         ...(isCustomWebsite ? [
-          { name: 'Custom Pages', icon: <Globe size={18} />, path: activeStoreId ? `/store/${activeStoreId}/custom-pages` : '#' },
-          { name: 'Menu Builder', icon: <Layers size={18} />, path: activeStoreId ? `/store/${activeStoreId}/navigation-menus` : '#' },
-          { name: 'Asset Manager', icon: <HardDrive size={18} />, path: activeStoreId ? `/store/${activeStoreId}/assets` : '#' }
+          { name: 'Custom Website', icon: <Globe size={18} />, path: activeStoreId ? `/store/${activeStoreId}/custom-website` : '#' }
         ] : []),
         { name: 'Domains', icon: <Globe size={18} />, path: activeStoreId ? `/store/${activeStoreId}/domains` : '#' },
         { name: 'Storage / Media', icon: <HardDrive size={18} />, path: activeStoreId ? `/store/${activeStoreId}/storage` : '#' }

@@ -27,6 +27,7 @@ import ManageReviews from './pages/ManageReviews';
 import SeoSetting from './pages/SeoSetting';
 import ManageNewsletter from './pages/ManageNewsletter';
 import ManageProfile from './pages/ManageProfile';
+import ManageCustomWebsite from './pages/ManageCustomWebsite';
 import ManageCustomPages from './pages/ManageCustomPages';
 import CustomPageEditor from './pages/CustomPageEditor';
 import CustomPagePreview from './pages/CustomPagePreview';
@@ -225,28 +226,32 @@ function App() {
             element={isLoggedIn ? <ManageProfile token="dummy-token" onLogout={handleLogout} stores={stores} /> : <Navigate to="/login" />} 
           />
           <Route 
+            path="/store/:storeId/custom-website" 
+            element={isLoggedIn ? <ManageCustomWebsite token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
+          />
+          <Route 
             path="/store/:storeId/custom-pages" 
-            element={isLoggedIn ? <ManageCustomPages token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageCustomWebsite token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/custom-pages/create" 
-            element={isLoggedIn ? <CustomPageEditor token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageCustomWebsite token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/custom-pages/edit/:pageId" 
-            element={isLoggedIn ? <CustomPageEditor token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageCustomWebsite token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/custom-pages/preview/:pageId" 
-            element={isLoggedIn ? <CustomPagePreview token="dummy-token" /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageCustomWebsite token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/navigation-menus" 
-            element={isLoggedIn ? <ManageCustomMenus token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageCustomWebsite token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/store/:storeId/assets" 
-            element={isLoggedIn ? <ManageCustomAssets token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
+            element={isLoggedIn ? <ManageCustomWebsite token="dummy-token" stores={stores} onLogout={handleLogout} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="*" 
