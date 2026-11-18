@@ -264,7 +264,7 @@ const ManageCustomWebsite = ({ token, stores, onLogout }) => {
 
   const storefrontDomain = currentStore.canonicalDomain || 
     (currentStore.subdomain ? `${currentStore.subdomain}.galibrand.cloud` : (currentStore.storeSlug ? `${currentStore.storeSlug}.galibrand.cloud` : ''));
-  const storefrontUrl = storefrontDomain ? `https://${storefrontDomain}` : '';
+  const storefrontUrl = storefrontDomain ? `${storefrontDomain}` : '';
 
   return (
     <AdminLayout token={token} stores={stores} onLogout={onLogout}>
