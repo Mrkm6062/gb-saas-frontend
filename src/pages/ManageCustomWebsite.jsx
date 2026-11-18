@@ -11,6 +11,7 @@ import {
 const ManageCustomWebsite = ({ token, stores, onLogout }) => {
   const { storeId } = useParams();
   const currentStore = stores.find(s => s.storeId === storeId || s._id === storeId) || {};
+  const activeStoreId = currentStore._id || currentStore.storeId || storeId;
 
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,11 +36,11 @@ const ManageCustomWebsite = ({ token, stores, onLogout }) => {
   };
 
   const fetchFiles = async () => {
-    if (!currentStore._id) return;
+    if (!activeStoreId) return;
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/custom-website/files?storeId=${currentStore._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/custom-website/files?storeId=${activeStoreId}`, {
         headers: { 
           'Authorization': `Bearer ${token}` 
         },
@@ -68,12 +69,12 @@ const ManageCustomWebsite = ({ token, stores, onLogout }) => {
   useEffect(() => {
     fetchFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStore._id]);
+  }, [activeStoreId, currentStore._id]);
 
   // Upload handler for both folder upload and multiple files upload
   const handleFileUpload = async (selectedFiles) => {
     if (!selectedFiles || selectedFiles.length === 0) return;
-    if (!currentStore._id) {
+    if (!activeStoreId) {
       setError('Store not found. Please refresh the page.');
       return;
     }
@@ -85,7 +86,7 @@ const ManageCustomWebsite = ({ token, stores, onLogout }) => {
 
     try {
       const formData = new FormData();
-      formData.append('storeId', currentStore._id);
+      formData.append('storeId', activeStoreId);
 
       const paths = [];
       for (let i = 0; i < selectedFiles.length; i++) {
@@ -189,7 +190,7 @@ const ManageCustomWebsite = ({ token, stores, onLogout }) => {
       const res = await fetch(`${API_BASE_URL}/api/custom-website/file`, {
         method: 'DELETE',
         headers,
-        body: JSON.stringify({ storeId: currentStore._id, filePath }),
+        body: JSON.stringify({ storeId: activeStoreId, filePath }),
         credentials: 'include'
       });
 
@@ -220,7 +221,7 @@ const ManageCustomWebsite = ({ token, stores, onLogout }) => {
       const res = await fetch(`${API_BASE_URL}/api/custom-website/all`, {
         method: 'DELETE',
         headers,
-        body: JSON.stringify({ storeId: currentStore._id }),
+        body: JSON.stringify({ storeId: activeStoreId }),
         credentials: 'include'
       });
 
