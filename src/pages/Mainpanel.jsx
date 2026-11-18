@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../api';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { CreditCard, TrendingUp, ShoppingBag, Users, IndianRupee, Mail, Store, Package, Wallet, Building, MapPin, Upload, ArrowRight, CheckCircle, X } from 'lucide-react';
+import { CreditCard, Tag, CheckCircle2, Ticket, TrendingUp, ShoppingBag, Users, IndianRupee, Mail, Store, Package, Wallet, Building, MapPin, Upload, ArrowRight, CheckCircle, X } from 'lucide-react';
 
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
@@ -48,6 +48,10 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
   const [newStoreEmpId, setNewStoreEmpId] = useState('');
   const [empName, setEmpName] = useState('');
   const [verifyingEmp, setVerifyingEmp] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
   const [storeTypes, setStoreTypes] = useState([]);
   const navigate = useNavigate();
 
@@ -193,6 +197,52 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
 
     return () => clearTimeout(delayDebounceFn);
   }, [newStoreSlug]);
+
+
+  const handleApplyCoupon = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!couponInput.trim()) return;
+    setCouponLoading(true);
+    setCouponError('');
+    try {
+      const selectedPlanObj = plans.find(p => p._id === newStorePlan);
+      const planRate = getPlanBilling(selectedPlanObj, billingCycle);
+      const baseAmount = planRate.price * billingCycle;
+
+      const response = await fetch(`${API_BASE_URL}/api/galicoupons/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          code: couponInput.trim(),
+          amount: baseAmount,
+          billingDuration: billingCycle,
+                planId: newStorePlan
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.valid) {
+        setAppliedCoupon(data);
+        setCouponError('');
+      } else {
+        setCouponError(data.message || 'Invalid or inapplicable coupon code');
+        setAppliedCoupon(null);
+      }
+    } catch (err) {
+      setCouponError('Network error while validating coupon');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError('');
+  };
 
   const handleCreateStore = async (e) => {
     e.preventDefault();
@@ -945,7 +995,7 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                     </div>
 
                     {/* Choose Payment Method */}
-                    {getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle > 0 && (
+                    {Math.max(0, (getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle) - (appliedCoupon?.discountAmount || 0)) > 0 && (
                       <div className="space-y-3">
                         <h4 className="text-sm font-bold text-slate-800">Choose Payment Method</h4>
                         <div className="grid grid-cols-2 gap-3">

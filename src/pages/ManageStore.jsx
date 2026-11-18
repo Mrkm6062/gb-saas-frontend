@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../api';
 import AdminLayout from '../components/AdminLayout';
-import { Link as LinkIcon, Trash2, Plus, CreditCard, Download, Store, Package, Wallet, Building, MapPin, Upload, ArrowRight, CheckCircle, X, ChevronRight, ChevronLeft, Printer, Copy, ExternalLink, Search, QrCode, Clock, Calendar, AlertCircle } from 'lucide-react';
+import { Link as LinkIcon, Tag, CheckCircle2, Ticket, Trash2, Plus, CreditCard, Download, Store, Package, Wallet, Building, MapPin, Upload, ArrowRight, CheckCircle, X, ChevronRight, ChevronLeft, Printer, Copy, ExternalLink, Search, QrCode, Clock, Calendar, AlertCircle } from 'lucide-react';
 
 // Helper to dynamically load razorpay
 const loadRazorpay = () => {
@@ -444,6 +444,10 @@ const ManageStore = ({ token, stores, onLogout }) => {
   const [storeTypes, setStoreTypes] = useState([]);
   const [empName, setEmpName] = useState('');
   const [verifyingEmp, setVerifyingEmp] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
   const [platformSettings, setPlatformSettings] = useState(null);
 
   const isCreatingStoreLoader = createStatus && (
@@ -1010,6 +1014,50 @@ const ManageStore = ({ token, stores, onLogout }) => {
     return <SocialIcon platform={platform} size={20} className={colorClass} />;
   };
 
+
+  const handleApplyCoupon = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!couponInput.trim()) return;
+    setCouponLoading(true);
+    setCouponError('');
+    try {
+      const selectedPlanObj = plans.find(p => p._id === newStorePlan);
+      const baseAmount = selectedPlanObj ? (selectedPlanObj.price || 0) : 0;
+
+      const response = await fetch(`${API_BASE_URL}/api/galicoupons/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          code: couponInput.trim(),
+          amount: baseAmount,
+          planId: newStorePlan
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.valid) {
+        setAppliedCoupon(data);
+        setCouponError('');
+      } else {
+        setCouponError(data.message || 'Invalid or inapplicable coupon code');
+        setAppliedCoupon(null);
+      }
+    } catch (err) {
+      setCouponError('Network error while validating coupon');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError('');
+  };
+
   const handleCreateStore = async (e) => {
     e.preventDefault();
     setCreateStatus('Processing...');
@@ -1044,7 +1092,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
             empId: newStoreEmpId,
             metaDescription: newStoreMeta,
             planId: newStorePlan,
-            storeSlug: newStoreSlug
+            storeSlug: newStoreSlug,
+            couponCode: appliedCoupon ? appliedCoupon.code : undefined
           })
         });
 
@@ -1101,7 +1150,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
                 empId: newStoreEmpId,
                 metaDescription: newStoreMeta,
                 planId: newStorePlan,
-                storeSlug: newStoreSlug
+                storeSlug: newStoreSlug,
+                couponCode: appliedCoupon ? appliedCoupon.code : undefined
               })
             });
 
@@ -1117,7 +1167,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
             const verifyRes = await fetch(`${API_BASE_URL}/api/platform-payments/verify-payment`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify({ ...paymentResponse, storeId: createdStore._id, planId: newStorePlan })
+              body: JSON.stringify({ ...paymentResponse, storeId: createdStore._id,
+                couponCode: appliedCoupon ? appliedCoupon.code : undefined, planId: newStorePlan })
             });
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
@@ -2592,8 +2643,96 @@ const ManageStore = ({ token, stores, onLogout }) => {
                       <p className="text-xs text-slate-500">Includes 7 days free trial. Start date: {new Date(new Date().setDate(new Date().getDate() + 7)).toLocaleDateString()}</p>
                     </div>
 
+                    {/* Coupon Code Section */}
+                    <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                          <Tag size={14} className="text-green-600" />
+                          Have a Coupon Code?
+                        </label>
+                        {appliedCoupon && (
+                          <button
+                            type="button"
+                            onClick={handleRemoveCoupon}
+                            className="text-[11px] font-bold text-red-500 hover:text-red-700 transition"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
+                      {!appliedCoupon ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={couponInput}
+                            onChange={(e) => {
+                              setCouponInput(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''));
+                              setCouponError('');
+                            }}
+                            placeholder="ENTER COUPON CODE"
+                            className="flex-1 h-10 px-3 border border-slate-200 rounded-xl font-mono text-xs font-bold uppercase focus:ring-2 focus:ring-green-500 outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleApplyCoupon}
+                            disabled={couponLoading || !couponInput.trim()}
+                            className="px-4 h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition disabled:opacity-50 shrink-0 shadow-2xs"
+                          >
+                            {couponLoading ? 'Checking...' : 'Apply'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                            <div>
+                              <span className="font-mono font-black text-xs text-green-800 bg-white px-2 py-0.5 rounded border border-green-200">
+                                {appliedCoupon.code}
+                              </span>
+                              <span className="text-xs font-bold text-green-700 ml-2">
+                                {appliedCoupon.discountType === 'PERCENTAGE' ? `${appliedCoupon.discountValue}% OFF` : `₹${appliedCoupon.discountValue} FLAT OFF`}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-xs font-extrabold text-green-700">
+                            -₹{appliedCoupon.discountAmount}
+                          </span>
+                        </div>
+                      )}
+
+                      {couponError && (
+                        <p className="text-[11px] font-bold text-red-500 animate-fadeIn">
+                          {couponError}
+                        </p>
+                      )}
+
+                      {/* Price Breakdown */}
+                      <div className="pt-2 border-t border-slate-100 space-y-1.5 text-xs">
+                        <div className="flex justify-between text-slate-500">
+                          <span>Base Plan Price</span>
+                          <span className="font-bold text-slate-700">
+                            ₹{plans.find(p => p._id === newStorePlan)?.price || 0}
+                          </span>
+                        </div>
+                        {appliedCoupon && (
+                          <div className="flex justify-between text-green-600 font-bold">
+                            <span>Coupon Discount ({appliedCoupon.code})</span>
+                            <span>-₹{appliedCoupon.discountAmount}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-t border-slate-100">
+                          <span>Total Payable</span>
+                          <span className={appliedCoupon ? 'text-green-600' : 'text-slate-900'}>
+                            ₹{Math.max(0, (plans.find(p => p._id === newStorePlan)?.price || 0) - (appliedCoupon?.discountAmount || 0))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+
                     {/* Choose Payment Method */}
-                    {plans.find(p => p._id === newStorePlan)?.price > 0 && (
+                    {Math.max(0, (plans.find(p => p._id === newStorePlan)?.price || 0) - (appliedCoupon?.discountAmount || 0)) > 0 && (
                       <div className="space-y-3">
                         <h4 className="text-sm font-bold text-slate-800">Choose Payment Method</h4>
                         <div className="grid grid-cols-2 gap-3">
