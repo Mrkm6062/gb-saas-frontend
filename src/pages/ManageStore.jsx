@@ -1064,6 +1064,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
 
     const selectedPlanObj = plans.find(p => p._id === newStorePlan);
     const planPrice = selectedPlanObj ? selectedPlanObj.price : 0;
+    const discount = appliedCoupon?.discountAmount || 0;
+    const totalAmount = Math.max(0, planPrice - discount);
 
     // Pre-check subdomain slug availability
     try {
@@ -1077,7 +1079,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
     }
 
     try {
-      if (planPrice === 0) {
+      if (totalAmount === 0) {
         // Free plan: Create store immediately
         setCreateStatus('Creating store...');
         const response = await fetch(`${API_BASE_URL}/api/store`, {
@@ -1123,7 +1125,7 @@ const ManageStore = ({ token, stores, onLogout }) => {
       const orderRes = await fetch(`${API_BASE_URL}/api/platform-payments/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ amount: planPrice })
+        body: JSON.stringify({ amount: totalAmount })
       });
       const orderData = await orderRes.json();
       if (!orderRes.ok) throw new Error(orderData.message || 'Failed to create order');
@@ -2908,8 +2910,8 @@ const ManageStore = ({ token, stores, onLogout }) => {
                       disabled={!newStoreName || !newStoreSlug || subdomainStatus === 'taken' || subdomainStatus === 'checking' || subdomainStatus === 'invalid'}
                       className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
                     >
-                      {plans.find(p => p._id === newStorePlan)?.price > 0 ? (
-                        <>Proceed for Payment <ArrowRight size={16}/></>
+                      {Math.max(0, (plans.find(p => p._id === newStorePlan)?.price || 0) - (appliedCoupon?.discountAmount || 0)) > 0 ? (
+                        <>Proceed for Payment (₹{Math.max(0, (plans.find(p => p._id === newStorePlan)?.price || 0) - (appliedCoupon?.discountAmount || 0))}) <ArrowRight size={16}/></>
                       ) : (
                         <>Confirm & Create <CheckCircle size={16} /></>
                       )}

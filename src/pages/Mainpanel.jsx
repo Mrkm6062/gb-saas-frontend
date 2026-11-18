@@ -250,7 +250,9 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
 
     const selectedPlanObj = plans.find(p => p._id === newStorePlan);
     const planRate = getPlanBilling(selectedPlanObj, billingCycle);
-    const totalAmount = planRate.price * billingCycle;
+    const baseAmount = planRate.price * billingCycle;
+    const discount = appliedCoupon?.discountAmount || 0;
+    const totalAmount = Math.max(0, baseAmount - discount);
 
     // Pre-check subdomain slug availability
     try {
@@ -280,7 +282,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
             metaDescription: newStoreMeta,
             planId: newStorePlan,
             storeSlug: newStoreSlug,
-            billingDuration: billingCycle
+            billingDuration: billingCycle,
+            couponCode: appliedCoupon ? appliedCoupon.code : undefined
           })
         });
 
@@ -297,6 +300,9 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
           setSubdomainStatus('idle');
           setCurrentStep(1);
           setBillingCycle(1);
+          setAppliedCoupon(null);
+          setCouponInput('');
+          setCouponError('');
           setStores([...stores, createdStore]);
           showToast('Store created successfully!', 'success');
         } else {
@@ -349,7 +355,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 metaDescription: newStoreMeta,
                 planId: newStorePlan,
                 storeSlug: newStoreSlug,
-                billingDuration: billingCycle
+                billingDuration: billingCycle,
+                couponCode: appliedCoupon ? appliedCoupon.code : undefined
               })
             });
 
@@ -369,7 +376,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                 ...paymentResponse, 
                 storeId: createdStore._id, 
                 planId: newStorePlan,
-                billingDuration: billingCycle
+                billingDuration: billingCycle,
+                couponCode: appliedCoupon ? appliedCoupon.code : undefined
               })
             });
             const verifyData = await verifyRes.json();
@@ -384,6 +392,9 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
               setSubdomainStatus('idle');
               setCurrentStep(1);
               setBillingCycle(1);
+              setAppliedCoupon(null);
+              setCouponInput('');
+              setCouponError('');
               setStores([...stores, createdStore]);
               showToast('Store created & payment successful!', 'success');
             } else {
@@ -415,6 +426,9 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
     setStatus('');
     setCurrentStep(1);
     setBillingCycle(1);
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError('');
   };
 
   const handleVerifyEmpId = async () => {
@@ -994,6 +1008,93 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                       <p className="text-xs text-slate-500 mt-2">Includes 7 days free trial. Plan official start date: {new Date(new Date().setDate(new Date().getDate() + 7)).toLocaleDateString()}</p>
                     </div>
 
+                    {/* Coupon Code Section */}
+                    <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                          <Tag size={14} className="text-green-600" />
+                          Have a Coupon Code?
+                        </label>
+                        {appliedCoupon && (
+                          <button
+                            type="button"
+                            onClick={handleRemoveCoupon}
+                            className="text-[11px] font-bold text-red-500 hover:text-red-700 transition"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
+                      {!appliedCoupon ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={couponInput}
+                            onChange={(e) => {
+                              setCouponInput(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''));
+                              setCouponError('');
+                            }}
+                            placeholder="ENTER COUPON CODE"
+                            className="flex-1 h-10 px-3 border border-slate-200 rounded-xl font-mono text-xs font-bold uppercase focus:ring-2 focus:ring-green-500 outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleApplyCoupon}
+                            disabled={couponLoading || !couponInput.trim()}
+                            className="px-4 h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition disabled:opacity-50 shrink-0 shadow-2xs"
+                          >
+                            {couponLoading ? 'Checking...' : 'Apply'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                            <div>
+                              <span className="font-mono font-black text-xs text-green-800 bg-white px-2 py-0.5 rounded border border-green-200">
+                                {appliedCoupon.code}
+                              </span>
+                              <span className="text-xs font-bold text-green-700 ml-2">
+                                {appliedCoupon.discountType === 'PERCENTAGE' ? `${appliedCoupon.discountValue}% OFF` : `₹${appliedCoupon.discountValue} FLAT OFF`}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-xs font-extrabold text-green-700">
+                            -₹{appliedCoupon.discountAmount}
+                          </span>
+                        </div>
+                      )}
+
+                      {couponError && (
+                        <p className="text-[11px] font-bold text-red-500 animate-fadeIn">
+                          {couponError}
+                        </p>
+                      )}
+
+                      {/* Price Breakdown */}
+                      <div className="pt-2 border-t border-slate-100 space-y-1.5 text-xs">
+                        <div className="flex justify-between text-slate-500">
+                          <span>Base Plan Price</span>
+                          <span className="font-bold text-slate-700">
+                            ₹{getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle}
+                          </span>
+                        </div>
+                        {appliedCoupon && (
+                          <div className="flex justify-between text-green-600 font-bold">
+                            <span>Coupon Discount ({appliedCoupon.code})</span>
+                            <span>-₹{appliedCoupon.discountAmount}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-t border-slate-100">
+                          <span>Total Payable</span>
+                          <span className={appliedCoupon ? 'text-green-600' : 'text-slate-900'}>
+                            ₹{Math.max(0, (getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle) - (appliedCoupon?.discountAmount || 0))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Choose Payment Method */}
                     {Math.max(0, (getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle) - (appliedCoupon?.discountAmount || 0)) > 0 && (
                       <div className="space-y-3">
@@ -1171,8 +1272,8 @@ const Mainpanel = ({ token, stores, setStores, onLogout }) => {
                       disabled={!newStoreName || !newStoreSlug || subdomainStatus === 'taken' || subdomainStatus === 'checking' || subdomainStatus === 'invalid'}
                       className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-md flex items-center gap-2 disabled:opacity-50 text-sm animate-fadeIn"
                     >
-                      {getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle > 0 ? (
-                        <>Proceed for Payment (₹{getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle}) <ArrowRight size={16} /></>
+                      {Math.max(0, (getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle) - (appliedCoupon?.discountAmount || 0)) > 0 ? (
+                        <>Proceed for Payment (₹{Math.max(0, (getPlanBilling(plans.find(p => p._id === newStorePlan), billingCycle).price * billingCycle) - (appliedCoupon?.discountAmount || 0))}) <ArrowRight size={16} /></>
                       ) : (
                         <>Confirm & Create <CheckCircle size={16} /></>
                       )}
