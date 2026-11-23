@@ -10,6 +10,8 @@ function Login({ onLoginSuccess }) {
   const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
   const [status, setStatus] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [settings, setSettings] = useState({ mainLogoUrl: "https://storage.googleapis.com/galibrand/superadmin/products/galibrandfullname-logo.png", loginImageGrid: [] });
   const [imagesPreloaded, setImagesPreloaded] = useState(false);
 
@@ -54,7 +56,9 @@ function Login({ onLoginSuccess }) {
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    setStatus('Sending OTP...');
+    if (isSendingOtp) return;
+    setStatus('');
+    setIsSendingOtp(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
@@ -73,12 +77,16 @@ function Login({ onLoginSuccess }) {
       }
     } catch (err) {
       setStatus(`Error: ${err.message}`);
+    } finally {
+      setIsSendingOtp(false);
     }
   };
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    setStatus('Verifying...');
+    if (isVerifyingOtp) return;
+    setStatus('');
+    setIsVerifyingOtp(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
@@ -99,6 +107,8 @@ function Login({ onLoginSuccess }) {
       }
     } catch (err) {
       setStatus(`Error: ${err.message}`);
+    } finally {
+      setIsVerifyingOtp(false);
     }
   };
 
@@ -188,8 +198,22 @@ function Login({ onLoginSuccess }) {
                     />
                   </div>
 
-                  <button type="submit" className="w-full py-3.5 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-xl hover:opacity-95 transition shadow-md shadow-green-100 text-sm">
-                    Send OTP Code
+                  <button 
+                    type="submit" 
+                    disabled={isSendingOtp}
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-xl hover:opacity-95 transition shadow-md shadow-green-100 text-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSendingOtp ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Sending OTP...</span>
+                      </>
+                    ) : (
+                      'Send OTP Code'
+                    )}
                   </button>
                 </form>
 
@@ -230,8 +254,22 @@ function Login({ onLoginSuccess }) {
                   />
                 </div>
 
-                <button type="submit" className="w-full py-3.5 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-xl hover:opacity-95 transition shadow-md shadow-green-100 text-sm">
-                  Verify & {isLogin ? 'Login' : 'Create Account'}
+                <button 
+                  type="submit" 
+                  disabled={isVerifyingOtp}
+                  className="w-full py-3.5 px-4 bg-gradient-to-r from-[#76b900] to-[#ff8a00] text-white font-bold rounded-xl hover:opacity-95 transition shadow-md shadow-green-100 text-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isVerifyingOtp ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    `Verify & ${isLogin ? 'Login' : 'Create Account'}`
+                  )}
                 </button>
               </form>
             )}
